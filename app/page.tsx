@@ -96,6 +96,8 @@ export default function ChildForm() {
   const [formData, setFormData] = useState<FormState>(() => createEmptyForm())
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<MessageState>(null)
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [photoInputKey, setPhotoInputKey] = useState(() => Date.now())
 
   useEffect(() => {
     fetchEacData()
@@ -144,18 +146,106 @@ export default function ChildForm() {
     }))
   }
 
+  const handlePhotoChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null
+
+    if (file && file.size > 5 * 1024 * 1024) {
+      setMessage({ type: 'error', text: 'Image must be 5MB or smaller.' })
+      event.target.value = ''
+      setPhotoFile(null)
+      setFormData((prev) => ({ ...prev, photo_link: '' }))
+      setPhotoInputKey(Date.now())
+      return
+    }
+
+    setPhotoFile(file)
+    setFormData((prev) => ({ ...prev, photo_link: file ? file.name : '' }))
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setMessage(null)
 
     try {
-      const { error } = await supabase.from('Child_Data').insert([formData])
+      if (!formData.eac_no) {
+        throw new Error('EAC number is required.')
+      }
 
-      if (error) throw error
+      const eacNumber = Number(formData.eac_no)
+      if (Number.isNaN(eacNumber)) {
+        throw new Error('EAC number must be a valid number.')
+      }
 
-      setMessage({ type: 'success', text: 'Child data saved successfully.' })
-      setFormData(createEmptyForm())
+      let photoUrl: string | null = formData.photo_link ? formData.photo_link : null
+
+      if (photoFile) {
+        const extension = photoFile.name.split('.').pop() ?? 'jpg'
+        const uniqueId = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Date.now().toString(36)
+        const folder = (formData.reg_no || formData.eac_no || 'uploads').replace(/\s+/g, '-').toLowerCase()
+        const filePath = `${folder}/${uniqueId}.${extension}`
+
+        const { error: uploadError } = await supabase.storage.from('bucket').upload(filePath, photoFile, {
+          cacheControl: '3600',
+          upsert: false,
+        })
+
+        if (uploadError) {
+          throw uploadError
+        }
+
+        const { data: publicData } = supabase.storage.from('bucket').getPublicUrl(filePath)
+        photoUrl = publicData.publicUrl
+      }
+
+      const toNullableString = (value: string) => (value.trim() === '' ? null : value)
+      const toNullableNumber = (value: string) => {
+        if (value.trim() === '') return null
+        const parsed = Number(value)
+        return Number.isNaN(parsed) ? null : parsed
+      }
+
+      const payload = {
+        eac_no: eacNumber,
+        village_name: toNullableString(formData.village_name),
+        centre_id: toNullableString(formData.centre_id),
+        district: toNullableString(formData.district),
+        taluk: toNullableString(formData.taluk),
+        panchayat: toNullableString(formData.panchayat),
+        village: toNullableString(formData.village),
+        adm_date: toNullableString(formData.adm_date),
+        reg_no: toNullableNumber(formData.reg_no),
+        first_name: toNullableString(formData.first_name),
+        last_name: toNullableString(formData.last_name),
+        gender: toNullableString(formData.gender),
+        aadhar_no: toNullableNumber(formData.aadhar_no),
+        birth_place: toNullableString(formData.birth_place),
+        height: toNullableNumber(formData.height),
+        weight: toNullableNumber(formData.weight),
+        blood_group: toNullableString(formData.blood_group),
+        health: toNullableString(formData.health),
+        caste: toNullableString(formData.caste),
+        mother_tongue: toNullableString(formData.mother_tongue),
+        class_std: toNullableNumber(formData.class_std),
+        school_name: toNullableString(formData.school_name),
+        school_category: toNullableString(formData.school_category),
+        sats_no: toNullableNumber(formData.sats_no),
+        pen_no: toNullableNumber(formData.pen_no),
+        medium_of_study: toNullableString(formData.medium_of_study),
+        life_ambition: toNullableString(formData.life_ambition),
+        fav_subject: toNullableString(formData.fav_subject),
+        child_other_info: toNullableString(formData.child_other_info),
+        photo_link: photoUrl,
+      }
+
+    const { error } = await supabase.from('Child_Data').insert([payload])
+
+    if (error) throw error
+
+    setMessage({ type: 'success', text: 'Child data saved successfully.' })
+    setFormData(createEmptyForm())
+    setPhotoFile(null)
+    setPhotoInputKey(Date.now())
     } catch (error: unknown) {
       const fallback = error instanceof Error ? error.message : 'Unexpected error occurred.'
       setMessage({ type: 'error', text: `Unable to save the form: ${fallback}` })
@@ -167,7 +257,7 @@ export default function ChildForm() {
   return (
     <main className="flex-1">
       <header className="mb-8">
-        <div className="mb-6 flex flex-col items-center gap-4 text-center sm:flex-row sm:justify-left sm:text-left">
+        <div className="mb-6 flex flex-col items-center gap-4 text-center sm:flex-row sm:justify-start sm:text-left">
           <Image
             src="/DFI.png"
             alt="Debora Foundation India logo"
@@ -176,6 +266,7 @@ export default function ChildForm() {
             priority
             className="h-auto w-40 sm:w-44"
           />
+          <span className="text-xl font-semibold text-slate-900">Debora Foundation India</span>
         </div>
 
         <p className="text-sm font-semibold tracking-wide text-blue-600">Registration</p>
@@ -355,7 +446,26 @@ export default function ChildForm() {
           <div className="grid gap-4 md:grid-cols-2">
             <TextInput label="Life Ambition" name="life_ambition" value={formData.life_ambition} onChange={handleChange} />
             <TextInput label="Favorite Subject" name="fav_subject" value={formData.fav_subject} onChange={handleChange} />
-            <TextInput label="Photo Link" name="photo_link" value={formData.photo_link} onChange={handleChange} type="url" />
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="photoUpload">
+                Child Photo
+              </label>
+              <input
+                key={photoInputKey}
+                id="photoUpload"
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handlePhotoChange}
+                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition file:mr-3 file:rounded-md file:border-none file:bg-blue-600 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-blue-700 focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+              />
+              <p className="mt-1 text-xs text-slate-500">Use your camera or upload an existing image (max 5MB).</p>
+              {photoFile && (
+                <p className="mt-1 text-xs font-medium text-slate-600">
+                  Selected: {photoFile.name}
+                </p>
+              )}
+            </div>
           </div>
 
           <div className="mt-4">
