@@ -7,6 +7,7 @@ import {
   type ChangeEventHandler,
   type HTMLInputTypeAttribute,
 } from 'react'
+import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { supabase } from '../lib/supabase'
 
@@ -92,16 +93,56 @@ const genderOptions = ['Male', 'Female', 'Other']
 const bloodGroupOptions = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
 
 export default function ChildForm() {
+  const router = useRouter()
   const [eacOptions, setEacOptions] = useState<CentreOption[]>([])
   const [formData, setFormData] = useState<FormState>(() => createEmptyForm())
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<MessageState>(null)
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoInputKey, setPhotoInputKey] = useState(() => Date.now())
+  const [checkedAuth, setCheckedAuth] = useState(false)
+  const [authorized, setAuthorized] = useState(false)
 
   useEffect(() => {
+    let isMounted = true
+
+    const verifySession = async () => {
+      const { data } = await supabase.auth.getSession()
+      if (!isMounted) return
+
+      const hasSession = Boolean(data.session)
+      setAuthorized(hasSession)
+      setCheckedAuth(true)
+
+      if (!hasSession) {
+        router.replace('/sign-in')
+      }
+    }
+
+    verifySession()
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!isMounted) return
+
+      const hasSession = Boolean(session)
+      setAuthorized(hasSession)
+      if (!hasSession) {
+        router.replace('/sign-in')
+      }
+    })
+
+    return () => {
+      isMounted = false
+      subscription.unsubscribe()
+    }
+  }, [router])
+
+  useEffect(() => {
+    if (!authorized) return
     fetchEacData()
-  }, [])
+  }, [authorized])
 
   const fetchEacData = async () => {
     try {
@@ -178,24 +219,35 @@ export default function ChildForm() {
       }
 
       let photoUrl: string | null = formData.photo_link ? formData.photo_link : null
+      const registrationNumber = formData.reg_no.trim()
 
       if (photoFile) {
-        const extension = photoFile.name.split('.').pop() ?? 'jpg'
-        const uniqueId = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Date.now().toString(36)
-        const folder = (formData.reg_no || formData.eac_no || 'uploads').replace(/\s+/g, '-').toLowerCase()
-        const filePath = `${folder}/${uniqueId}.${extension}`
+        if (registrationNumber === '') {
+          throw new Error('Registration number is required to upload a photo.')
+        }
 
-        const { error: uploadError } = await supabase.storage.from('bucket').upload(filePath, photoFile, {
+        const extension = (photoFile.name.split('.').pop() || 'jpg').toLowerCase()
+        const sanitizedIdentifier = registrationNumber.replace(/[^a-zA-Z0-9_-]+/g, '-').toLowerCase()
+        const uniqueFallback =
+          typeof crypto !== 'undefined' && 'randomUUID' in crypto
+            ? crypto.randomUUID()
+            : Date.now().toString(36)
+        const safeIdentifier = sanitizedIdentifier || uniqueFallback
+        const filePath = `${safeIdentifier}.${extension}`
+
+        const { error: uploadError } = await supabase.storage.from('profiles').upload(filePath, photoFile, {
           cacheControl: '3600',
-          upsert: false,
+          upsert: true,
         })
 
         if (uploadError) {
           throw uploadError
         }
 
-        const { data: publicData } = supabase.storage.from('bucket').getPublicUrl(filePath)
-        photoUrl = publicData.publicUrl
+        const { data: publicData } = supabase.storage.from('profiles').getPublicUrl(filePath)
+        photoUrl =
+          publicData.publicUrl ??
+          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/profile/${filePath}`
       }
 
       const toNullableString = (value: string) => (value.trim() === '' ? null : value)
@@ -254,19 +306,46 @@ export default function ChildForm() {
     }
   }
 
+  if (!checkedAuth) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-100">
+        <p className="text-sm text-slate-500">Checking access…</p>
+      </main>
+    )
+  }
+
+  if (!authorized) {
+    return null
+  }
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    router.replace('/sign-in')
+  }
+
   return (
     <main className="flex-1">
       <header className="mb-8">
-        <div className="mb-6 flex flex-col items-center gap-4 text-center sm:flex-row sm:justify-start sm:text-left">
-          <Image
-            src="/DFI.png"
-            alt="Debora Foundation India logo"
-            width={180}
-            height={60}
-            priority
-            className="h-auto w-40 sm:w-44"
-          />
-          <span className="text-xl font-semibold text-slate-900">Debora Foundation India</span>
+        <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+          <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:justify-start sm:text-left">
+            <Image
+              src="/DFI.png"
+              alt="Debora Foundation India logo"
+              width={180}
+              height={60}
+              priority
+              className="h-auto w-40 sm:w-44"
+            />
+            <span className="text-xl font-semibold text-slate-900">Debora Foundation India</span>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-800"
+          >
+            Sign out
+          </button>
         </div>
 
         <p className="text-sm font-semibold tracking-wide text-blue-600">Registration</p>
