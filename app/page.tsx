@@ -1,45 +1,101 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import {
+  useState,
+  useEffect,
+  type ChangeEvent,
+  type ChangeEventHandler,
+  type HTMLInputTypeAttribute,
+} from 'react'
+import Image from 'next/image'
 import { supabase } from '../lib/supabase'
 
-export default function ChildForm() {
-  const [eacOptions, setEacOptions] = useState<any[]>([])
-  const [formData, setFormData] = useState({
-    eac_no: '',
-    village_name: '',
-    centre_id: '',
-    district: '',
-    taluk: '',
-    panchayat: '',
-    village: '',
-    adm_date: '',
-    reg_no: '',
-    first_name: '',
-    last_name: '',
-    gender: '',
-    aadhar_no: '',
-    birth_place: '',
-    height: '',
-    weight: '',
-    blood_group: '',
-    health: '',
-    caste: '',
-    mother_tongue: '',
-    class_std: '',
-    school_name: '',
-    school_category: '',
-    sats_no: '',
-    pen_no: '',
-    medium_of_study: '',
-    life_ambition: '',
-    fav_subject: '',
-    child_other_info: '',
-    photo_link: ''
-  })
+type CentreOption = {
+  eac_no: string | number
+  village_name?: string | null
+  centre_id?: string | null
+  district?: string | null
+  taluk?: string | null
+  panchayat?: string | null
+  village?: string | null
+}
 
+type FormState = {
+  eac_no: string
+  village_name: string
+  centre_id: string
+  district: string
+  taluk: string
+  panchayat: string
+  village: string
+  adm_date: string
+  reg_no: string
+  first_name: string
+  last_name: string
+  gender: string
+  aadhar_no: string
+  birth_place: string
+  height: string
+  weight: string
+  blood_group: string
+  health: string
+  caste: string
+  mother_tongue: string
+  class_std: string
+  school_name: string
+  school_category: string
+  sats_no: string
+  pen_no: string
+  medium_of_study: string
+  life_ambition: string
+  fav_subject: string
+  child_other_info: string
+  photo_link: string
+}
+
+type MessageState = { type: 'success' | 'error'; text: string } | null
+
+const createEmptyForm = (): FormState => ({
+  eac_no: '',
+  village_name: '',
+  centre_id: '',
+  district: '',
+  taluk: '',
+  panchayat: '',
+  village: '',
+  adm_date: '',
+  reg_no: '',
+  first_name: '',
+  last_name: '',
+  gender: '',
+  aadhar_no: '',
+  birth_place: '',
+  height: '',
+  weight: '',
+  blood_group: '',
+  health: '',
+  caste: '',
+  mother_tongue: '',
+  class_std: '',
+  school_name: '',
+  school_category: '',
+  sats_no: '',
+  pen_no: '',
+  medium_of_study: '',
+  life_ambition: '',
+  fav_subject: '',
+  child_other_info: '',
+  photo_link: ''
+})
+
+const genderOptions = ['Male', 'Female', 'Other']
+const bloodGroupOptions = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
+
+export default function ChildForm() {
+  const [eacOptions, setEacOptions] = useState<CentreOption[]>([])
+  const [formData, setFormData] = useState<FormState>(() => createEmptyForm())
   const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState('')
+  const [message, setMessage] = useState<MessageState>(null)
 
   useEffect(() => {
     fetchEacData()
@@ -47,469 +103,330 @@ export default function ChildForm() {
 
   const fetchEacData = async () => {
     try {
+      // Pull centre metadata once so dependent fields can auto-fill.
       const { data, error } = await supabase
         .from('centre_data')
         .select('*')
-      
+
       if (error) throw error
-      setEacOptions(data || [])
+      setEacOptions((data as CentreOption[]) ?? [])
     } catch (error) {
       console.error('Error fetching EAC data:', error)
+      setMessage({ type: 'error', text: 'Unable to load centre details. Please refresh.' })
     }
   }
 
-  const handleEacChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleEacChange = (e: ChangeEvent<HTMLSelectElement>) => {
     const selectedEac = e.target.value
-    const eacData = eacOptions.find(item => item.eac_no.toString() === selectedEac)
-    
-    if (eacData) {
-      setFormData({
-        ...formData,
-        eac_no: selectedEac,
-        village_name: eacData.village_name || '',
-        centre_id: eacData.centre_id || '',
-        district: eacData.district || '',
-        taluk: eacData.taluk || '',
-        panchayat: eacData.panchayat || '',
-        village: eacData.village || ''
-      })
-    } else {
-      setFormData({
-        ...formData,
-        eac_no: selectedEac
-      })
+    const eacData = eacOptions.find((item) => item.eac_no?.toString() === selectedEac)
+
+    if (!eacData) {
+      setFormData((prev) => ({ ...prev, eac_no: selectedEac }))
+      return
     }
+
+    setFormData((prev) => ({
+      ...prev,
+      eac_no: selectedEac,
+      village_name: eacData.village_name ?? '',
+      centre_id: eacData.centre_id ?? '',
+      district: eacData.district ?? '',
+      taluk: eacData.taluk ?? '',
+      panchayat: eacData.panchayat ?? '',
+      village: eacData.village ?? ''
+    }))
   }
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    setFormData({
-      ...formData,
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    setFormData((prev) => ({
+      ...prev,
       [e.target.name]: e.target.value
-    })
+    }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    setMessage('')
+    setMessage(null)
 
     try {
-      const { data, error } = await supabase
-        .from('Child_Data')
-        .insert([formData])
+      const { error } = await supabase.from('Child_Data').insert([formData])
 
       if (error) throw error
 
-      setMessage('Child data saved successfully!')
-      setFormData({
-        eac_no: '',
-        village_name: '',
-        centre_id: '',
-        district: '',
-        taluk: '',
-        panchayat: '',
-        village: '',
-        adm_date: '',
-        reg_no: '',
-        first_name: '',
-        last_name: '',
-        gender: '',
-        aadhar_no: '',
-        birth_place: '',
-        height: '',
-        weight: '',
-        blood_group: '',
-        health: '',
-        caste: '',
-        mother_tongue: '',
-        class_std: '',
-        school_name: '',
-        school_category: '',
-        sats_no: '',
-        pen_no: '',
-        medium_of_study: '',
-        life_ambition: '',
-        fav_subject: '',
-        child_other_info: '',
-        photo_link: ''
-      })
-    } catch (error: any) {
-      setMessage('Error: ' + error.message)
+      setMessage({ type: 'success', text: 'Child data saved successfully.' })
+      setFormData(createEmptyForm())
+    } catch (error: unknown) {
+      const fallback = error instanceof Error ? error.message : 'Unexpected error occurred.'
+      setMessage({ type: 'error', text: `Unable to save the form: ${fallback}` })
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Child Registration Form</h1>
-      
-      {message && (
-        <div className={`p-4 mb-4 rounded ${message.includes('Error') ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
-          {message}
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">EAC No *</label>
-            <select
-              name="eac_no"
-              value={formData.eac_no}
-              onChange={handleEacChange}
-              required
-              className="w-full p-2 border rounded"
-            >
-              <option value="">Select EAC No</option>
-              {eacOptions.map((eac) => (
-                <option key={eac.eac_no} value={eac.eac_no}>
-                  {eac.eac_no}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Village Name</label>
-            <input
-              type="text"
-              name="village_name"
-              value={formData.village_name}
-              readOnly
-              className="w-full p-2 border rounded bg-gray-100"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Centre ID</label>
-            <input
-              type="text"
-              name="centre_id"
-              value={formData.centre_id}
-              readOnly
-              className="w-full p-2 border rounded bg-gray-100"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">District</label>
-            <input
-              type="text"
-              name="district"
-              value={formData.district}
-              readOnly
-              className="w-full p-2 border rounded bg-gray-100"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Taluk</label>
-            <input
-              type="text"
-              name="taluk"
-              value={formData.taluk}
-              readOnly
-              className="w-full p-2 border rounded bg-gray-100"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Panchayat</label>
-            <input
-              type="text"
-              name="panchayat"
-              value={formData.panchayat}
-              readOnly
-              className="w-full p-2 border rounded bg-gray-100"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Village</label>
-            <input
-              type="text"
-              name="village"
-              value={formData.village}
-              readOnly
-              className="w-full p-2 border rounded bg-gray-100"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Admission Date</label>
-            <input
-              type="date"
-              name="adm_date"
-              value={formData.adm_date}
-              onChange={handleChange}
-              className="w-full p-2 border rounded"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Registration No</label>
-            <input
-              type="number"
-              name="reg_no"
-              value={formData.reg_no}
-              onChange={handleChange}
-              className="w-full p-2 border rounded"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">First Name</label>
-            <input
-              type="text"
-              name="first_name"
-              value={formData.first_name}
-              onChange={handleChange}
-              className="w-full p-2 border rounded"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Last Name</label>
-            <input
-              type="text"
-              name="last_name"
-              value={formData.last_name}
-              onChange={handleChange}
-              className="w-full p-2 border rounded"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Gender</label>
-            <select
-              name="gender"
-              value={formData.gender}
-              onChange={handleChange}
-              className="w-full p-2 border rounded"
-            >
-              <option value="">Select Gender</option>
-              <option value="Male">Male</option>
-              <option value="Female">Female</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Aadhar No</label>
-            <input
-              type="number"
-              name="aadhar_no"
-              value={formData.aadhar_no}
-              onChange={handleChange}
-              className="w-full p-2 border rounded"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Birth Place</label>
-            <input
-              type="text"
-              name="birth_place"
-              value={formData.birth_place}
-              onChange={handleChange}
-              className="w-full p-2 border rounded"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Height (cm)</label>
-            <input
-              type="number"
-              name="height"
-              value={formData.height}
-              onChange={handleChange}
-              className="w-full p-2 border rounded"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Weight (kg)</label>
-            <input
-              type="number"
-              name="weight"
-              value={formData.weight}
-              onChange={handleChange}
-              className="w-full p-2 border rounded"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Blood Group</label>
-            <select
-              name="blood_group"
-              value={formData.blood_group}
-              onChange={handleChange}
-              className="w-full p-2 border rounded"
-            >
-              <option value="">Select Blood Group</option>
-              <option value="A+">A+</option>
-              <option value="A-">A-</option>
-              <option value="B+">B+</option>
-              <option value="B-">B-</option>
-              <option value="AB+">AB+</option>
-              <option value="AB-">AB-</option>
-              <option value="O+">O+</option>
-              <option value="O-">O-</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Health Status</label>
-            <input
-              type="text"
-              name="health"
-              value={formData.health}
-              onChange={handleChange}
-              className="w-full p-2 border rounded"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Caste</label>
-            <input
-              type="text"
-              name="caste"
-              value={formData.caste}
-              onChange={handleChange}
-              className="w-full p-2 border rounded"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Mother Tongue</label>
-            <input
-              type="text"
-              name="mother_tongue"
-              value={formData.mother_tongue}
-              onChange={handleChange}
-              className="w-full p-2 border rounded"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Class/Standard</label>
-            <input
-              type="number"
-              name="class_std"
-              value={formData.class_std}
-              onChange={handleChange}
-              className="w-full p-2 border rounded"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">School Name</label>
-            <input
-              type="text"
-              name="school_name"
-              value={formData.school_name}
-              onChange={handleChange}
-              className="w-full p-2 border rounded"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">School Category</label>
-            <input
-              type="text"
-              name="school_category"
-              value={formData.school_category}
-              onChange={handleChange}
-              className="w-full p-2 border rounded"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">SATS No</label>
-            <input
-              type="number"
-              name="sats_no"
-              value={formData.sats_no}
-              onChange={handleChange}
-              className="w-full p-2 border rounded"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">PEN No</label>
-            <input
-              type="number"
-              name="pen_no"
-              value={formData.pen_no}
-              onChange={handleChange}
-              className="w-full p-2 border rounded"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Medium of Study</label>
-            <input
-              type="text"
-              name="medium_of_study"
-              value={formData.medium_of_study}
-              onChange={handleChange}
-              className="w-full p-2 border rounded"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Life Ambition</label>
-            <input
-              type="text"
-              name="life_ambition"
-              value={formData.life_ambition}
-              onChange={handleChange}
-              className="w-full p-2 border rounded"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Favorite Subject</label>
-            <input
-              type="text"
-              name="fav_subject"
-              value={formData.fav_subject}
-              onChange={handleChange}
-              className="w-full p-2 border rounded"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Photo Link</label>
-            <input
-              type="url"
-              name="photo_link"
-              value={formData.photo_link}
-              onChange={handleChange}
-              className="w-full p-2 border rounded"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">Other Information</label>
-          <textarea
-            name="child_other_info"
-            value={formData.child_other_info}
-            onChange={handleChange}
-            rows={3}
-            className="w-full p-2 border rounded"
+    <main className="flex-1">
+      <header className="mb-8">
+        <div className="mb-6 flex flex-col items-center gap-4 text-center sm:flex-row sm:justify-left sm:text-left">
+          <Image
+            src="/DFI.png"
+            alt="Debora Foundation India logo"
+            width={180}
+            height={60}
+            priority
+            className="h-auto w-40 sm:w-44"
           />
         </div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-blue-500 text-white p-3 rounded hover:bg-blue-600 disabled:opacity-50"
+        <p className="text-sm font-semibold tracking-wide text-blue-600">Registration</p>
+        <h1 className="mt-2 text-3xl font-bold text-slate-900">Child Onboarding Form</h1>
+        <p className="mt-2 max-w-2xl text-sm text-slate-600">
+          Fill in each section carefully. Centre details auto-fill once you pick an EAC number, so you can
+          focus on the child's personal and academic information.
+        </p>
+      </header>
+
+      {message && (
+        <div
+          className={`mb-6 rounded-lg border px-4 py-3 text-sm font-medium ${
+            message.type === 'success'
+              ? 'border-green-200 bg-green-50 text-green-700'
+              : 'border-red-200 bg-red-50 text-red-700'
+          }`}
         >
-          {loading ? 'Saving...' : 'Save Child Data'}
-        </button>
+          {message.text}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-8">
+        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">Centre Information</h2>
+              <p className="mt-1 text-sm text-slate-500">Select the EAC to auto-fill the location details.</p>
+            </div>
+            <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-600">
+              Step 1
+            </span>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700">EAC No *</label>
+              <select
+                name="eac_no"
+                value={formData.eac_no}
+                onChange={handleEacChange}
+                required
+                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+              >
+                <option value="">Select EAC No</option>
+                {eacOptions.map((eac) => (
+                  <option key={eac.eac_no} value={eac.eac_no}>
+                    {eac.eac_no}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700">Admission Date</label>
+              <input
+                type="date"
+                name="adm_date"
+                value={formData.adm_date}
+                onChange={handleChange}
+                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+              />
+            </div>
+
+            <ReadOnlyInput label="Village Name" value={formData.village_name} />
+            <ReadOnlyInput label="Centre ID" value={formData.centre_id} />
+            <ReadOnlyInput label="District" value={formData.district} />
+            <ReadOnlyInput label="Taluk" value={formData.taluk} />
+            <ReadOnlyInput label="Panchayat" value={formData.panchayat} />
+            <ReadOnlyInput label="Village" value={formData.village} />
+
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700">Registration No</label>
+              <input
+                type="number"
+                name="reg_no"
+                value={formData.reg_no}
+                onChange={handleChange}
+                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+              />
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">Child Profile</h2>
+              <p className="mt-1 text-sm text-slate-500">Capture core identity information for the child.</p>
+            </div>
+            <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-600">
+              Step 2
+            </span>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <TextInput label="First Name" name="first_name" value={formData.first_name} onChange={handleChange} />
+            <TextInput label="Last Name" name="last_name" value={formData.last_name} onChange={handleChange} />
+
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700">Gender</label>
+              <select
+                name="gender"
+                value={formData.gender}
+                onChange={handleChange}
+                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+              >
+                <option value="">Select Gender</option>
+                {genderOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <NumberInput label="Aadhar No" name="aadhar_no" value={formData.aadhar_no} onChange={handleChange} />
+            <TextInput label="Birth Place" name="birth_place" value={formData.birth_place} onChange={handleChange} />
+            <NumberInput label="Height (cm)" name="height" value={formData.height} onChange={handleChange} />
+            <NumberInput label="Weight (kg)" name="weight" value={formData.weight} onChange={handleChange} />
+
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700">Blood Group</label>
+              <select
+                name="blood_group"
+                value={formData.blood_group}
+                onChange={handleChange}
+                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+              >
+                <option value="">Select Blood Group</option>
+                {bloodGroupOptions.map((group) => (
+                  <option key={group} value={group}>
+                    {group}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <TextInput label="Health Status" name="health" value={formData.health} onChange={handleChange} />
+            <TextInput label="Caste" name="caste" value={formData.caste} onChange={handleChange} />
+            <TextInput label="Mother Tongue" name="mother_tongue" value={formData.mother_tongue} onChange={handleChange} />
+          </div>
+        </section>
+
+        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">Academic Details</h2>
+              <p className="mt-1 text-sm text-slate-500">Schooling, identification numbers, and learning context.</p>
+            </div>
+            <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-600">
+              Step 3
+            </span>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <NumberInput label="Class/Standard" name="class_std" value={formData.class_std} onChange={handleChange} />
+            <TextInput label="School Name" name="school_name" value={formData.school_name} onChange={handleChange} />
+            <TextInput label="School Category" name="school_category" value={formData.school_category} onChange={handleChange} />
+            <NumberInput label="SATS No" name="sats_no" value={formData.sats_no} onChange={handleChange} />
+            <NumberInput label="PEN No" name="pen_no" value={formData.pen_no} onChange={handleChange} />
+            <TextInput label="Medium of Study" name="medium_of_study" value={formData.medium_of_study} onChange={handleChange} />
+          </div>
+        </section>
+
+        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">Aspirations & Extras</h2>
+              <p className="mt-1 text-sm text-slate-500">Capture interests, ambitions, and supporting details.</p>
+            </div>
+            <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-600">
+              Step 4
+            </span>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <TextInput label="Life Ambition" name="life_ambition" value={formData.life_ambition} onChange={handleChange} />
+            <TextInput label="Favorite Subject" name="fav_subject" value={formData.fav_subject} onChange={handleChange} />
+            <TextInput label="Photo Link" name="photo_link" value={formData.photo_link} onChange={handleChange} type="url" />
+          </div>
+
+          <div className="mt-4">
+            <label className="mb-1 block text-sm font-medium text-slate-700">Other Information</label>
+            <textarea
+              name="child_other_info"
+              value={formData.child_other_info}
+              onChange={handleChange}
+              rows={4}
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+            />
+          </div>
+        </section>
+
+        <div className="flex justify-end pt-2">
+          <button
+            type="submit"
+            disabled={loading}
+            className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+          >
+            {loading ? 'Saving...' : 'Save Child Data'}
+          </button>
+        </div>
       </form>
+    </main>
+  )
+}
+
+type InputProps = {
+  label: string
+  name: string
+  value: string
+  onChange: ChangeEventHandler<HTMLInputElement>
+  type?: HTMLInputTypeAttribute
+}
+
+const baseInputClass =
+  'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100'
+
+function TextInput({ label, name, value, onChange, type = 'text' }: InputProps) {
+  return (
+    <div>
+      <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor={name}>
+        {label}
+      </label>
+      <input
+        id={name}
+        type={type}
+        name={name}
+        value={value}
+        onChange={onChange}
+        className={baseInputClass}
+      />
+    </div>
+  )
+}
+
+function NumberInput(props: InputProps) {
+  return <TextInput {...props} type="number" />
+}
+
+function ReadOnlyInput({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <label className="mb-1 block text-sm font-medium text-slate-700">{label}</label>
+      <input
+        type="text"
+        value={value}
+        readOnly
+        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600"
+      />
     </div>
   )
 }
