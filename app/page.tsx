@@ -290,14 +290,14 @@ export default function ChildForm() {
         photo_link: photoUrl,
       }
 
-    const { error } = await supabase.from('Child_Data').insert([payload])
+      const { error } = await supabase.from('Child_Data').insert([payload])
 
-    if (error) throw error
+      if (error) throw error
 
-    setMessage({ type: 'success', text: 'Child data saved successfully.' })
-    setFormData(createEmptyForm())
-    setPhotoFile(null)
-    setPhotoInputKey(Date.now())
+      setMessage({ type: 'success', text: 'Child data saved successfully.' })
+      setFormData(createEmptyForm())
+      setPhotoFile(null)
+      setPhotoInputKey(Date.now())
     } catch (error: unknown) {
       const fallback = error instanceof Error ? error.message : 'Unexpected error occurred.'
       setMessage({ type: 'error', text: `Unable to save the form: ${fallback}` })
@@ -358,11 +358,10 @@ export default function ChildForm() {
 
       {message && (
         <div
-          className={`mb-6 rounded-lg border px-4 py-3 text-sm font-medium ${
-            message.type === 'success'
-              ? 'border-green-200 bg-green-50 text-green-700'
-              : 'border-red-200 bg-red-50 text-red-700'
-          }`}
+          className={`mb-6 rounded-lg border px-4 py-3 text-sm font-medium ${message.type === 'success'
+            ? 'border-green-200 bg-green-50 text-green-700'
+            : 'border-red-200 bg-red-50 text-red-700'
+            }`}
         >
           {message.text}
         </div>
