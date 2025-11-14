@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { supabase } from '../lib/supabase'
+import { supabase } from '../../lib/supabase'
 
 type EacDetail = {
     eac_no: string | number

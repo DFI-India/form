@@ -20,7 +20,7 @@ export default function SignInPage() {
     const checkSession = async () => {
       const { data } = await supabase.auth.getSession()
       if (data.session) {
-        router.replace('/')
+        router.replace('/EAC_details')
       }
     }
 
@@ -55,7 +55,7 @@ export default function SignInPage() {
     }
 
     setLoading(false)
-    router.replace('/')
+    router.replace('/EAC_details')
   }
 
   return (
