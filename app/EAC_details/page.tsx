@@ -36,8 +36,8 @@ export default function EAC_Details() {
     // Search
     const [searchQuery, setSearchQuery] = useState('')
 
-    // Add Entry Form
-    const [newEntry, setNewEntry] = useState<EacDetail>({
+    // Add / Edit Entry Form
+    const emptyEntry: EacDetail = {
         eac_no: '',
         centre_id: '',
         village_name: '',
@@ -45,7 +45,10 @@ export default function EAC_Details() {
         taluk: '',
         panchayat: '',
         village: ''
-    })
+    }
+    const [newEntry, setNewEntry] = useState<EacDetail>(emptyEntry)
+    const [editing, setEditing] = useState(false)
+    const [originalEac, setOriginalEac] = useState<string | number | null>(null)
 
     useEffect(() => {
         let isMounted = true
@@ -86,7 +89,7 @@ export default function EAC_Details() {
     const fetchEacDetails = async () => {
         try {
             setLoading(true)
-            const { data, error } = await supabase.from('centre_data').select('*')
+            const { data, error } = await supabase.from('centre_data').select('*').order('eac_no', { ascending: true })
             if (error) throw error
             setEacData(data as EacDetail[])
             setMessage(null)
@@ -118,21 +121,48 @@ export default function EAC_Details() {
             const { error } = await supabase.from('centre_data').insert([newEntry])
             if (error) throw error
 
-            setNewEntry({
-                eac_no: '',
-                centre_id: '',
-                village_name: '',
-                district: '',
-                taluk: '',
-                panchayat: '',
-                village: ''
-            })
-
+            setNewEntry(emptyEntry)
             fetchEacDetails()
+            setMessage('Entry added.')
         } catch (error) {
             console.error(error)
             setMessage('Could not add entry.')
         }
+    }
+
+    const handleUpdateRecord = async () => {
+        if (originalEac === null) return
+        try {
+            // Use originalEac to locate the row even if eac_no was changed
+            const { error } = await supabase
+                .from('centre_data')
+                .update(newEntry)
+                .eq('eac_no', originalEac)
+            if (error) throw error
+
+            setMessage('Entry updated.')
+            setEditing(false)
+            setOriginalEac(null)
+            setNewEntry(emptyEntry)
+            fetchEacDetails()
+        } catch (error) {
+            console.error(error)
+            setMessage('Could not update entry.')
+        }
+    }
+
+    const handleCancelEdit = () => {
+        setEditing(false)
+        setOriginalEac(null)
+        setNewEntry(emptyEntry)
+        setMessage(null)
+    }
+
+    const handleRowClick = (item: EacDetail) => {
+        setNewEntry(item)
+        setEditing(true)
+        setOriginalEac(item.eac_no ?? null)
+        setMessage(null)
     }
 
     if (!checkedAuth) {
@@ -192,57 +222,8 @@ export default function EAC_Details() {
                     className="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm focus:border-blue-500 focus:outline-none"
                 />
             </section>
-
-            {/* Add New Entry Form */}
-            <section className="mb-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h2 className="mb-4 text-lg font-semibold text-slate-800">
-                    Add New EAC Entry
-                </h2>
-
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {(
-                        [
-                            'eac_no',
-                            'centre_id',
-                            'village_name',
-                            'district',
-                            'taluk',
-                            'panchayat',
-                            'village'
-                        ] as (keyof EacDetail)[]
-                    ).map((field) => (
-                        <div key={field} className="flex flex-col">
-                            <label className="mb-1 text-sm font-medium text-slate-700">
-                                {field.replace('_', ' ').toUpperCase()}
-                            </label>
-                            <input
-                                type="text"
-                                value={newEntry[field] ?? ''}
-                                onChange={(e) =>
-                                    setNewEntry({ ...newEntry, [field]: e.target.value })
-                                }
-                                className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-                            />
-                        </div>
-                    ))}
-                </div>
-
-                <button
-                    onClick={handleAddRecord}
-                    className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-                >
-                    Add Entry
-                </button>
-            </section>
-
-            {/* Table Section */}
+            {/* Table Section (moved after form so user sees entry boxes when row clicked) */}
             <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                {message && (
-                    <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                        {message}
-                    </div>
-                )}
-
                 {loading ? (
                     <p className="text-sm text-slate-500">Loading…</p>
                 ) : filteredData.length === 0 ? (
@@ -264,17 +245,25 @@ export default function EAC_Details() {
                             <tbody>
                                 {filteredData
                                     .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                                    .map((item, index) => (
-                                        <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
-                                            <td className="border px-3 py-2">{item.eac_no}</td>
-                                            <td className="border px-3 py-2">{item.centre_id ?? '-'}</td>
-                                            <td className="border px-3 py-2">{item.village_name ?? '-'}</td>
-                                            <td className="border px-3 py-2">{item.district ?? '-'}</td>
-                                            <td className="border px-3 py-2">{item.taluk ?? '-'}</td>
-                                            <td className="border px-3 py-2">{item.panchayat ?? '-'}</td>
-                                            <td className="border px-3 py-2">{item.village ?? '-'}</td>
-                                        </tr>
-                                    ))}
+                                    .map((item, idx) => {
+                                        const key = item.eac_no?.toString() ?? `row-${idx}`
+                                        const isSelected = originalEac !== null && item.eac_no?.toString() === originalEac.toString()
+                                        return (
+                                            <tr
+                                                key={key}
+                                                onClick={() => handleRowClick(item)}
+                                                className={`cursor-pointer ${isSelected ? 'bg-blue-50' : (idx % 2 === 0 ? 'bg-white' : 'bg-slate-50')}`}
+                                            >
+                                                <td className="border px-3 py-2">{item.eac_no}</td>
+                                                <td className="border px-3 py-2">{item.centre_id ?? '-'}</td>
+                                                <td className="border px-3 py-2">{item.village_name ?? '-'}</td>
+                                                <td className="border px-3 py-2">{item.district ?? '-'}</td>
+                                                <td className="border px-3 py-2">{item.taluk ?? '-'}</td>
+                                                <td className="border px-3 py-2">{item.panchayat ?? '-'}</td>
+                                                <td className="border px-3 py-2">{item.village ?? '-'}</td>
+                                            </tr>
+                                        )
+                                    })}
                             </tbody>
                         </table>
 
@@ -290,6 +279,77 @@ export default function EAC_Details() {
                     </div>
                 )}
             </section>
+            {/* Add New Entry Form */}
+            <section className="mb-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="mb-4 flex items-start justify-between">
+                    <h2 className="text-lg font-semibold text-slate-800">
+                        {editing ? 'Edit EAC Entry' : 'Add New EAC Entry'}
+                    </h2>
+
+                    <div className="flex gap-2">
+                        {editing ? (
+                            <>
+                                <button
+                                    onClick={handleUpdateRecord}
+                                    className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700"
+                                >
+                                    Update Entry
+                                </button>
+                                <button
+                                    onClick={handleCancelEdit}
+                                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                                >
+                                    Cancel
+                                </button>
+                            </>
+                        ) : (
+                            <button
+                                onClick={handleAddRecord}
+                                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                            >
+                                Add Entry
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                {message && (
+                    <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                        {message}
+                    </div>
+                )}
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {(
+                        [
+                            'eac_no',
+                            'centre_id',
+                            'village_name',
+                            'district',
+                            'taluk',
+                            'panchayat',
+                            'village'
+                        ] as (keyof EacDetail)[]
+                    ).map((field) => (
+                        <div key={field} className="flex flex-col">
+                            <label className="mb-1 text-sm font-medium text-slate-700">
+                                {field.replace('_', ' ').toUpperCase()}
+                            </label>
+                            <input
+                                type="text"
+                                value={newEntry[field] ?? ''}
+                                onChange={(e) =>
+                                    setNewEntry(prev => ({ ...(prev as any), [field]: e.target.value }))
+                                }
+                                className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                            />
+                        </div>
+                    ))}
+                </div>
+            </section>
+
+
+
         </main>
     )
 }
