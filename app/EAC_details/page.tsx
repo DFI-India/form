@@ -240,6 +240,7 @@ export default function EAC_Details() {
                                     <th className="border px-3 py-2 text-left">Taluk</th>
                                     <th className="border px-3 py-2 text-left">Panchayat</th>
                                     <th className="border px-3 py-2 text-left">Village</th>
+                                    <th className="border px-3 py-2 text-left">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -261,6 +262,17 @@ export default function EAC_Details() {
                                                 <td className="border px-3 py-2">{item.taluk ?? '-'}</td>
                                                 <td className="border px-3 py-2">{item.panchayat ?? '-'}</td>
                                                 <td className="border px-3 py-2">{item.village ?? '-'}</td>
+                                                <td className="border px-3 py-2">
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            router.push(`/child-details/${item.eac_no}`)
+                                                        }}
+                                                        className="text-sm px-3 py-1 rounded border hover:bg-gray-100"
+                                                    >
+                                                        Manage Children
+                                                    </button>
+                                                </td>
                                             </tr>
                                         )
                                     })}
@@ -276,8 +288,10 @@ export default function EAC_Details() {
                             onRowsPerPageChange={handleChangeRowsPerPage}
                             rowsPerPageOptions={[5, 10, 25]}
                         />
+
                     </div>
                 )}
+
             </section>
             {/* Add New Entry Form */}
             <section className="mb-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
