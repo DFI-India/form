@@ -122,12 +122,6 @@ export default function ChildDetailsPage({ params }: { params: { eac_no: string 
                         <table className="min-w-[1400px] w-full table-auto text-sm text-slate-700">
                             <thead className="bg-slate-50 text-slate-600 sticky top-0">
                                 <tr>
-                                    <th className="border px-3 py-2 text-left">Village Name</th>
-                                    <th className="border px-3 py-2 text-left">Centre ID</th>
-                                    <th className="border px-3 py-2 text-left">District</th>
-                                    <th className="border px-3 py-2 text-left">Taluk</th>
-                                    <th className="border px-3 py-2 text-left">Panchayat</th>
-                                    <th className="border px-3 py-2 text-left">Village</th>
                                     <th className="border px-3 py-2 text-left">Admission Date</th>
                                     <th className="border px-3 py-2 text-left">Registration No</th>
                                     <th className="border px-3 py-2 text-left">First Name</th>
@@ -159,12 +153,6 @@ export default function ChildDetailsPage({ params }: { params: { eac_no: string 
                                         key={c.reg_no ?? i}
                                         className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50'}
                                     >
-                                        <td className="border px-3 py-2">{c.village_name ?? '-'}</td>
-                                        <td className="border px-3 py-2">{c.centre_id ?? '-'}</td>
-                                        <td className="border px-3 py-2">{c.district ?? '-'}</td>
-                                        <td className="border px-3 py-2">{c.taluk ?? '-'}</td>
-                                        <td className="border px-3 py-2">{c.panchayat ?? '-'}</td>
-                                        <td className="border px-3 py-2">{c.village ?? '-'}</td>
                                         <td className="border px-3 py-2">{c.adm_date ?? '-'}</td>
                                         <td className="border px-3 py-2">{c.reg_no ?? '-'}</td>
                                         <td className="border px-3 py-2">{c.first_name ?? '-'}</td>
@@ -200,6 +188,7 @@ export default function ChildDetailsPage({ params }: { params: { eac_no: string 
                                 ))}
                             </tbody>
                         </table>
+
                     </div>
                 )}
             </section>
