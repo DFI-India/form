@@ -57,6 +57,10 @@ export default function EAC_Details() {
             const { data } = await supabase.auth.getSession()
             if (!isMounted) return
 
+            // Debugging: print session response and UID for auth.uid()
+            console.log('verifySession response:', data)
+            console.log('verifySession auth.uid():', data.session?.user?.id)
+
             const hasSession = Boolean(data.session)
             setAuthorized(hasSession)
             setCheckedAuth(true)
@@ -70,6 +74,12 @@ export default function EAC_Details() {
             data: { subscription }
         } = supabase.auth.onAuthStateChange((_event, session) => {
             if (!isMounted) return
+
+            // Debugging: show auth state change and UID (if any)
+            console.log('onAuthStateChange event:', _event)
+            console.log('onAuthStateChange session:', session)
+            console.log('onAuthStateChange auth.uid():', session?.user?.id)
+
             const hasSession = Boolean(session)
             setAuthorized(hasSession)
             if (!hasSession) router.replace('/sign-in')
