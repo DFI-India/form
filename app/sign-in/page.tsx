@@ -5,10 +5,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 
-const USERNAME_EMAIL_MAP: Record<string, string> = {
-  volunteer1: process.env.NEXT_PUBLIC_VOLUNTEER_EMAIL || 'volunteer1@example.com',
-}
-
 export default function SignInPage() {
   const router = useRouter()
   const [username, setUsername] = useState('')
@@ -34,28 +30,41 @@ export default function SignInPage() {
 
     setError('')
     setLoading(true)
+    try {
+      const res = await fetch('/api/auth/signin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: normalizedUsername, password }),
+      })
 
-    const email = USERNAME_EMAIL_MAP[normalizedUsername]
+      const json = await res.json()
+      console.log("SIGNIN API RESPONSE:", json)
+      if (!res.ok) {
+        setError(json.error || 'Sign in failed')
+        setLoading(false)
+        return
+      }
 
-    if (!email) {
-      setError('Unknown username.')
+      // If profile includes an email, sign in with Supabase to create a session
+      if (json.email) {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: json.email,
+          password,
+        })
+
+        if (signInError) {
+          setError(signInError.message)
+          setLoading(false)
+          return
+        }
+      }
+
       setLoading(false)
-      return
-    }
-
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
-
-    if (signInError) {
-      setError(signInError.message)
+      router.replace('/EAC_details')
+    } catch (err: any) {
+      setError(err?.message || 'Unexpected error')
       setLoading(false)
-      return
     }
-
-    setLoading(false)
-    router.replace('/EAC_details')
   }
 
   return (
@@ -116,9 +125,7 @@ export default function SignInPage() {
           </button>
         </form>
         <p className="mt-6 text-center text-xs text-slate-500">
-          Create the volunteer account in Supabase Auth using the mapped email (default{' '}
-          <code className="rounded bg-slate-100 px-1">volunteer1@example.com</code>). Update{' '}
-          <code className="rounded bg-slate-100 px-1">NEXT_PUBLIC_VOLUNTEER_EMAIL</code> if you use a different email.
+          Credentials are validated against the `profiles` table in Supabase.
         </p>
       </div>
     </main>
