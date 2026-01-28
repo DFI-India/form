@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
@@ -7,50 +6,92 @@ import { supabase } from '../../lib/supabase'
 
 export default function SignInPage() {
   const router = useRouter()
+
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  const normalizedUsername = useMemo(
+    () => username.trim().toLowerCase(),
+    [username]
+  )
+
+  // 🔁 Redirect user based on role
+  const redirectByRole = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) return
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile) return
+
+    switch (profile.role) {
+      case 'field_volunteer':
+        router.replace('/field-volunteer/child-data-entry')
+        break
+
+      case 'admin':
+        router.replace('/EAC_details')
+        break
+
+      default:
+        router.replace('/unauthorized')
+    }
+  }
+
+  // ✅ Handle existing session
   useEffect(() => {
     const checkSession = async () => {
       const { data } = await supabase.auth.getSession()
       if (data.session) {
-        router.replace('/EAC_details')
+        await redirectByRole()
       }
     }
 
     checkSession()
-  }, [router])
+  }, [])
 
-  const normalizedUsername = useMemo(() => username.trim().toLowerCase(), [username])
-
+  // 🔐 Handle login
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
 
     setError('')
     setLoading(true)
+
     try {
       const res = await fetch('/api/auth/signin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: normalizedUsername, password }),
+        body: JSON.stringify({
+          username: normalizedUsername,
+          password,
+        }),
       })
 
       const json = await res.json()
-      console.log("SIGNIN API RESPONSE:", json)
+      console.log('SIGNIN API RESPONSE:', json)
+
       if (!res.ok) {
         setError(json.error || 'Sign in failed')
         setLoading(false)
         return
       }
 
-      // If profile includes an email, sign in with Supabase to create a session
+      // Create Supabase session
       if (json.email) {
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email: json.email,
-          password,
-        })
+        const { error: signInError } =
+          await supabase.auth.signInWithPassword({
+            email: json.email,
+            password,
+          })
 
         if (signInError) {
           setError(signInError.message)
@@ -60,7 +101,7 @@ export default function SignInPage() {
       }
 
       setLoading(false)
-      router.replace('/EAC_details')
+      await redirectByRole()
     } catch (err: any) {
       setError(err?.message || 'Unexpected error')
       setLoading(false)
@@ -71,50 +112,60 @@ export default function SignInPage() {
     <main className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
       <div className="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
         <div className="mb-6 text-center">
-          <h1 className="text-2xl font-semibold text-slate-900">Admin Sign In</h1>
+          <h1 className="text-2xl font-semibold text-slate-900">
+            Admin Sign In
+          </h1>
           <p className="mt-2 text-sm text-slate-600">
-            Enter the admin credentials to manage child registrations.
+            Enter credentials to continue.
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="username">
+            <label
+              htmlFor="username"
+              className="mb-1 block text-sm font-medium text-slate-700"
+            >
               Username
             </label>
             <input
               id="username"
               type="text"
               value={username}
-              onChange={(event) => {
-                setUsername(event.target.value)
+              onChange={(e) => {
+                setUsername(e.target.value)
                 if (error) setError('')
               }}
               autoComplete="username"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
               required
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="password">
+            <label
+              htmlFor="password"
+              className="mb-1 block text-sm font-medium text-slate-700"
+            >
               Password
             </label>
             <input
               id="password"
               type="password"
               value={password}
-              onChange={(event) => {
-                setPassword(event.target.value)
+              onChange={(e) => {
+                setPassword(e.target.value)
                 if (error) setError('')
               }}
               autoComplete="current-password"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
               required
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
             />
           </div>
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && (
+            <p className="text-sm text-red-600">{error}</p>
+          )}
 
           <button
             type="submit"
@@ -124,8 +175,9 @@ export default function SignInPage() {
             {loading ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
+
         <p className="mt-6 text-center text-xs text-slate-500">
-          Credentials are validated against the `profiles` table in Supabase.
+          Credentials are validated against the <code>profiles</code> table.
         </p>
       </div>
     </main>
