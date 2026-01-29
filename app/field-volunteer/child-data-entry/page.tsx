@@ -174,6 +174,8 @@ type FormState = {
   photo_link: string
 }
 
+type HistoryRow = FormState & { record_id?: number }
+
 type ChildFamilyState = {
   village_name: string
   eac_no: string
@@ -409,6 +411,11 @@ export default function ChildForm() {
   const [editFormData, setEditFormData] = useState<any>(null)
   const [editLoading, setEditLoading] = useState(false)
 
+  // Personal history state
+  const [historyData, setHistoryData] = useState<HistoryRow[]>([])
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const [historyMessage, setHistoryMessage] = useState<MessageState>(null)
+
   const [checkedAuth, setCheckedAuth] = useState(false)
   const [authorized, setAuthorized] = useState(false)
 
@@ -518,6 +525,57 @@ export default function ChildForm() {
       fetchRejectedData(activeRejectedSubTab)
     }
   }, [activeTab, activeRejectedSubTab, authorized])
+
+  const fetchPersonalHistory = async () => {
+    setHistoryLoading(true)
+    setHistoryMessage(null)
+
+    try {
+      const { data: userData } = await supabase.auth.getUser()
+      const userId = userData.user?.id
+      if (!userId) throw new Error('No user session found.')
+
+      const { data: approvals, error: approvalsError } = await supabase
+        .from('child_approvals')
+        .select('entity_id')
+        .eq('submitted_by', userId)
+        .eq('entity_type', 'Child_Data')
+
+      if (approvalsError) throw approvalsError
+
+      const ids: number[] = (approvals ?? [])
+        .map((r: any) => (typeof r.entity_id === 'string' ? Number(r.entity_id) : r.entity_id))
+        .filter(Boolean)
+
+      if (ids.length === 0) {
+        setHistoryData([])
+        return
+      }
+
+      const { data: rows, error: rowsError } = await supabase
+        .from('Child_Data')
+        .select('*')
+        .in('record_id', ids)
+
+      if (rowsError) throw rowsError
+
+      // Sort descending by record_id for most recent first
+      const sorted = (rows ?? []).slice().sort((a: any, b: any) => (b.record_id ?? 0) - (a.record_id ?? 0))
+      setHistoryData(sorted as HistoryRow[])
+    } catch (error) {
+      console.error('Error fetching personal history:', error)
+      const fallback = error instanceof Error ? error.message : 'Unexpected error occurred.'
+      setHistoryMessage({ type: 'error', text: `Unable to load history: ${fallback}` })
+    } finally {
+      setHistoryLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (activeTab === 'history' && authorized) {
+      fetchPersonalHistory()
+    }
+  }, [activeTab, authorized])
 
   const handleEacChange = (e: ChangeEvent<HTMLSelectElement>) => {
     const selectedEac = e.target.value
@@ -2051,26 +2109,57 @@ export default function ChildForm() {
             <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
               <h2 className="mb-4 text-lg font-semibold text-slate-900">Personal History</h2>
               <p className="text-sm text-slate-600 mb-4">Track all updates and changes to child records.</p>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-slate-200">
-                      <th className="px-4 py-2 text-left font-medium text-slate-700">Registration No</th>
-                      <th className="px-4 py-2 text-left font-medium text-slate-700">Field Modified</th>
-                      <th className="px-4 py-2 text-left font-medium text-slate-700">Previous Value</th>
-                      <th className="px-4 py-2 text-left font-medium text-slate-700">New Value</th>
-                      <th className="px-4 py-2 text-left font-medium text-slate-700">Modified By</th>
-                      <th className="px-4 py-2 text-left font-medium text-slate-700">Date</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr className="border-b border-slate-200">
-                      <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
-                        No history records found. Integration with audit logging system pending.
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+              <div className="max-h-[60vh] overflow-auto rounded border border-slate-100 bg-white">
+                {historyLoading ? (
+                  <div className="p-4 text-sm text-slate-600">Loading history…</div>
+                ) : historyMessage ? (
+                  <div className={`p-4 text-sm font-medium ${historyMessage.type === 'success' ? 'text-green-700' : 'text-red-700'}`}>
+                    {historyMessage.text}
+                  </div>
+                ) : historyData.length === 0 ? (
+                  <div className="p-4 text-sm text-slate-600">No history found.</div>
+                ) : (
+                  <div className="min-w-full">
+                    <table className="min-w-[900px] w-full table-auto">
+                      <thead>
+                        <tr className="bg-slate-50 text-left text-sm text-slate-700">
+                          <th className="px-4 py-3">Record</th>
+                          <th className="px-4 py-3">Adm Date</th>
+                          <th className="px-4 py-3">EAC No</th>
+                          <th className="px-4 py-3">Reg No</th>
+                          <th className="px-4 py-3">First Name</th>
+                          <th className="px-4 py-3">Last Name</th>
+                          <th className="px-4 py-3">Gender</th>
+                          <th className="px-4 py-3">Class</th>
+                          <th className="px-4 py-3">School</th>
+                          <th className="px-4 py-3">Photo</th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-sm text-slate-700">
+                        {historyData.map((row) => (
+                          <tr key={(row.record_id ?? '') + '-' + (row.reg_no ?? '')} className="border-t">
+                            <td className="px-4 py-3">{row.record_id}</td>
+                            <td className="px-4 py-3">{row.adm_date ?? ''}</td>
+                            <td className="px-4 py-3">{row.eac_no}</td>
+                            <td className="px-4 py-3">{row.reg_no}</td>
+                            <td className="px-4 py-3">{row.first_name}</td>
+                            <td className="px-4 py-3">{row.last_name}</td>
+                            <td className="px-4 py-3">{row.gender}</td>
+                            <td className="px-4 py-3">{row.class_std}</td>
+                            <td className="px-4 py-3">{row.school_name}</td>
+                            <td className="px-4 py-3">
+                              {row.photo_link ? (
+                                <a href={row.photo_link} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">View</a>
+                              ) : (
+                                <span className="text-slate-500">—</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </section>
           </div>
