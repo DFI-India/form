@@ -11,6 +11,7 @@ export default function SignInPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [checkingAuth, setCheckingAuth] = useState(true)
 
   const normalizedUsername = useMemo(
     () => username.trim().toLowerCase(),
@@ -37,6 +38,9 @@ export default function SignInPage() {
       case 'field_volunteer':
         router.replace('/field-volunteer/child-data-entry')
         break
+      case 'dfi_field_staff':
+        router.replace('/dfi-field-staff/approve-data')
+        break
 
       case 'admin':
         router.replace('/EAC_details')
@@ -51,13 +55,21 @@ export default function SignInPage() {
   useEffect(() => {
     const checkSession = async () => {
       const { data } = await supabase.auth.getSession()
+
       if (data.session) {
         await redirectByRole()
+        return
       }
+
+      // No session → allow sign-in page to render
+      setCheckingAuth(false)
     }
 
     checkSession()
   }, [])
+  if (checkingAuth) {
+    return null // or a spinner
+  }
 
   // 🔐 Handle login
   const handleSubmit = async (event: React.FormEvent) => {
