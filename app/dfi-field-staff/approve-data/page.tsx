@@ -18,6 +18,21 @@ type ApprovalRecord = Record<string, unknown> & {
 
 type MessageState = { type: 'success' | 'error'; text: string } | null
 
+// Columns we don't show in the table (used for both header and rows)
+const HIDDEN_COLUMNS = [
+    'approval_id',
+    'approval_status',
+    'rejection_reason',
+    'record_submitted_by',
+    'created_at',
+    'status',
+    'submitted_by',
+    'approved_by',
+    'approved_at',
+]
+
+type Toast = { id: string; type: 'success' | 'error'; text: string }
+
 export default function ApproveDataPage() {
     const router = useRouter()
     const [mainTab, setMainTab] = useState<MainTabType>('verify')
@@ -53,6 +68,18 @@ export default function ApproveDataPage() {
     })
 
     const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({})
+
+    // Toast notifications
+    const [toasts, setToasts] = useState<Toast[]>([])
+
+    const addToast = (t: Omit<Toast, 'id'>) => {
+        const id = String(Date.now())
+        setToasts((prev) => [...prev, { id, ...t }])
+        // Auto dismiss
+        setTimeout(() => setToasts((prev) => prev.filter((x) => x.id !== id)), 4000)
+    }
+
+    const removeToast = (id: string) => setToasts((prev) => prev.filter((x) => x.id !== id))
 
     // Auth Check
     useEffect(() => {
@@ -150,11 +177,15 @@ export default function ApproveDataPage() {
 
             if (error) throw error
 
-            setMessage({ type: 'success', text: 'Record approved successfully.' })
-            fetchVerifyData(verifySubTab)
+            // Show toast and remove from current visible list immediately
+            addToast({ type: 'success', text: 'Record approved successfully.' })
+            setVerifyData((prev) => ({
+                ...prev,
+                [verifySubTab]: prev[verifySubTab].filter((r) => r.approval_id !== recordId),
+            }))
         } catch (error: unknown) {
             const fallback = error instanceof Error ? error.message : 'Failed to approve'
-            setMessage({ type: 'error', text: `Unable to approve: ${fallback}` })
+            addToast({ type: 'error', text: `Unable to approve: ${fallback}` })
         } finally {
             setActionLoading((prev) => ({ ...prev, [recordId]: false }))
         }
@@ -182,11 +213,15 @@ export default function ApproveDataPage() {
 
             if (error) throw error
 
-            setMessage({ type: 'success', text: 'Record rejected successfully.' })
-            fetchVerifyData(verifySubTab)
+            // Show toast and remove from current visible list immediately
+            addToast({ type: 'success', text: 'Record rejected successfully.' })
+            setVerifyData((prev) => ({
+                ...prev,
+                [verifySubTab]: prev[verifySubTab].filter((r) => r.approval_id !== recordId),
+            }))
         } catch (error: unknown) {
             const fallback = error instanceof Error ? error.message : 'Failed to reject'
-            setMessage({ type: 'error', text: `Unable to reject: ${fallback}` })
+            addToast({ type: 'error', text: `Unable to reject: ${fallback}` })
         } finally {
             setActionLoading((prev) => ({ ...prev, [recordId]: false }))
         }
@@ -222,6 +257,12 @@ export default function ApproveDataPage() {
         { id: 'uniform', label: 'Child Uniform' },
         { id: 'leaving', label: 'Child Leaving' },
     ]
+
+    // Ensure headers and rows use the same visible keys so columns stay aligned
+    const currentRecords = verifyData[verifySubTab] || []
+    const visibleKeys: string[] = currentRecords.length > 0
+        ? Object.keys(currentRecords[0]).filter((key) => !HIDDEN_COLUMNS.includes(key))
+        : []
 
     return (
         <main className="flex-1">
@@ -331,14 +372,12 @@ export default function ApproveDataPage() {
                                     <thead className="sticky top-0 bg-slate-50 border-b border-slate-200">
                                         <tr>
                                             <th className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap">Record ID</th>
-                                            {verifyData[verifySubTab].length > 0 && Object.keys(verifyData[verifySubTab][0])
-                                                .filter(key => !['approval_id'].includes(key))
-                                                .map((key) => (
-                                                    <th key={key} className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap">
-                                                        {key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}
-                                                    </th>
-                                                ))}
-                                            <th className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap">Actions</th>
+                                            {visibleKeys.length > 0 && visibleKeys.map((key) => (
+                                                <th key={key} className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap">
+                                                    {key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}
+                                                </th>
+                                            ))} 
+                                            <th className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap sticky right-0 top-0 bg-white z-20 w-[170px]">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -346,11 +385,12 @@ export default function ApproveDataPage() {
                                             <VerifyDataRow
                                                 key={record.approval_id}
                                                 record={record}
+                                                displayKeys={visibleKeys}
                                                 isLoading={actionLoading[record.approval_id] || false}
                                                 onApprove={() => handleApprove(record.approval_id)}
                                                 onReject={(reason) => handleReject(record.approval_id, reason)}
                                             />
-                                        ))}
+                                        ))} 
                                     </tbody>
                                 </table>
                             </div>
@@ -416,6 +456,20 @@ export default function ApproveDataPage() {
                     </p>
                 </section>
             )}
+
+            {/* Toasts */}
+            {toasts.length > 0 && (
+                <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3">
+                    {toasts.map((t) => (
+                        <div key={t.id} className={`rounded-lg px-4 py-2 text-sm font-medium shadow-lg ${t.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                            <div className="flex items-start gap-3">
+                                <div className="flex-1">{t.text}</div>
+                                <button onClick={() => removeToast(t.id)} className="text-sm font-semibold text-slate-500 hover:text-slate-700">✕</button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
         </main>
     )
 }
@@ -425,9 +479,10 @@ type VerifyDataRowProps = {
     isLoading: boolean
     onApprove: () => void
     onReject: (reason: string) => void
+    displayKeys: string[]
 }
 
-function VerifyDataRow({ record, isLoading, onApprove, onReject }: VerifyDataRowProps) {
+function VerifyDataRow({ record, isLoading, onApprove, onReject, displayKeys }: VerifyDataRowProps) {
     const [showRejectInput, setShowRejectInput] = useState(false)
     const [rejectReason, setRejectReason] = useState('')
     const [photoModal, setPhotoModal] = useState<{ isOpen: boolean; url: string }>({
@@ -437,24 +492,6 @@ function VerifyDataRow({ record, isLoading, onApprove, onReject }: VerifyDataRow
 
     // Extract record_id, defaulting to id if not present
     const displayId = (record.record_id as string) || (record.approval_id as string)
-
-    // Hidden columns to exclude from display
-    const hiddenColumns = [
-        'approval_id',
-        'approval_status',
-        'rejection_reason',
-        'record_submitted_by',
-        'created_at',
-        'status',
-        'submitted_by',
-        'approved_by',
-        'approved_at'
-    ]
-
-    // Get all keys except hidden columns for display
-    const displayKeys = Object.keys(record).filter(
-        key => !hiddenColumns.includes(key)
-    )
 
     // Format cell value for display
     const formatCellValue = (value: unknown): string => {
@@ -496,7 +533,7 @@ function VerifyDataRow({ record, isLoading, onApprove, onReject }: VerifyDataRow
                         </td>
                     )
                 })}
-                <td className="px-4 py-3 text-sm sticky right-0 bg-white">
+                <td className="px-4 py-3 text-sm sticky right-0 bg-white z-10 w-[170px]">
                     <div className="flex gap-2 flex-nowrap">
                         <button
                             onClick={onApprove}
