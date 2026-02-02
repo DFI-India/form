@@ -61,12 +61,12 @@ type RejectedFamilyRecord = {
   reg_no: string
   f_name: string
   f_occup: string
-  f_inc: string
+  f_inc: number | null
   f_aadhar: string
   f_mobile: string
   m_name: string
   m_occup: string
-  m_inc: string
+  m_inc: number | null
   m_aadhar: string
   m_mobile: string
   fmly_addr1: string
@@ -84,23 +84,23 @@ type RejectedSiblingRecord = {
   eac_no: string
   reg_no: string
   names_1: string
-  ages_1: string
+  ages_1: number | null
   genders_1: string
   class_occup_1: string
   names_2: string
-  ages_2: string
+  ages_2: number | null
   genders_2: string
   class_occup_2: string
   names_3: string
-  ages_3: string
+  ages_3: number | null
   genders_3: string
   class_occup_3: string
   names_4: string
-  ages_4: string
+  ages_4: number | null
   genders_4: string
   class_occup_4: string
   names_5: string
-  ages_5: string
+  ages_5: number | null
   genders_5: string
   class_occup_5: string
   sibling_remarks: string
@@ -119,7 +119,7 @@ type RejectedUniformRecord = {
   chudidharsize: string
   top_pantsize: string
   footwearsize: string
-  uniform_updated: string
+  uniform_updated: string | null
   rejection_reason?: string
   rejected_at?: string
 }
@@ -131,7 +131,7 @@ type RejectedLeavingRecord = {
   reg_no: string
   reason: string
   leav_class: string
-  leav_date: string
+  leav_date: string | null
   leav_addr1: string
   leav_addr2: string
   leav_addr3: string
@@ -482,27 +482,33 @@ export default function ChildForm() {
     try {
       let viewName = ''
       let setter: any = null
+      let entityType = ''
 
       switch (subTabType) {
         case 'child':
           viewName = 'childdata_rejected_for_volunteer'
           setter = setRejectedChildData
+          entityType = 'Child_Data'
           break
         case 'family':
           viewName = 'childfmly_rejected_for_volunteer'
           setter = setRejectedFamilyData
+          entityType = 'childfmly'
           break
         case 'sibling':
           viewName = 'childsibling_rejected_for_volunteer'
           setter = setRejectedSiblingData
+          entityType = 'childsibling'
           break
         case 'uniform':
           viewName = 'childuniform_rejected_for_volunteer'
           setter = setRejectedUniformData
+          entityType = 'childuniform'
           break
         case 'leaving':
           viewName = 'childleaving_rejected_for_volunteer'
           setter = setRejectedLeavingData
+          entityType = 'childleaving'
           break
       }
 
@@ -511,7 +517,34 @@ export default function ChildForm() {
         .select('*')
 
       if (error) throw error
-      setter((data ?? []) as any[])
+
+      // Fetch approval IDs for these records
+      const recordIds = (data ?? []).map((r: any) => r.record_id)
+      if (recordIds.length === 0) {
+        setter([])
+        return
+      }
+
+      const { data: approvals, error: approvalsError } = await supabase
+        .from('child_approvals')
+        .select('id, entity_id')
+        .eq('entity_type', entityType)
+        .in('entity_id', recordIds)
+
+      if (approvalsError) throw approvalsError
+
+      // Create a map of entity_id -> approval id
+      const approvalMap = new Map(
+        (approvals ?? []).map((a: any) => [a.entity_id, a.id])
+      )
+
+      // Add approval_id to each record
+      const enrichedData = (data ?? []).map((record: any) => ({
+        ...record,
+        approval_id: approvalMap.get(record.record_id)
+      }))
+
+      setter(enrichedData as any[])
     } catch (error) {
       console.error(`Error fetching rejected data for ${subTabType}:`, error)
       setRejectedMessage({ type: 'error', text: `Unable to load rejected ${subTabType} data.` })
@@ -754,9 +787,37 @@ export default function ChildForm() {
         throw new Error('Registration number is required.')
       }
 
+      const toNullableString = (value: string) => (value.trim() === '' ? null : value)
+      const toNullableNumber = (value: string) => {
+        if (value.trim() === '') return null
+        const parsed = Number(value)
+        return Number.isNaN(parsed) ? null : parsed
+      }
+
+      const payload = {
+        village_name: toNullableString(familyData.village_name),
+        eac_no: toNullableString(familyData.eac_no),
+        reg_no: toNullableString(familyData.reg_no),
+        f_name: toNullableString(familyData.f_name),
+        f_occup: toNullableString(familyData.f_occup),
+        f_inc: toNullableNumber(familyData.f_inc),
+        f_aadhar: toNullableString(familyData.f_aadhar),
+        f_mobile: toNullableString(familyData.f_mobile),
+        m_name: toNullableString(familyData.m_name),
+        m_occup: toNullableString(familyData.m_occup),
+        m_inc: toNullableNumber(familyData.m_inc),
+        m_aadhar: toNullableString(familyData.m_aadhar),
+        m_mobile: toNullableString(familyData.m_mobile),
+        fmly_addr1: toNullableString(familyData.fmly_addr1),
+        fmly_addr2: toNullableString(familyData.fmly_addr2),
+        fmly_addr3: toNullableString(familyData.fmly_addr3),
+        fmly_pincode: toNullableString(familyData.fmly_pincode),
+        fmly_remarks: toNullableString(familyData.fmly_remarks),
+      }
+
       const { data, error } = await supabase
         .from('childfmly')
-        .insert([familyData])
+        .insert([payload])
         .select()
         .single()
 
@@ -795,9 +856,43 @@ export default function ChildForm() {
         throw new Error('Registration number is required.')
       }
 
+      const toNullableString = (value: string) => (value.trim() === '' ? null : value)
+      const toNullableNumber = (value: string) => {
+        if (value.trim() === '') return null
+        const parsed = Number(value)
+        return Number.isNaN(parsed) ? null : parsed
+      }
+
+      const payload = {
+        village_name: toNullableString(siblingData.village_name),
+        eac_no: toNullableString(siblingData.eac_no),
+        reg_no: toNullableString(siblingData.reg_no),
+        names_1: toNullableString(siblingData.names_1),
+        ages_1: toNullableNumber(siblingData.ages_1),
+        genders_1: toNullableString(siblingData.genders_1),
+        class_occup_1: toNullableString(siblingData.class_occup_1),
+        names_2: toNullableString(siblingData.names_2),
+        ages_2: toNullableNumber(siblingData.ages_2),
+        genders_2: toNullableString(siblingData.genders_2),
+        class_occup_2: toNullableString(siblingData.class_occup_2),
+        names_3: toNullableString(siblingData.names_3),
+        ages_3: toNullableNumber(siblingData.ages_3),
+        genders_3: toNullableString(siblingData.genders_3),
+        class_occup_3: toNullableString(siblingData.class_occup_3),
+        names_4: toNullableString(siblingData.names_4),
+        ages_4: toNullableNumber(siblingData.ages_4),
+        genders_4: toNullableString(siblingData.genders_4),
+        class_occup_4: toNullableString(siblingData.class_occup_4),
+        names_5: toNullableString(siblingData.names_5),
+        ages_5: toNullableNumber(siblingData.ages_5),
+        genders_5: toNullableString(siblingData.genders_5),
+        class_occup_5: toNullableString(siblingData.class_occup_5),
+        sibling_remarks: toNullableString(siblingData.sibling_remarks),
+      }
+
       const { data, error } = await supabase
         .from('childsibling')
-        .insert([siblingData])
+        .insert([payload])
         .select()
         .single()
 
@@ -836,9 +931,24 @@ export default function ChildForm() {
         throw new Error('Registration number is required.')
       }
 
+      const toNullableString = (value: string) => (value.trim() === '' ? null : value)
+
+      const payload = {
+        village_name: toNullableString(uniformData.village_name),
+        eac_no: toNullableString(uniformData.eac_no),
+        reg_no: toNullableString(uniformData.reg_no),
+        shirtsize: toNullableString(uniformData.shirtsize),
+        knickersize: toNullableString(uniformData.knickersize),
+        pant_skirtsize: toNullableString(uniformData.pant_skirtsize),
+        chudidharsize: toNullableString(uniformData.chudidharsize),
+        top_pantsize: toNullableString(uniformData.top_pantsize),
+        footwearsize: toNullableString(uniformData.footwearsize),
+        uniform_updated: toNullableString(uniformData.uniform_updated),
+      }
+
       const { data, error } = await supabase
         .from('childuniform')
-        .insert([uniformData])
+        .insert([payload])
         .select()
         .single()
 
@@ -877,9 +987,24 @@ export default function ChildForm() {
         throw new Error('Registration number is required.')
       }
 
+      const toNullableString = (value: string) => (value.trim() === '' ? null : value)
+
+      const payload = {
+        eac_no: toNullableString(leavingData.eac_no),
+        reg_no: toNullableString(leavingData.reg_no),
+        reason: toNullableString(leavingData.reason),
+        leav_class: toNullableString(leavingData.leav_class),
+        leav_date: toNullableString(leavingData.leav_date),
+        leav_addr1: toNullableString(leavingData.leav_addr1),
+        leav_addr2: toNullableString(leavingData.leav_addr2),
+        leav_addr3: toNullableString(leavingData.leav_addr3),
+        leav_pincode: toNullableString(leavingData.leav_pincode),
+        leav_remarks: toNullableString(leavingData.leav_remarks),
+      }
+
       const { data, error } = await supabase
         .from('childleaving')
-        .insert([leavingData])
+        .insert([payload])
         .select()
         .single()
 
@@ -938,7 +1063,15 @@ export default function ChildForm() {
       }
 
       let tableName = ''
-      const { record_id, approval_id } = editingRecord
+      const { record_id, approval_id, id } = editingRecord
+      console.log("Record fields:", Object.keys(editingRecord))
+      console.log("Approval ID from record:", approval_id)
+      console.log("ID field:", id)
+
+      const approvalId = approval_id || id
+      if (!approvalId) {
+        throw new Error('Approval ID not found in record.')
+      }
 
       switch (editModalType) {
         case 'child':
@@ -958,12 +1091,134 @@ export default function ChildForm() {
           break
       }
 
+      // Helper functions for type conversion
+      const toNullableString = (value: any) => {
+        if (value === null || value === undefined) return null
+        const str = String(value).trim()
+        return str === '' ? null : str
+      }
+      const toNullableNumber = (value: any) => {
+        if (value === null || value === undefined || value === '') return null
+        const parsed = Number(value)
+        return Number.isNaN(parsed) ? null : parsed
+      }
+
       // Remove record_id and approval_id from update payload
-      const updatePayload = { ...editFormData }
+      let updatePayload: any = { ...editFormData }
       delete updatePayload.record_id
       delete updatePayload.approval_id
       delete updatePayload.rejection_reason
       delete updatePayload.rejected_at
+
+      // Convert types based on form type
+      if (editModalType === 'child') {
+        updatePayload = {
+          eac_no: toNullableNumber(updatePayload.eac_no),
+          village_name: toNullableString(updatePayload.village_name),
+          centre_id: toNullableString(updatePayload.centre_id),
+          district: toNullableString(updatePayload.district),
+          taluk: toNullableString(updatePayload.taluk),
+          panchayat: toNullableString(updatePayload.panchayat),
+          village: toNullableString(updatePayload.village),
+          adm_date: toNullableString(updatePayload.adm_date),
+          reg_no: toNullableNumber(updatePayload.reg_no),
+          first_name: toNullableString(updatePayload.first_name),
+          last_name: toNullableString(updatePayload.last_name),
+          gender: toNullableString(updatePayload.gender),
+          aadhar_no: toNullableNumber(updatePayload.aadhar_no),
+          birth_place: toNullableString(updatePayload.birth_place),
+          height: toNullableNumber(updatePayload.height),
+          weight: toNullableNumber(updatePayload.weight),
+          blood_group: toNullableString(updatePayload.blood_group),
+          health: toNullableString(updatePayload.health),
+          caste: toNullableString(updatePayload.caste),
+          mother_tongue: toNullableString(updatePayload.mother_tongue),
+          class_std: toNullableNumber(updatePayload.class_std),
+          school_name: toNullableString(updatePayload.school_name),
+          school_category: toNullableString(updatePayload.school_category),
+          sats_no: toNullableNumber(updatePayload.sats_no),
+          pen_no: toNullableNumber(updatePayload.pen_no),
+          medium_of_study: toNullableString(updatePayload.medium_of_study),
+          life_ambition: toNullableString(updatePayload.life_ambition),
+          fav_subject: toNullableString(updatePayload.fav_subject),
+          child_other_info: toNullableString(updatePayload.child_other_info),
+          photo_link: toNullableString(updatePayload.photo_link),
+        }
+      } else if (editModalType === 'family') {
+        updatePayload = {
+          village_name: toNullableString(updatePayload.village_name),
+          eac_no: toNullableString(updatePayload.eac_no),
+          reg_no: toNullableString(updatePayload.reg_no),
+          f_name: toNullableString(updatePayload.f_name),
+          f_occup: toNullableString(updatePayload.f_occup),
+          f_inc: toNullableNumber(updatePayload.f_inc),
+          f_aadhar: toNullableString(updatePayload.f_aadhar),
+          f_mobile: toNullableString(updatePayload.f_mobile),
+          m_name: toNullableString(updatePayload.m_name),
+          m_occup: toNullableString(updatePayload.m_occup),
+          m_inc: toNullableNumber(updatePayload.m_inc),
+          m_aadhar: toNullableString(updatePayload.m_aadhar),
+          m_mobile: toNullableString(updatePayload.m_mobile),
+          fmly_addr1: toNullableString(updatePayload.fmly_addr1),
+          fmly_addr2: toNullableString(updatePayload.fmly_addr2),
+          fmly_addr3: toNullableString(updatePayload.fmly_addr3),
+          fmly_pincode: toNullableString(updatePayload.fmly_pincode),
+          fmly_remarks: toNullableString(updatePayload.fmly_remarks),
+        }
+      } else if (editModalType === 'sibling') {
+        updatePayload = {
+          village_name: toNullableString(updatePayload.village_name),
+          eac_no: toNullableString(updatePayload.eac_no),
+          reg_no: toNullableString(updatePayload.reg_no),
+          names_1: toNullableString(updatePayload.names_1),
+          ages_1: toNullableNumber(updatePayload.ages_1),
+          genders_1: toNullableString(updatePayload.genders_1),
+          class_occup_1: toNullableString(updatePayload.class_occup_1),
+          names_2: toNullableString(updatePayload.names_2),
+          ages_2: toNullableNumber(updatePayload.ages_2),
+          genders_2: toNullableString(updatePayload.genders_2),
+          class_occup_2: toNullableString(updatePayload.class_occup_2),
+          names_3: toNullableString(updatePayload.names_3),
+          ages_3: toNullableNumber(updatePayload.ages_3),
+          genders_3: toNullableString(updatePayload.genders_3),
+          class_occup_3: toNullableString(updatePayload.class_occup_3),
+          names_4: toNullableString(updatePayload.names_4),
+          ages_4: toNullableNumber(updatePayload.ages_4),
+          genders_4: toNullableString(updatePayload.genders_4),
+          class_occup_4: toNullableString(updatePayload.class_occup_4),
+          names_5: toNullableString(updatePayload.names_5),
+          ages_5: toNullableNumber(updatePayload.ages_5),
+          genders_5: toNullableString(updatePayload.genders_5),
+          class_occup_5: toNullableString(updatePayload.class_occup_5),
+          sibling_remarks: toNullableString(updatePayload.sibling_remarks),
+        }
+      } else if (editModalType === 'uniform') {
+        updatePayload = {
+          village_name: toNullableString(updatePayload.village_name),
+          eac_no: toNullableString(updatePayload.eac_no),
+          reg_no: toNullableString(updatePayload.reg_no),
+          shirtsize: toNullableString(updatePayload.shirtsize),
+          knickersize: toNullableString(updatePayload.knickersize),
+          pant_skirtsize: toNullableString(updatePayload.pant_skirtsize),
+          chudidharsize: toNullableString(updatePayload.chudidharsize),
+          top_pantsize: toNullableString(updatePayload.top_pantsize),
+          footwearsize: toNullableString(updatePayload.footwearsize),
+          uniform_updated: toNullableString(updatePayload.uniform_updated),
+        }
+      } else if (editModalType === 'leaving') {
+        updatePayload = {
+          eac_no: toNullableString(updatePayload.eac_no),
+          reg_no: toNullableString(updatePayload.reg_no),
+          reason: toNullableString(updatePayload.reason),
+          leav_class: toNullableString(updatePayload.leav_class),
+          leav_date: toNullableString(updatePayload.leav_date),
+          leav_addr1: toNullableString(updatePayload.leav_addr1),
+          leav_addr2: toNullableString(updatePayload.leav_addr2),
+          leav_addr3: toNullableString(updatePayload.leav_addr3),
+          leav_pincode: toNullableString(updatePayload.leav_pincode),
+          leav_remarks: toNullableString(updatePayload.leav_remarks),
+        }
+      }
 
       // Update base table
       const { error: updateError } = await supabase
