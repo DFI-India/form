@@ -244,6 +244,8 @@ export default function ApproveDataPage() {
                 .from(tableName)
                 .select('*')
                 .eq('eac_no', userEacNo)
+                .eq('status', 'Approved')
+
 
             // Apply search filter if provided
             if (searchQuery.trim()) {

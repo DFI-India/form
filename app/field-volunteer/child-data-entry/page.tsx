@@ -416,6 +416,38 @@ export default function ChildForm() {
   const [historyLoading, setHistoryLoading] = useState(false)
   const [historyMessage, setHistoryMessage] = useState<MessageState>(null)
 
+  // Personal history subtabs state
+  type HistorySubTabType = 'child' | 'family' | 'sibling' | 'uniform' | 'leaving'
+  const [activeHistorySubTab, setActiveHistorySubTab] = useState<HistorySubTabType>('child')
+
+  // History data for each type
+  const [historyChildData, setHistoryChildData] = useState<any[]>([])
+  const [historyFamilyData, setHistoryFamilyData] = useState<any[]>([])
+  const [historySiblingData, setHistorySiblingData] = useState<any[]>([])
+  const [historyUniformData, setHistoryUniformData] = useState<any[]>([])
+  const [historyLeavingData, setHistoryLeavingData] = useState<any[]>([])
+
+  // Date range filters for each type
+  const [historyChildDateRange, setHistoryChildDateRange] = useState({ start: '', end: '' })
+  const [historyFamilyDateRange, setHistoryFamilyDateRange] = useState({ start: '', end: '' })
+  const [historySiblingDateRange, setHistorySiblingDateRange] = useState({ start: '', end: '' })
+  const [historyUniformDateRange, setHistoryUniformDateRange] = useState({ start: '', end: '' })
+  const [historyLeavingDateRange, setHistoryLeavingDateRange] = useState({ start: '', end: '' })
+
+  // Loading states for history subtabs
+  const [historyChildLoading, setHistoryChildLoading] = useState(false)
+  const [historyFamilyLoading, setHistoryFamilyLoading] = useState(false)
+  const [historySiblingLoading, setHistorySiblingLoading] = useState(false)
+  const [historyUniformLoading, setHistoryUniformLoading] = useState(false)
+  const [historyLeavingLoading, setHistoryLeavingLoading] = useState(false)
+
+  // Submission guard states (prevent duplicate submissions)
+  const [isSubmittingChild, setIsSubmittingChild] = useState(false)
+  const [isSubmittingFamily, setIsSubmittingFamily] = useState(false)
+  const [isSubmittingSibling, setIsSubmittingSibling] = useState(false)
+  const [isSubmittingUniform, setIsSubmittingUniform] = useState(false)
+  const [isSubmittingLeaving, setIsSubmittingLeaving] = useState(false)
+
   const [checkedAuth, setCheckedAuth] = useState(false)
   const [authorized, setAuthorized] = useState(false)
 
@@ -610,6 +642,146 @@ export default function ChildForm() {
     }
   }, [activeTab, authorized])
 
+  const fetchHistoryData = async (
+    tableName: string,
+    entityType: string,
+    setData: (data: any[]) => void,
+    setLoading: (loading: boolean) => void,
+    dateRange: { start: string; end: string }
+  ) => {
+    setLoading(true)
+    try {
+      const { data: userData } = await supabase.auth.getUser()
+      const userId = userData.user?.id
+      if (!userId) throw new Error('No user session found.')
+
+      // First, get entity IDs from child_approvals for this user and entity type
+      const { data: approvals, error: approvalsError } = await supabase
+        .from('child_approvals')
+        .select('entity_id')
+        .eq('submitted_by', userId)
+        .eq('entity_type', entityType)
+
+      if (approvalsError) throw approvalsError
+
+      const ids: number[] = (approvals ?? [])
+        .map((r: any) => (typeof r.entity_id === 'string' ? Number(r.entity_id) : r.entity_id))
+        .filter(Boolean)
+
+      if (ids.length === 0) {
+        setData([])
+        return
+      }
+
+      // Then fetch records from the table using those IDs
+      let query = supabase
+        .from(tableName)
+        .select('*')
+        .in('record_id', ids)
+
+      // Apply date range filter if dates are provided
+      if (dateRange.start) {
+        query = query.gte('created_at', dateRange.start)
+      }
+      if (dateRange.end) {
+        query = query.lte('created_at', dateRange.end)
+      }
+
+      const { data: rows, error: rowsError } = await query
+
+      if (rowsError) throw rowsError
+
+      const sorted = (rows ?? []).slice().sort((a: any, b: any) => {
+        const aDate = new Date(a.created_at || 0).getTime()
+        const bDate = new Date(b.created_at || 0).getTime()
+        return bDate - aDate
+      })
+
+      setData(sorted)
+    } catch (error) {
+      console.error(`Error fetching ${tableName} history:`, error)
+      setData([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleHistorySubTabChange = (subTab: HistorySubTabType) => {
+    setActiveHistorySubTab(subTab)
+
+    // Fetch data for the selected subtab
+    switch (subTab) {
+      case 'child':
+        fetchHistoryData('Child_Data', 'Child_Data', setHistoryChildData, setHistoryChildLoading, historyChildDateRange)
+        break
+      case 'family':
+        fetchHistoryData('childfmly', 'childfmly', setHistoryFamilyData, setHistoryFamilyLoading, historyFamilyDateRange)
+        break
+      case 'sibling':
+        fetchHistoryData('childsibling', 'childsibling', setHistorySiblingData, setHistorySiblingLoading, historySiblingDateRange)
+        break
+      case 'uniform':
+        fetchHistoryData('childuniform', 'childuniform', setHistoryUniformData, setHistoryUniformLoading, historyUniformDateRange)
+        break
+      case 'leaving':
+        fetchHistoryData('childleaving', 'childleaving', setHistoryLeavingData, setHistoryLeavingLoading, historyLeavingDateRange)
+        break
+    }
+  }
+
+  useEffect(() => {
+    if (activeTab === 'history' && authorized && activeHistorySubTab) {
+      handleHistorySubTabChange(activeHistorySubTab)
+    }
+  }, [activeTab, authorized])
+
+  const handleHistoryDateRangeChange = (
+    subTab: HistorySubTabType,
+    type: 'start' | 'end',
+    value: string
+  ) => {
+    switch (subTab) {
+      case 'child':
+        setHistoryChildDateRange(prev => ({ ...prev, [type]: value }))
+        break
+      case 'family':
+        setHistoryFamilyDateRange(prev => ({ ...prev, [type]: value }))
+        break
+      case 'sibling':
+        setHistorySiblingDateRange(prev => ({ ...prev, [type]: value }))
+        break
+      case 'uniform':
+        setHistoryUniformDateRange(prev => ({ ...prev, [type]: value }))
+        break
+      case 'leaving':
+        setHistoryLeavingDateRange(prev => ({ ...prev, [type]: value }))
+        break
+    }
+  }
+
+  useEffect(() => {
+    if (activeTab !== 'history' || !authorized) return
+
+    // Re-fetch data when date range changes
+    switch (activeHistorySubTab) {
+      case 'child':
+        fetchHistoryData('Child_Data', 'Child_Data', setHistoryChildData, setHistoryChildLoading, historyChildDateRange)
+        break
+      case 'family':
+        fetchHistoryData('childfmly', 'childfmly', setHistoryFamilyData, setHistoryFamilyLoading, historyFamilyDateRange)
+        break
+      case 'sibling':
+        fetchHistoryData('childsibling', 'childsibling', setHistorySiblingData, setHistorySiblingLoading, historySiblingDateRange)
+        break
+      case 'uniform':
+        fetchHistoryData('childuniform', 'childuniform', setHistoryUniformData, setHistoryUniformLoading, historyUniformDateRange)
+        break
+      case 'leaving':
+        fetchHistoryData('childleaving', 'childleaving', setHistoryLeavingData, setHistoryLeavingLoading, historyLeavingDateRange)
+        break
+    }
+  }, [historyChildDateRange, historyFamilyDateRange, historySiblingDateRange, historyUniformDateRange, historyLeavingDateRange])
+
   const handleEacChange = (e: ChangeEvent<HTMLSelectElement>) => {
     const selectedEac = e.target.value
     const eacData = eacOptions.find((item) => item.eac_no?.toString() === selectedEac)
@@ -656,6 +828,9 @@ export default function ChildForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (isSubmittingChild) return
+    setIsSubmittingChild(true)
     setLoading(true)
     setMessage(null)
 
@@ -774,11 +949,15 @@ export default function ChildForm() {
       setMessage({ type: 'error', text: `Unable to save the form: ${fallback}` })
     } finally {
       setLoading(false)
+      setIsSubmittingChild(false)
     }
   }
 
   const handleFamilySubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (isSubmittingFamily) return
+    setIsSubmittingFamily(true)
     setFamilyLoading(true)
     setFamilyMessage(null)
 
@@ -843,11 +1022,15 @@ export default function ChildForm() {
       setFamilyMessage({ type: 'error', text: `Unable to save: ${fallback}` })
     } finally {
       setFamilyLoading(false)
+      setIsSubmittingFamily(false)
     }
   }
 
   const handleSiblingSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (isSubmittingSibling) return
+    setIsSubmittingSibling(true)
     setSiblingLoading(true)
     setSiblingMessage(null)
 
@@ -918,11 +1101,15 @@ export default function ChildForm() {
       setSiblingMessage({ type: 'error', text: `Unable to save: ${fallback}` })
     } finally {
       setSiblingLoading(false)
+      setIsSubmittingSibling(false)
     }
   }
 
   const handleUniformSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (isSubmittingUniform) return
+    setIsSubmittingUniform(true)
     setUniformLoading(true)
     setUniformMessage(null)
 
@@ -974,11 +1161,15 @@ export default function ChildForm() {
       setUniformMessage({ type: 'error', text: `Unable to save: ${fallback}` })
     } finally {
       setUniformLoading(false)
+      setIsSubmittingUniform(false)
     }
   }
 
   const handleLeavingSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (isSubmittingLeaving) return
+    setIsSubmittingLeaving(true)
     setLeavingLoading(true)
     setLeavingMessage(null)
 
@@ -1030,6 +1221,7 @@ export default function ChildForm() {
       setLeavingMessage({ type: 'error', text: `Unable to save: ${fallback}` })
     } finally {
       setLeavingLoading(false)
+      setIsSubmittingLeaving(false)
     }
   }
 
@@ -2363,56 +2555,359 @@ export default function ChildForm() {
           <div className="space-y-8">
             <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
               <h2 className="mb-4 text-lg font-semibold text-slate-900">Personal History</h2>
-              <p className="text-sm text-slate-600 mb-4">Track all updates and changes to child records.</p>
-              <div className="max-h-[60vh] overflow-auto rounded border border-slate-100 bg-white">
-                {historyLoading ? (
-                  <div className="p-4 text-sm text-slate-600">Loading history…</div>
-                ) : historyMessage ? (
-                  <div className={`p-4 text-sm font-medium ${historyMessage.type === 'success' ? 'text-green-700' : 'text-red-700'}`}>
-                    {historyMessage.text}
+              <p className="text-sm text-slate-600 mb-6">Track all updates and changes to child records.</p>
+
+              {/* History Subtabs */}
+              <div className="mb-6">
+                <div className="flex gap-2 flex-wrap border-b border-slate-200">
+                  {(['child', 'family', 'sibling', 'uniform', 'leaving'] as HistorySubTabType[]).map((subTab) => (
+                    <button
+                      key={subTab}
+                      onClick={() => handleHistorySubTabChange(subTab)}
+                      className={`px-4 py-2 font-medium text-sm transition-colors ${activeHistorySubTab === subTab
+                        ? 'text-blue-600 border-b-2 border-blue-600'
+                        : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                    >
+                      {subTab === 'child' && 'Child Data'}
+                      {subTab === 'family' && 'Child Family'}
+                      {subTab === 'sibling' && 'Child Sibling'}
+                      {subTab === 'uniform' && 'Child Uniform'}
+                      {subTab === 'leaving' && 'Child Leaving'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Date Range Filter */}
+              <div className="mb-6 flex gap-4 items-end">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">From Date</label>
+                  <input
+                    type="date"
+                    value={
+                      activeHistorySubTab === 'child' ? historyChildDateRange.start :
+                        activeHistorySubTab === 'family' ? historyFamilyDateRange.start :
+                          activeHistorySubTab === 'sibling' ? historySiblingDateRange.start :
+                            activeHistorySubTab === 'uniform' ? historyUniformDateRange.start :
+                              historyLeavingDateRange.start
+                    }
+                    onChange={(e) => handleHistoryDateRangeChange(activeHistorySubTab, 'start', e.target.value)}
+                    className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">To Date</label>
+                  <input
+                    type="date"
+                    value={
+                      activeHistorySubTab === 'child' ? historyChildDateRange.end :
+                        activeHistorySubTab === 'family' ? historyFamilyDateRange.end :
+                          activeHistorySubTab === 'sibling' ? historySiblingDateRange.end :
+                            activeHistorySubTab === 'uniform' ? historyUniformDateRange.end :
+                              historyLeavingDateRange.end
+                    }
+                    onChange={(e) => handleHistoryDateRangeChange(activeHistorySubTab, 'end', e.target.value)}
+                    className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                  />
+                </div>
+              </div>
+
+              {/* History Tables */}
+              <div className="rounded border border-slate-100 bg-white overflow-hidden">
+                {/* Child Data Table */}
+                {activeHistorySubTab === 'child' && (
+                  <div>
+                    {historyChildLoading ? (
+                      <div className="p-4 text-sm text-slate-600">Loading data…</div>
+                    ) : historyChildData.length === 0 ? (
+                      <div className="p-4 text-sm text-slate-600">No child data history found.</div>
+                    ) : (
+                      <div className="overflow-x-auto overflow-y-auto max-h-[60vh]">
+                        <table className="min-w-full table-auto text-sm">
+                          <thead className="sticky top-0">
+                            <tr className="bg-slate-50 text-left text-slate-700">
+                              <th className="px-4 py-3 whitespace-nowrap">Record ID</th>
+                              <th className="px-4 py-3 whitespace-nowrap">EAC No</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Reg No</th>
+                              <th className="px-4 py-3 whitespace-nowrap">First Name</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Last Name</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Gender</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Aadhar No</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Birth Place</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Height</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Weight</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Blood Group</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Health</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Caste</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Mother Tongue</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Class</th>
+                              <th className="px-4 py-3 whitespace-nowrap">School Name</th>
+                              <th className="px-4 py-3 whitespace-nowrap">School Category</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Life Ambition</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Fav Subject</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Created At</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {historyChildData.map((row) => (
+                              <tr key={row.record_id} className="border-t border-slate-200 hover:bg-slate-50">
+                                <td className="px-4 py-3 text-slate-700">{row.record_id}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.eac_no}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.reg_no}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.first_name}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.last_name}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.gender}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.aadhar_no}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.birth_place}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.height}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.weight}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.blood_group}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.health}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.caste}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.mother_tongue}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.class_std}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.school_name}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.school_category}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.life_ambition}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.fav_subject}</td>
+                                <td className="px-4 py-3 text-slate-700 whitespace-nowrap">{row.created_at ? new Date(row.created_at).toLocaleDateString() : ''}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </div>
-                ) : historyData.length === 0 ? (
-                  <div className="p-4 text-sm text-slate-600">No history found.</div>
-                ) : (
-                  <div className="min-w-full">
-                    <table className="min-w-[900px] w-full table-auto">
-                      <thead>
-                        <tr className="bg-slate-50 text-left text-sm text-slate-700">
-                          <th className="px-4 py-3">Record</th>
-                          <th className="px-4 py-3">Adm Date</th>
-                          <th className="px-4 py-3">EAC No</th>
-                          <th className="px-4 py-3">Reg No</th>
-                          <th className="px-4 py-3">First Name</th>
-                          <th className="px-4 py-3">Last Name</th>
-                          <th className="px-4 py-3">Gender</th>
-                          <th className="px-4 py-3">Class</th>
-                          <th className="px-4 py-3">School</th>
-                          <th className="px-4 py-3">Photo</th>
-                        </tr>
-                      </thead>
-                      <tbody className="text-sm text-slate-700">
-                        {historyData.map((row) => (
-                          <tr key={(row.record_id ?? '') + '-' + (row.reg_no ?? '')} className="border-t">
-                            <td className="px-4 py-3">{row.record_id}</td>
-                            <td className="px-4 py-3">{row.adm_date ?? ''}</td>
-                            <td className="px-4 py-3">{row.eac_no}</td>
-                            <td className="px-4 py-3">{row.reg_no}</td>
-                            <td className="px-4 py-3">{row.first_name}</td>
-                            <td className="px-4 py-3">{row.last_name}</td>
-                            <td className="px-4 py-3">{row.gender}</td>
-                            <td className="px-4 py-3">{row.class_std}</td>
-                            <td className="px-4 py-3">{row.school_name}</td>
-                            <td className="px-4 py-3">
-                              {row.photo_link ? (
-                                <a href={row.photo_link} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">View</a>
-                              ) : (
-                                <span className="text-slate-500">—</span>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                )}
+
+                {/* Child Family Table */}
+                {activeHistorySubTab === 'family' && (
+                  <div>
+                    {historyFamilyLoading ? (
+                      <div className="p-4 text-sm text-slate-600">Loading data…</div>
+                    ) : historyFamilyData.length === 0 ? (
+                      <div className="p-4 text-sm text-slate-600">No family data history found.</div>
+                    ) : (
+                      <div className="overflow-x-auto overflow-y-auto max-h-[60vh]">
+                        <table className="min-w-full table-auto text-sm">
+                          <thead className="sticky top-0">
+                            <tr className="bg-slate-50 text-left text-slate-700">
+                              <th className="px-4 py-3 whitespace-nowrap">Record ID</th>
+                              <th className="px-4 py-3 whitespace-nowrap">EAC No</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Reg No</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Father's Name</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Father's Occupation</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Father's Income</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Father's Aadhar</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Father's Mobile</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Mother's Name</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Mother's Occupation</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Mother's Income</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Mother's Aadhar</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Mother's Mobile</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Address 1</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Address 2</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Address 3</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Pincode</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Remarks</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Created At</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {historyFamilyData.map((row) => (
+                              <tr key={row.record_id} className="border-t border-slate-200 hover:bg-slate-50">
+                                <td className="px-4 py-3 text-slate-700">{row.record_id}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.eac_no}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.reg_no}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.f_name}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.f_occup}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.f_inc}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.f_aadhar}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.f_mobile}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.m_name}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.m_occup}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.m_inc}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.m_aadhar}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.m_mobile}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.fmly_addr1}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.fmly_addr2}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.fmly_addr3}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.fmly_pincode}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.fmly_remarks}</td>
+                                <td className="px-4 py-3 text-slate-700 whitespace-nowrap">{row.created_at ? new Date(row.created_at).toLocaleDateString() : ''}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Child Sibling Table */}
+                {activeHistorySubTab === 'sibling' && (
+                  <div>
+                    {historySiblingLoading ? (
+                      <div className="p-4 text-sm text-slate-600">Loading data…</div>
+                    ) : historySiblingData.length === 0 ? (
+                      <div className="p-4 text-sm text-slate-600">No sibling data history found.</div>
+                    ) : (
+                      <div className="overflow-x-auto overflow-y-auto max-h-[60vh]">
+                        <table className="min-w-full table-auto text-sm">
+                          <thead className="sticky top-0">
+                            <tr className="bg-slate-50 text-left text-slate-700">
+                              <th className="px-4 py-3 whitespace-nowrap">Record ID</th>
+                              <th className="px-4 py-3 whitespace-nowrap">EAC No</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Reg No</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Sibling 1 Name</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Sibling 1 Age</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Sibling 1 Gender</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Sibling 1 Class/Occup</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Sibling 2 Name</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Sibling 2 Age</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Sibling 2 Gender</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Sibling 2 Class/Occup</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Sibling 3 Name</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Sibling 3 Age</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Sibling 3 Gender</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Sibling 3 Class/Occup</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Sibling 4 Name</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Sibling 4 Age</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Sibling 4 Gender</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Sibling 4 Class/Occup</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Remarks</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Created At</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {historySiblingData.map((row) => (
+                              <tr key={row.record_id} className="border-t border-slate-200 hover:bg-slate-50">
+                                <td className="px-4 py-3 text-slate-700">{row.record_id}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.eac_no}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.reg_no}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.names_1}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.ages_1}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.genders_1}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.class_occup_1}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.names_2}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.ages_2}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.genders_2}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.class_occup_2}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.names_3}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.ages_3}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.genders_3}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.class_occup_3}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.names_4}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.ages_4}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.genders_4}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.class_occup_4}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.sibling_remarks}</td>
+                                <td className="px-4 py-3 text-slate-700 whitespace-nowrap">{row.created_at ? new Date(row.created_at).toLocaleDateString() : ''}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Child Uniform Table */}
+                {activeHistorySubTab === 'uniform' && (
+                  <div>
+                    {historyUniformLoading ? (
+                      <div className="p-4 text-sm text-slate-600">Loading data…</div>
+                    ) : historyUniformData.length === 0 ? (
+                      <div className="p-4 text-sm text-slate-600">No uniform data history found.</div>
+                    ) : (
+                      <div className="overflow-x-auto overflow-y-auto max-h-[60vh]">
+                        <table className="min-w-full table-auto text-sm">
+                          <thead className="sticky top-0">
+                            <tr className="bg-slate-50 text-left text-slate-700">
+                              <th className="px-4 py-3 whitespace-nowrap">Record ID</th>
+                              <th className="px-4 py-3 whitespace-nowrap">EAC No</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Reg No</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Shirt Size</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Knicker Size</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Pant/Skirt Size</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Chudidhar Size</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Top/Pant Size</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Footwear Size</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Uniform Updated</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Created At</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {historyUniformData.map((row) => (
+                              <tr key={row.record_id} className="border-t border-slate-200 hover:bg-slate-50">
+                                <td className="px-4 py-3 text-slate-700">{row.record_id}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.eac_no}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.reg_no}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.shirtsize}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.knickersize}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.pant_skirtsize}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.chudidharsize}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.top_pantsize}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.footwearsize}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.uniform_updated ? new Date(row.uniform_updated).toLocaleDateString() : ''}</td>
+                                <td className="px-4 py-3 text-slate-700 whitespace-nowrap">{row.created_at ? new Date(row.created_at).toLocaleDateString() : ''}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Child Leaving Table */}
+                {activeHistorySubTab === 'leaving' && (
+                  <div>
+                    {historyLeavingLoading ? (
+                      <div className="p-4 text-sm text-slate-600">Loading data…</div>
+                    ) : historyLeavingData.length === 0 ? (
+                      <div className="p-4 text-sm text-slate-600">No leaving data history found.</div>
+                    ) : (
+                      <div className="overflow-x-auto overflow-y-auto max-h-[60vh]">
+                        <table className="min-w-full table-auto text-sm">
+                          <thead className="sticky top-0">
+                            <tr className="bg-slate-50 text-left text-slate-700">
+                              <th className="px-4 py-3 whitespace-nowrap">Record ID</th>
+                              <th className="px-4 py-3 whitespace-nowrap">EAC No</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Reg No</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Reason</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Leaving Class</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Leaving Date</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Address 1</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Address 2</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Address 3</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Pincode</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Remarks</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Created At</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {historyLeavingData.map((row) => (
+                              <tr key={row.record_id} className="border-t border-slate-200 hover:bg-slate-50">
+                                <td className="px-4 py-3 text-slate-700">{row.record_id}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.eac_no}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.reg_no}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.reason}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.leav_class}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.leav_date ? new Date(row.leav_date).toLocaleDateString() : ''}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.leav_addr1}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.leav_addr2}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.leav_addr3}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.leav_pincode}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.leav_remarks}</td>
+                                <td className="px-4 py-3 text-slate-700 whitespace-nowrap">{row.created_at ? new Date(row.created_at).toLocaleDateString() : ''}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
