@@ -410,6 +410,8 @@ export default function ChildForm() {
   const [editingRecord, setEditingRecord] = useState<any>(null)
   const [editFormData, setEditFormData] = useState<any>(null)
   const [editLoading, setEditLoading] = useState(false)
+  const [editPhotoFile, setEditPhotoFile] = useState<File | null>(null)
+  const [editPhotoInputKey, setEditPhotoInputKey] = useState(() => Date.now())
 
   // Personal history state
   const [historyData, setHistoryData] = useState<HistoryRow[]>([])
@@ -1236,6 +1238,8 @@ export default function ChildForm() {
     setEditModalOpen(false)
     setEditingRecord(null)
     setEditFormData(null)
+    setEditPhotoFile(null)
+    setEditPhotoInputKey(Date.now())
   }
 
   const handleEditFormChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -1243,6 +1247,22 @@ export default function ChildForm() {
       ...prev,
       [e.target.name]: e.target.value
     }))
+  }
+
+  const handleEditPhotoChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null
+
+    if (file && file.size > 5 * 1024 * 1024) {
+      setRejectedMessage({ type: 'error', text: 'Image must be 5MB or smaller.' })
+      event.target.value = ''
+      setEditPhotoFile(null)
+      setEditFormData((prev: any) => ({ ...prev, photo_link: prev.photo_link }))
+      setEditPhotoInputKey(Date.now())
+      return
+    }
+
+    setEditPhotoFile(file)
+    setEditFormData((prev: any) => ({ ...prev, photo_link: file ? file.name : prev.photo_link }))
   }
 
   const handleEditSubmit = async () => {
@@ -1281,6 +1301,38 @@ export default function ChildForm() {
         case 'leaving':
           tableName = 'childleaving'
           break
+      }
+
+      // Handle photo upload for child data
+      let photoUrl: string | null = editFormData.photo_link
+      if (editPhotoFile && editModalType === 'child') {
+        const registrationNumber = editFormData.reg_no?.toString().trim() || ''
+        if (registrationNumber === '') {
+          throw new Error('Registration number is required to upload a photo.')
+        }
+
+        const extension = (editPhotoFile.name.split('.').pop() || 'jpg').toLowerCase()
+        const sanitizedIdentifier = registrationNumber.replace(/[^a-zA-Z0-9_-]+/g, '-').toLowerCase()
+        const uniqueFallback =
+          typeof crypto !== 'undefined' && 'randomUUID' in crypto
+            ? crypto.randomUUID()
+            : Date.now().toString(36)
+        const safeIdentifier = sanitizedIdentifier || uniqueFallback
+        const filePath = `${safeIdentifier}.${extension}`
+
+        const { error: uploadError } = await supabase.storage.from('profiles').upload(filePath, editPhotoFile, {
+          cacheControl: '3600',
+          upsert: true,
+        })
+
+        if (uploadError) {
+          throw uploadError
+        }
+
+        const { data: publicData } = supabase.storage.from('profiles').getPublicUrl(filePath)
+        photoUrl =
+          publicData.publicUrl ??
+          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/profile/${filePath}`
       }
 
       // Helper functions for type conversion
@@ -1334,7 +1386,7 @@ export default function ChildForm() {
           life_ambition: toNullableString(updatePayload.life_ambition),
           fav_subject: toNullableString(updatePayload.fav_subject),
           child_other_info: toNullableString(updatePayload.child_other_info),
-          photo_link: toNullableString(updatePayload.photo_link),
+          photo_link: photoUrl,
         }
       } else if (editModalType === 'family') {
         updatePayload = {
@@ -2336,7 +2388,7 @@ export default function ChildForm() {
                   <p className="text-slate-500">Loading...</p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto max-h-96 overflow-y-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-slate-200">
@@ -2545,6 +2597,9 @@ export default function ChildForm() {
                 loading={editLoading}
                 onFormChange={handleEditFormChange}
                 onSubmit={handleEditSubmit}
+                onPhotoChange={handleEditPhotoChange}
+                photoInputKey={editPhotoInputKey}
+                setPhotoInputKey={setEditPhotoInputKey}
               />
             )}
           </div>
@@ -2928,6 +2983,9 @@ interface EditModalProps {
   loading: boolean
   onFormChange: (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void
   onSubmit: () => void
+  onPhotoChange: (e: ChangeEvent<HTMLInputElement>) => void
+  photoInputKey: number
+  setPhotoInputKey: (key: number) => void
 }
 
 function EditModal({
@@ -2939,6 +2997,9 @@ function EditModal({
   loading,
   onFormChange,
   onSubmit,
+  onPhotoChange,
+  photoInputKey,
+  setPhotoInputKey,
 }: EditModalProps) {
   if (!isOpen) return null
 
@@ -2964,6 +3025,21 @@ function EditModal({
         <div className="space-y-4">
           {modalType === 'child' && (
             <>
+              <div className="grid grid-cols-2 gap-4">
+                <TextInput
+                  label="Registration Number"
+                  name="reg_no"
+                  value={formData.reg_no}
+                  onChange={onFormChange}
+                />
+                <TextInput
+                  label="Admission Date"
+                  name="adm_date"
+                  value={formData.adm_date}
+                  onChange={onFormChange}
+                  type="date"
+                />
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <TextInput
                   label="First Name"
@@ -3042,9 +3118,23 @@ function EditModal({
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <TextInput
-                  label="School Name"
-                  name="school_name"
-                  value={formData.school_name}
+                  label="Health Status"
+                  name="health"
+                  value={formData.health}
+                  onChange={onFormChange}
+                />
+                <TextInput
+                  label="Caste"
+                  name="caste"
+                  value={formData.caste}
+                  onChange={onFormChange}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <TextInput
+                  label="Mother Tongue"
+                  name="mother_tongue"
+                  value={formData.mother_tongue}
                   onChange={onFormChange}
                 />
                 <NumberInput
@@ -3053,6 +3143,79 @@ function EditModal({
                   value={formData.class_std}
                   onChange={onFormChange}
                 />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <TextInput
+                  label="School Name"
+                  name="school_name"
+                  value={formData.school_name}
+                  onChange={onFormChange}
+                />
+                <TextInput
+                  label="School Category"
+                  name="school_category"
+                  value={formData.school_category}
+                  onChange={onFormChange}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <NumberInput
+                  label="SATS No"
+                  name="sats_no"
+                  value={formData.sats_no}
+                  onChange={onFormChange}
+                />
+                <NumberInput
+                  label="PEN No"
+                  name="pen_no"
+                  value={formData.pen_no}
+                  onChange={onFormChange}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <TextInput
+                  label="Medium of Study"
+                  name="medium_of_study"
+                  value={formData.medium_of_study}
+                  onChange={onFormChange}
+                />
+                <TextInput
+                  label="Life Ambition"
+                  name="life_ambition"
+                  value={formData.life_ambition}
+                  onChange={onFormChange}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <TextInput
+                  label="Favourite Subject"
+                  name="fav_subject"
+                  value={formData.fav_subject}
+                  onChange={onFormChange}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Other Information</label>
+                <textarea
+                  name="child_other_info"
+                  value={formData.child_other_info}
+                  onChange={onFormChange}
+                  rows={2}
+                  className={baseInputClass}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Photo Upload</label>
+                <input
+                  key={photoInputKey}
+                  type="file"
+                  accept="image/*"
+                  onChange={onPhotoChange}
+                  className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                />
+                {formData.photo_link && (
+                  <p className="mt-2 text-sm text-slate-600">Current: {formData.photo_link}</p>
+                )}
               </div>
             </>
           )}

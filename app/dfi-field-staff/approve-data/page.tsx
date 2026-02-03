@@ -105,6 +105,12 @@ export default function ApproveDataPage() {
         leaving: 'reg_no',
     })
 
+    // View Data Photo Modal
+    const [viewPhotoModal, setViewPhotoModal] = useState<{ isOpen: boolean; url: string }>({
+        isOpen: false,
+        url: '',
+    })
+
     // Personal History State
     const [activeHistorySubTab, setActiveHistorySubTab] = useState<HistorySubTabType>('child')
 
@@ -801,44 +807,46 @@ export default function ApproveDataPage() {
                                 <p className="text-sm text-slate-500">No records found.</p>
                             </div>
                         ) : (
-                            <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                            <div className="overflow-x-auto overflow-y-auto max-h-96 border border-slate-200 rounded-lg">
                                 <table className="w-full text-sm">
-                                    <thead className="bg-slate-50 border-b border-slate-200">
+                                    <thead className="sticky top-0 bg-slate-50 border-b border-slate-200">
                                         <tr>
-                                            {Object.keys(viewData[viewSubTab][0] || {}).map((key) => (
-                                                <th
-                                                    key={key}
-                                                    className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap"
-                                                >
-                                                    {key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}
-                                                </th>
-                                            ))}
+                                            {Object.keys(viewData[viewSubTab][0] || {})
+                                                .filter(key => !['status', 'submitted_by', 'approved_by', 'approved_at'].includes(key.toLowerCase()))
+                                                .map((key) => (
+                                                    <th
+                                                        key={key}
+                                                        className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap"
+                                                    >
+                                                        {key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}
+                                                    </th>
+                                                ))}
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {viewData[viewSubTab].map((record, idx) => (
                                             <tr key={idx} className="border-b border-slate-200 hover:bg-slate-50">
-                                                {Object.entries(record).map(([key, value]) => {
-                                                    const isPhoto = (key.toLowerCase().includes('photo') || key.toLowerCase().includes('image')) && value
-                                                    const displayValue = value === null || value === undefined ? '-' : String(value)
+                                                {Object.entries(record)
+                                                    .filter(([key]) => !['status', 'submitted_by', 'approved_by', 'approved_at'].includes(key.toLowerCase()))
+                                                    .map(([key, value]) => {
+                                                        const isPhoto = (key.toLowerCase().includes('photo') || key.toLowerCase().includes('image')) && value
+                                                        const displayValue = value === null || value === undefined ? '-' : String(value)
 
-                                                    return (
-                                                        <td key={key} className="px-4 py-3 text-sm text-slate-700 max-w-xs truncate">
-                                                            {isPhoto ? (
-                                                                <a
-                                                                    href={String(value)}
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    className="rounded-lg bg-blue-600 px-3 py-1 text-xs font-semibold text-white transition hover:bg-blue-700"
-                                                                >
-                                                                    View
-                                                                </a>
-                                                            ) : (
-                                                                displayValue
-                                                            )}
-                                                        </td>
-                                                    )
-                                                })}
+                                                        return (
+                                                            <td key={key} className="px-4 py-3 text-sm text-slate-700 max-w-xs truncate">
+                                                                {isPhoto ? (
+                                                                    <button
+                                                                        onClick={() => setViewPhotoModal({ isOpen: true, url: String(value) })}
+                                                                        className="rounded-lg bg-blue-600 px-3 py-1 text-xs font-semibold text-white transition hover:bg-blue-700"
+                                                                    >
+                                                                        View
+                                                                    </button>
+                                                                ) : (
+                                                                    displayValue
+                                                                )}
+                                                            </td>
+                                                        )
+                                                    })}
                                             </tr>
                                         ))}
                                     </tbody>
@@ -1010,6 +1018,38 @@ export default function ApproveDataPage() {
                             </div>
                         </div>
                     ))}
+                </div>
+            )}
+
+            {/* View Data Photo Modal */}
+            {viewPhotoModal.isOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+                    <div className="rounded-lg bg-white p-6 shadow-lg max-w-2xl max-h-96 flex flex-col">
+                        <div className="mb-4 flex items-center justify-between">
+                            <h3 className="text-lg font-semibold text-slate-900">Photo Preview</h3>
+                            <button
+                                onClick={() => setViewPhotoModal({ isOpen: false, url: '' })}
+                                className="text-slate-500 hover:text-slate-700"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                        <div className="flex-1 flex items-center justify-center overflow-auto">
+                            <img
+                                src={viewPhotoModal.url}
+                                alt="Preview"
+                                className="max-w-full max-h-full object-contain"
+                            />
+                        </div>
+                        <div className="mt-4 flex justify-end">
+                            <button
+                                onClick={() => setViewPhotoModal({ isOpen: false, url: '' })}
+                                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </main>
