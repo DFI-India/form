@@ -12,6 +12,7 @@ import { supabase } from '../../../lib/supabase'
 type MainTabType = 'verify' | 'view' | 'history'
 type VerifySubTabType = 'child' | 'family' | 'sibling' | 'uniform' | 'leaving'
 type ViewSubTabType = 'child' | 'family' | 'sibling' | 'uniform' | 'leaving'
+type HistorySubTabType = 'child' | 'family' | 'sibling' | 'uniform' | 'leaving'
 type SearchByType = 'name' | 'reg_no'
 
 type ApprovalRecord = Record<string, unknown> & {
@@ -103,6 +104,30 @@ export default function ApproveDataPage() {
         uniform: 'reg_no',
         leaving: 'reg_no',
     })
+
+    // Personal History State
+    const [activeHistorySubTab, setActiveHistorySubTab] = useState<HistorySubTabType>('child')
+
+    // History data for each type
+    const [historyChildData, setHistoryChildData] = useState<Record<string, unknown>[]>([])
+    const [historyFamilyData, setHistoryFamilyData] = useState<Record<string, unknown>[]>([])
+    const [historySiblingData, setHistorySiblingData] = useState<Record<string, unknown>[]>([])
+    const [historyUniformData, setHistoryUniformData] = useState<Record<string, unknown>[]>([])
+    const [historyLeavingData, setHistoryLeavingData] = useState<Record<string, unknown>[]>([])
+
+    // Date range filters for each type
+    const [historyChildDateRange, setHistoryChildDateRange] = useState({ start: '', end: '' })
+    const [historyFamilyDateRange, setHistoryFamilyDateRange] = useState({ start: '', end: '' })
+    const [historySiblingDateRange, setHistorySiblingDateRange] = useState({ start: '', end: '' })
+    const [historyUniformDateRange, setHistoryUniformDateRange] = useState({ start: '', end: '' })
+    const [historyLeavingDateRange, setHistoryLeavingDateRange] = useState({ start: '', end: '' })
+
+    // Loading states for history subtabs
+    const [historyChildLoading, setHistoryChildLoading] = useState(false)
+    const [historyFamilyLoading, setHistoryFamilyLoading] = useState(false)
+    const [historySiblingLoading, setHistorySiblingLoading] = useState(false)
+    const [historyUniformLoading, setHistoryUniformLoading] = useState(false)
+    const [historyLeavingLoading, setHistoryLeavingLoading] = useState(false)
 
     const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({})
 
@@ -278,6 +303,128 @@ export default function ApproveDataPage() {
             setViewLoading((prev) => ({ ...prev, [tabType]: false }))
         }
     }
+
+    const fetchHistoryData = async (
+        tableName: string,
+        setData: (data: Record<string, unknown>[]) => void,
+        setLoading: (loading: boolean) => void,
+        dateRange: { start: string; end: string }
+    ) => {
+        setLoading(true)
+        try {
+            const user = (await supabase.auth.getUser()).data.user
+            if (!user?.id || !userEacNo) {
+                throw new Error('User information not found.')
+            }
+
+            let query = supabase
+                .from(tableName)
+                .select('*')
+                .eq('approved_by', user.id)
+                .eq('status', 'Approved')
+                .eq('eac_no', userEacNo)
+
+            // Apply date range filter if dates are provided
+            if (dateRange.start) {
+                query = query.gte('approved_at', dateRange.start)
+            }
+            if (dateRange.end) {
+                // Add 1 day to include the entire end date
+                const endDate = new Date(dateRange.end)
+                endDate.setDate(endDate.getDate() + 1)
+                query = query.lt('approved_at', endDate.toISOString())
+            }
+
+            const { data, error } = await query
+
+            if (error) throw error
+
+            setData(data || [])
+        } catch (error: unknown) {
+            const fallback = error instanceof Error ? error.message : 'Failed to fetch data'
+            setMessage({ type: 'error', text: `Unable to load history data: ${fallback}` })
+            setData([])
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const handleHistorySubTabChange = (subTab: HistorySubTabType) => {
+        setActiveHistorySubTab(subTab)
+
+        // Fetch data for the selected subtab
+        switch (subTab) {
+            case 'child':
+                fetchHistoryData('Child_Data', setHistoryChildData, setHistoryChildLoading, historyChildDateRange)
+                break
+            case 'family':
+                fetchHistoryData('childfmly', setHistoryFamilyData, setHistoryFamilyLoading, historyFamilyDateRange)
+                break
+            case 'sibling':
+                fetchHistoryData('childsibling', setHistorySiblingData, setHistorySiblingLoading, historySiblingDateRange)
+                break
+            case 'uniform':
+                fetchHistoryData('childuniform', setHistoryUniformData, setHistoryUniformLoading, historyUniformDateRange)
+                break
+            case 'leaving':
+                fetchHistoryData('childleaving', setHistoryLeavingData, setHistoryLeavingLoading, historyLeavingDateRange)
+                break
+        }
+    }
+
+    const handleHistoryDateRangeChange = (
+        subTab: HistorySubTabType,
+        type: 'start' | 'end',
+        value: string
+    ) => {
+        switch (subTab) {
+            case 'child':
+                setHistoryChildDateRange(prev => ({ ...prev, [type]: value }))
+                break
+            case 'family':
+                setHistoryFamilyDateRange(prev => ({ ...prev, [type]: value }))
+                break
+            case 'sibling':
+                setHistorySiblingDateRange(prev => ({ ...prev, [type]: value }))
+                break
+            case 'uniform':
+                setHistoryUniformDateRange(prev => ({ ...prev, [type]: value }))
+                break
+            case 'leaving':
+                setHistoryLeavingDateRange(prev => ({ ...prev, [type]: value }))
+                break
+        }
+    }
+
+    // Fetch history data when tab changes or date range changes
+    useEffect(() => {
+        if (mainTab === 'history' && authorized && userEacNo) {
+            handleHistorySubTabChange(activeHistorySubTab)
+        }
+    }, [mainTab, authorized, userEacNo])
+
+    useEffect(() => {
+        if (mainTab !== 'history' || !authorized || !userEacNo) return
+
+        // Re-fetch data when date range changes
+        switch (activeHistorySubTab) {
+            case 'child':
+                fetchHistoryData('Child_Data', setHistoryChildData, setHistoryChildLoading, historyChildDateRange)
+                break
+            case 'family':
+                fetchHistoryData('childfmly', setHistoryFamilyData, setHistoryFamilyLoading, historyFamilyDateRange)
+                break
+            case 'sibling':
+                fetchHistoryData('childsibling', setHistorySiblingData, setHistorySiblingLoading, historySiblingDateRange)
+                break
+            case 'uniform':
+                fetchHistoryData('childuniform', setHistoryUniformData, setHistoryUniformLoading, historyUniformDateRange)
+                break
+            case 'leaving':
+                fetchHistoryData('childleaving', setHistoryLeavingData, setHistoryLeavingLoading, historyLeavingDateRange)
+                break
+        }
+    }, [historyChildDateRange, historyFamilyDateRange, historySiblingDateRange, historyUniformDateRange, historyLeavingDateRange])
 
     const handleApprove = async (recordId: string) => {
         setActionLoading((prev) => ({ ...prev, [recordId]: true }))
@@ -710,12 +857,146 @@ export default function ApproveDataPage() {
 
             {/* Personal History Tab */}
             {mainTab === 'history' && (
-                <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <h2 className="mb-4 text-lg font-semibold text-slate-900">Personal History</h2>
-                    <p className="text-sm text-slate-600">
-                        Track all approvals, rejections, and changes to child records. Integration pending.
-                    </p>
-                </section>
+                <div className="space-y-6">
+                    {/* History Subtabs */}
+                    <div className="border-b border-slate-200">
+                        <div className="flex flex-wrap gap-2 sm:gap-0">
+                            {[
+                                { id: 'child' as HistorySubTabType, label: 'Child Data' },
+                                { id: 'family' as HistorySubTabType, label: 'Child Family' },
+                                { id: 'sibling' as HistorySubTabType, label: 'Child Sibling' },
+                                { id: 'uniform' as HistorySubTabType, label: 'Child Uniform' },
+                                { id: 'leaving' as HistorySubTabType, label: 'Child Leaving' },
+                            ].map((tab) => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => handleHistorySubTabChange(tab.id)}
+                                    className={`px-4 py-3 text-sm font-medium transition ${activeHistorySubTab === tab.id
+                                        ? 'border-b-2 border-amber-600 text-amber-600'
+                                        : 'border-b-2 border-transparent text-slate-600 hover:text-slate-900'
+                                        }`}
+                                >
+                                    {tab.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* History Data Section */}
+                    <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                        <div className="mb-6">
+                            <h2 className="text-lg font-semibold text-slate-900">
+                                Approved {activeHistorySubTab === 'child' ? 'Child Data' :
+                                    activeHistorySubTab === 'family' ? 'Family' :
+                                        activeHistorySubTab === 'sibling' ? 'Sibling' :
+                                            activeHistorySubTab === 'uniform' ? 'Uniform' :
+                                                'Leaving'} Records
+                            </h2>
+                            <p className="mt-1 text-sm text-slate-600">
+                                View all records you have approved.
+                            </p>
+                        </div>
+
+                        {/* Date Range Filter */}
+                        <div className="mb-6 flex gap-4 items-end flex-col sm:flex-row">
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-slate-700">From Date (Approved)</label>
+                                <input
+                                    type="date"
+                                    value={
+                                        activeHistorySubTab === 'child' ? historyChildDateRange.start :
+                                            activeHistorySubTab === 'family' ? historyFamilyDateRange.start :
+                                                activeHistorySubTab === 'sibling' ? historySiblingDateRange.start :
+                                                    activeHistorySubTab === 'uniform' ? historyUniformDateRange.start :
+                                                        historyLeavingDateRange.start
+                                    }
+                                    onChange={(e) => handleHistoryDateRangeChange(activeHistorySubTab, 'start', e.target.value)}
+                                    className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                                />
+                            </div>
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-slate-700">To Date (Approved)</label>
+                                <input
+                                    type="date"
+                                    value={
+                                        activeHistorySubTab === 'child' ? historyChildDateRange.end :
+                                            activeHistorySubTab === 'family' ? historyFamilyDateRange.end :
+                                                activeHistorySubTab === 'sibling' ? historySiblingDateRange.end :
+                                                    activeHistorySubTab === 'uniform' ? historyUniformDateRange.end :
+                                                        historyLeavingDateRange.end
+                                    }
+                                    onChange={(e) => handleHistoryDateRangeChange(activeHistorySubTab, 'end', e.target.value)}
+                                    className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                                />
+                            </div>
+                        </div>
+
+                        {/* History Table */}
+                        {historyChildLoading || historyFamilyLoading || historySiblingLoading || historyUniformLoading || historyLeavingLoading ? (
+                            <div className="flex items-center justify-center py-8">
+                                <p className="text-sm text-slate-500">Loading records...</p>
+                            </div>
+                        ) : (
+                            (() => {
+                                const currentData = activeHistorySubTab === 'child' ? historyChildData :
+                                    activeHistorySubTab === 'family' ? historyFamilyData :
+                                        activeHistorySubTab === 'sibling' ? historySiblingData :
+                                            activeHistorySubTab === 'uniform' ? historyUniformData :
+                                                historyLeavingData
+
+                                return currentData.length === 0 ? (
+                                    <div className="flex items-center justify-center py-8">
+                                        <p className="text-sm text-slate-500">No approved records found.</p>
+                                    </div>
+                                ) : (
+                                    <div className="overflow-x-auto overflow-y-auto max-h-96 border border-slate-200 rounded-lg">
+                                        <table className="w-full text-sm">
+                                            <thead className="sticky top-0 bg-slate-50 border-b border-slate-200">
+                                                <tr>
+                                                    {Object.keys(currentData[0] || {}).map((key) => (
+                                                        <th
+                                                            key={key}
+                                                            className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap"
+                                                        >
+                                                            {key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}
+                                                        </th>
+                                                    ))}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {currentData.map((record, idx) => (
+                                                    <tr key={idx} className="border-b border-slate-200 hover:bg-slate-50">
+                                                        {Object.entries(record).map(([key, value]) => {
+                                                            const displayValue = value === null || value === undefined ? '-' : String(value)
+                                                            const isPhoto = (key.toLowerCase().includes('photo') || key.toLowerCase().includes('image')) && value
+
+                                                            return (
+                                                                <td key={key} className="px-4 py-3 text-sm text-slate-700 max-w-xs truncate">
+                                                                    {isPhoto ? (
+                                                                        <a
+                                                                            href={String(value)}
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            className="rounded-lg bg-blue-600 px-3 py-1 text-xs font-semibold text-white transition hover:bg-blue-700"
+                                                                        >
+                                                                            View
+                                                                        </a>
+                                                                    ) : (
+                                                                        displayValue
+                                                                    )}
+                                                                </td>
+                                                            )
+                                                        })}
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )
+                            })()
+                        )}
+                    </section>
+                </div>
             )}
 
             {/* Toasts */}
