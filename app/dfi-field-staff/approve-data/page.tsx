@@ -11,6 +11,8 @@ import { supabase } from '../../../lib/supabase'
 
 type MainTabType = 'verify' | 'view' | 'history'
 type VerifySubTabType = 'child' | 'family' | 'sibling' | 'uniform' | 'leaving'
+type ViewSubTabType = 'child' | 'family' | 'sibling' | 'uniform' | 'leaving'
+type SearchByType = 'name' | 'reg_no'
 
 type ApprovalRecord = Record<string, unknown> & {
     approval_id: string   // <-- REAL child_approvals.id
@@ -37,10 +39,12 @@ export default function ApproveDataPage() {
     const router = useRouter()
     const [mainTab, setMainTab] = useState<MainTabType>('verify')
     const [verifySubTab, setVerifySubTab] = useState<VerifySubTabType>('child')
+    const [viewSubTab, setViewSubTab] = useState<ViewSubTabType>('child')
 
     const [checkedAuth, setCheckedAuth] = useState(false)
     const [authorized, setAuthorized] = useState(false)
     const [message, setMessage] = useState<MessageState>(null)
+    const [userEacNo, setUserEacNo] = useState<number | null>(null)
 
     // Verify Data State
     const [verifyData, setVerifyData] = useState<Record<VerifySubTabType, ApprovalRecord[]>>({
@@ -65,6 +69,39 @@ export default function ApproveDataPage() {
         sibling: { page: 1, pageSize: 10 },
         uniform: { page: 1, pageSize: 10 },
         leaving: { page: 1, pageSize: 10 },
+    })
+
+    // View Data State
+    const [viewData, setViewData] = useState<Record<ViewSubTabType, Record<string, unknown>[]>>({
+        child: [],
+        family: [],
+        sibling: [],
+        uniform: [],
+        leaving: [],
+    })
+
+    const [viewLoading, setViewLoading] = useState<Record<ViewSubTabType, boolean>>({
+        child: false,
+        family: false,
+        sibling: false,
+        uniform: false,
+        leaving: false,
+    })
+
+    const [viewSearchQuery, setViewSearchQuery] = useState<Record<ViewSubTabType, string>>({
+        child: '',
+        family: '',
+        sibling: '',
+        uniform: '',
+        leaving: '',
+    })
+
+    const [viewSearchType, setViewSearchType] = useState<Record<ViewSubTabType, SearchByType>>({
+        child: 'name',
+        family: 'reg_no',
+        sibling: 'reg_no',
+        uniform: 'reg_no',
+        leaving: 'reg_no',
     })
 
     const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({})
@@ -95,6 +132,20 @@ export default function ApproveDataPage() {
 
             if (!hasSession) {
                 router.replace('/sign-in')
+            } else {
+                // Fetch user's eac_no from profile
+                const { data: user } = await supabase.auth.getUser()
+                if (user.user?.id) {
+                    const { data: profile } = await supabase
+                        .from('profiles')
+                        .select('centre_eac_no_int')
+                        .eq('id', user.user.id)
+                        .single()
+
+                    if (profile?.centre_eac_no_int) {
+                        setUserEacNo(profile.centre_eac_no_int)
+                    }
+                }
             }
         }
 
@@ -124,6 +175,13 @@ export default function ApproveDataPage() {
             fetchVerifyData(verifySubTab)
         }
     }, [authorized, mainTab, verifySubTab, verifyPagination])
+
+    // Fetch data for current view subtab
+    useEffect(() => {
+        if (authorized && mainTab === 'view' && userEacNo) {
+            fetchViewData(viewSubTab)
+        }
+    }, [authorized, mainTab, viewSubTab, userEacNo, viewSearchQuery, viewSearchType])
 
     const fetchVerifyData = async (tabType: VerifySubTabType) => {
         setVerifyLoading((prev) => ({ ...prev, [tabType]: true }))
@@ -160,6 +218,62 @@ export default function ApproveDataPage() {
             setMessage({ type: 'error', text: `Unable to load ${tabType} data: ${fallback}` })
         } finally {
             setVerifyLoading((prev) => ({ ...prev, [tabType]: false }))
+        }
+    }
+
+    const fetchViewData = async (tabType: ViewSubTabType) => {
+        setViewLoading((prev) => ({ ...prev, [tabType]: true }))
+        try {
+            if (!userEacNo) {
+                throw new Error('User EAC number not found.')
+            }
+
+            const tableMap: Record<ViewSubTabType, string> = {
+                child: 'Child_Data',
+                family: 'childfmly',
+                sibling: 'childsibling',
+                uniform: 'childuniform',
+                leaving: 'childleaving',
+            }
+
+            const tableName = tableMap[tabType]
+            const searchQuery = viewSearchQuery[tabType]
+            const searchType = viewSearchType[tabType]
+
+            let query = supabase
+                .from(tableName)
+                .select('*')
+                .eq('eac_no', userEacNo)
+
+            // Apply search filter if provided
+            if (searchQuery.trim()) {
+                if (searchType === 'name') {
+                    if (tabType === 'child') {
+                        query = query.or(`first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%`)
+                    } else {
+                        query = query.ilike('f_name', `%${searchQuery}%`)
+                    }
+                } if (searchType === 'reg_no') {
+                    const regNo = Number(searchQuery)
+                    if (!Number.isNaN(regNo)) {
+                        query = query.eq('reg_no', regNo)
+                    }
+                }
+            }
+
+            const { data, error } = await query
+
+            if (error) throw error
+
+            setViewData((prev) => ({
+                ...prev,
+                [tabType]: data || [],
+            }))
+        } catch (error: unknown) {
+            const fallback = error instanceof Error ? error.message : 'Failed to fetch data'
+            setMessage({ type: 'error', text: `Unable to load ${tabType} data: ${fallback}` })
+        } finally {
+            setViewLoading((prev) => ({ ...prev, [tabType]: false }))
         }
     }
 
@@ -376,7 +490,7 @@ export default function ApproveDataPage() {
                                                 <th key={key} className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap">
                                                     {key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}
                                                 </th>
-                                            ))} 
+                                            ))}
                                             <th className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap sticky right-0 top-0 bg-white z-20 w-[170px]">Actions</th>
                                         </tr>
                                     </thead>
@@ -390,7 +504,7 @@ export default function ApproveDataPage() {
                                                 onApprove={() => handleApprove(record.approval_id)}
                                                 onReject={(reason) => handleReject(record.approval_id, reason)}
                                             />
-                                        ))} 
+                                        ))}
                                     </tbody>
                                 </table>
                             </div>
@@ -439,12 +553,157 @@ export default function ApproveDataPage() {
 
             {/* View Data Tab */}
             {mainTab === 'view' && (
-                <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <h2 className="mb-4 text-lg font-semibold text-slate-900">View All Data</h2>
-                    <p className="text-sm text-slate-600">
-                        View and search through all submitted child management data. Integration pending.
-                    </p>
-                </section>
+                <div className="space-y-6">
+                    {/* View Subtabs */}
+                    <div className="border-b border-slate-200">
+                        <div className="flex flex-wrap gap-2 sm:gap-0">
+                            {verifySubTabs.map((tab) => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setViewSubTab(tab.id as ViewSubTabType)}
+                                    className={`px-4 py-3 text-sm font-medium transition ${viewSubTab === tab.id
+                                        ? 'border-b-2 border-purple-600 text-purple-600'
+                                        : 'border-b-2 border-transparent text-slate-600 hover:text-slate-900'
+                                        }`}
+                                >
+                                    {tab.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* View Data Section */}
+                    <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                        <div className="mb-6">
+                            <h2 className="text-lg font-semibold text-slate-900">
+                                View {verifySubTabs.find((t) => t.id === viewSubTab)?.label} Records
+                            </h2>
+                            <p className="mt-1 text-sm text-slate-600">
+                                View all approved records for your centre.
+                            </p>
+                        </div>
+
+                        {/* Search Bar */}
+                        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end">
+                            <div className="flex-1">
+                                <label className="mb-2 block text-sm font-medium text-slate-700">
+                                    Search Query
+                                </label>
+                                <input
+                                    type="text"
+                                    placeholder="Enter search term..."
+                                    value={viewSearchQuery[viewSubTab]}
+                                    onChange={(e) =>
+                                        setViewSearchQuery((prev) => ({
+                                            ...prev,
+                                            [viewSubTab]: e.target.value,
+                                        }))
+                                    }
+                                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                                />
+                            </div>
+                            <div>
+                                <label className="mb-2 block text-sm font-medium text-slate-700">
+                                    Search By
+                                </label>
+                                <select
+                                    value={viewSearchType[viewSubTab]}
+                                    onChange={(e) =>
+                                        setViewSearchType((prev) => ({
+                                            ...prev,
+                                            [viewSubTab]: e.target.value as SearchByType,
+                                        }))
+                                    }
+                                    className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                                >
+                                    {viewSubTab === 'child' ? (
+                                        <>
+                                            <option value="name">Name</option>
+                                            <option value="reg_no">Registration No</option>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <option value="reg_no">Registration No</option>
+                                            <option value="name">Name</option>
+                                        </>
+                                    )}
+                                </select>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    setViewSearchQuery((prev) => ({
+                                        ...prev,
+                                        [viewSubTab]: '',
+                                    }))
+                                }}
+                                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                            >
+                                Clear
+                            </button>
+                        </div>
+
+                        {/* Data Table */}
+                        {viewLoading[viewSubTab] ? (
+                            <div className="flex items-center justify-center py-8">
+                                <p className="text-sm text-slate-500">Loading records...</p>
+                            </div>
+                        ) : viewData[viewSubTab].length === 0 ? (
+                            <div className="flex items-center justify-center py-8">
+                                <p className="text-sm text-slate-500">No records found.</p>
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                                <table className="w-full text-sm">
+                                    <thead className="bg-slate-50 border-b border-slate-200">
+                                        <tr>
+                                            {Object.keys(viewData[viewSubTab][0] || {}).map((key) => (
+                                                <th
+                                                    key={key}
+                                                    className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap"
+                                                >
+                                                    {key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}
+                                                </th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {viewData[viewSubTab].map((record, idx) => (
+                                            <tr key={idx} className="border-b border-slate-200 hover:bg-slate-50">
+                                                {Object.entries(record).map(([key, value]) => {
+                                                    const isPhoto = (key.toLowerCase().includes('photo') || key.toLowerCase().includes('image')) && value
+                                                    const displayValue = value === null || value === undefined ? '-' : String(value)
+
+                                                    return (
+                                                        <td key={key} className="px-4 py-3 text-sm text-slate-700 max-w-xs truncate">
+                                                            {isPhoto ? (
+                                                                <a
+                                                                    href={String(value)}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="rounded-lg bg-blue-600 px-3 py-1 text-xs font-semibold text-white transition hover:bg-blue-700"
+                                                                >
+                                                                    View
+                                                                </a>
+                                                            ) : (
+                                                                displayValue
+                                                            )}
+                                                        </td>
+                                                    )
+                                                })}
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+
+                        {userEacNo && (
+                            <p className="mt-4 text-xs text-slate-500">
+                                Showing records for EAC No: {userEacNo}
+                            </p>
+                        )}
+                    </section>
+                </div>
             )}
 
             {/* Personal History Tab */}
