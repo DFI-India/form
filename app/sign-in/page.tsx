@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
+import { Alert, LoadingSpinner } from '../components/UI'
+import { ROLE_CONFIG } from '../../lib/types'
 
 export default function SignInPage() {
   const router = useRouter()
@@ -36,16 +38,20 @@ export default function SignInPage() {
 
     switch (profile.role) {
       case 'field_volunteer':
-        router.replace('/field-volunteer/child-data-entry')
+        router.replace('/field-volunteer')
         break
       case 'dfi_field_staff':
-        router.replace('/dfi-field-staff/approve-data')
+        router.replace('/dfi-field-staff')
         break
-
+      case 'dfi_staff':
+        router.replace('/dfi-staff')
+        break
       case 'admin':
-        router.replace('/EAC_details')
+        router.replace('/admin')
         break
-
+      case 'tech_support':
+        router.replace('/tech-support')
+        break
       default:
         router.replace('/unauthorized')
     }
@@ -54,21 +60,31 @@ export default function SignInPage() {
   // ✅ Handle existing session
   useEffect(() => {
     const checkSession = async () => {
-      const { data } = await supabase.auth.getSession()
+      try {
+        const { data } = await supabase.auth.getSession()
 
-      if (data.session) {
-        await redirectByRole()
-        return
+        if (data.session) {
+          await redirectByRole()
+          return
+        }
+
+        // No session → allow sign-in page to render
+        setCheckingAuth(false)
+      } catch (err: any) {
+        console.error('Session check error:', err?.message || err)
+        // If session check fails, still allow sign-in page to render
+        setCheckingAuth(false)
       }
-
-      // No session → allow sign-in page to render
-      setCheckingAuth(false)
     }
 
     checkSession()
   }, [])
   if (checkingAuth) {
-    return null // or a spinner
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-100">
+        <LoadingSpinner size="lg" />
+      </main>
+    )
   }
 
   // 🔐 Handle login
@@ -89,24 +105,31 @@ export default function SignInPage() {
       })
 
       const json = await res.json()
-      console.log('SIGNIN API RESPONSE:', json)
+      console.log('SIGNIN API RESPONSE:', res.status, json)
 
       if (!res.ok) {
-        setError(json.error || 'Sign in failed')
+        setError(json.error || `Sign in failed (${res.status})`)
         setLoading(false)
         return
       }
 
       // Create Supabase session
       if (json.email) {
-        const { error: signInError } =
-          await supabase.auth.signInWithPassword({
-            email: json.email,
-            password,
-          })
+        try {
+          const { error: signInError } =
+            await supabase.auth.signInWithPassword({
+              email: json.email,
+              password,
+            })
 
-        if (signInError) {
-          setError(signInError.message)
+          if (signInError) {
+            setError(signInError.message)
+            setLoading(false)
+            return
+          }
+        } catch (supabaseErr: any) {
+          console.error('Supabase auth error:', supabaseErr?.message || supabaseErr)
+          setError('Authentication service error: ' + (supabaseErr?.message || 'Unknown error'))
           setLoading(false)
           return
         }
@@ -115,6 +138,7 @@ export default function SignInPage() {
       setLoading(false)
       await redirectByRole()
     } catch (err: any) {
+      console.error('Signin error:', err?.message || err)
       setError(err?.message || 'Unexpected error')
       setLoading(false)
     }
@@ -175,9 +199,9 @@ export default function SignInPage() {
             />
           </div>
 
-          {error && (
-            <p className="text-sm text-red-600">{error}</p>
-          )}
+        {error && (
+          <Alert type="error" message={error} />
+        )}
 
           <button
             type="submit"

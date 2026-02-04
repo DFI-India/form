@@ -1,5 +1,6 @@
 import './globals.css'
 import { Poppins } from 'next/font/google'
+import { ErrorBoundary } from './components/ErrorBoundary'
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -15,9 +16,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${poppins.className} min-h-screen bg-slate-100 text-slate-900`}>
-        <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-4 py-10">
+        <ErrorBoundary>
           {children}
-        </div>
+        </ErrorBoundary>
       </body>
     </html>
   )

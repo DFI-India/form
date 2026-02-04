@@ -1,0 +1,556 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useRequireRole } from '../../lib/hooks'
+import { supabase } from '../../lib/supabase'
+import { ROLE_CONFIG, ROLE_CAPABILITIES, getRoleConfig, getRoleCapabilities } from '../../lib/types'
+import type { UserProfile, CreateUserForm, DeleteConfirmState } from '../../lib/types'
+import { Alert, LoadingSpinner } from '../components/UI'
+import { Navbar, Sidebar, PageContainer } from '../components/Navbar'
+
+export default function AdminPage() {
+  const { profile, loading: authLoading, isAuthorized } = useRequireRole(['admin'])
+  const [form, setForm] = useState<CreateUserForm>({ username: '', email: '', password: '', confirmPassword: '', role: 'field_volunteer' })
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState(false)
+  const [users, setUsers] = useState<UserProfile[]>([])
+  const [sessionToken, setSessionToken] = useState<string | null>(null)
+  const [showForm, setShowForm] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [filterRole, setFilterRole] = useState<string>('')
+  const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirmState | null>(null)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <LoadingSpinner size="lg" />
+      </div>
+    )
+  }
+
+  if (!isAuthorized || !profile) {
+    return (
+      <main className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-lg shadow-lg p-6 max-w-md text-center">
+          <h1 className="text-2xl font-bold text-slate-900 mb-2">Access Denied</h1>
+          <p className="text-slate-600">You don't have permission to access this page.</p>
+        </div>
+      </main>
+    )
+  }
+
+  useEffect(() => {
+    const init = async () => {
+      const { data } = await supabase.auth.getSession()
+      const token = data.session?.access_token || null
+      if (!token) {
+        setError('Not signed in')
+        return
+      }
+      setSessionToken(token)
+      await loadUsers(token)
+    }
+    if (isAuthorized) {
+      init()
+    }
+  }, [isAuthorized])
+
+  async function loadUsers(token: string) {
+    setError('')
+    try {
+      const res = await fetch('/api/admin/list-users', { headers: { Authorization: `Bearer ${token}` } })
+      if (res.status === 401 || res.status === 403) {
+        setError('Not authorized')
+        return
+      }
+      const json = await res.json()
+      setUsers(json.users || [])
+    } catch (err: any) {
+      setError(err.message || String(err))
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+    setSuccess(false)
+    
+    if (!sessionToken) return setError('Not signed in')
+
+    if (form.password !== form.confirmPassword) {
+      setError('Passwords do not match')
+      setLoading(false)
+      return
+    }
+
+    if (form.password.length < 6) {
+      setError('Password must be at least 6 characters')
+      setLoading(false)
+      return
+    }
+
+    const res = await fetch('/api/admin/create-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sessionToken}` },
+      body: JSON.stringify({
+        username: form.username,
+        email: form.email,
+        password: form.password,
+        role: form.role,
+      }),
+    })
+
+    const json = await res.json()
+
+    if (!res.ok) {
+      setError(json.error || 'Failed to create user')
+      setLoading(false)
+      return
+    }
+
+    setSuccess(true)
+    setForm({ username: '', email: '', password: '', confirmPassword: '', role: 'field_volunteer' })
+    setLoading(false)
+    setShowForm(false)
+    await loadUsers(sessionToken)
+  }
+
+  const handleDelete = async (id: string) => {
+    if (!sessionToken) return setError('Not signed in')
+    const user = users.find(u => u.id === id)
+    if (!user) return
+    setDeleteConfirm({ id, username: user.username })
+    setDeleteConfirmText('')
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteConfirm || !sessionToken) return
+    if (deleteConfirmText !== deleteConfirm.username) {
+      setError('Username does not match')
+      return
+    }
+
+    setLoading(true)
+    const res = await fetch('/api/admin/delete-user', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sessionToken}` },
+      body: JSON.stringify({ id: deleteConfirm.id }),
+    })
+    const json = await res.json()
+    setLoading(false)
+
+    if (!res.ok) {
+      setError(json.error || 'Failed to delete')
+      setDeleteConfirm(null)
+      return
+    }
+
+    setDeleteConfirm(null)
+    setDeleteConfirmText('')
+    setSuccess(true)
+    await loadUsers(sessionToken)
+  }
+
+  const handleRoleChange = async (id: string, role: string) => {
+    if (!sessionToken) return setError('Not signed in')
+    const res = await fetch('/api/admin/update-user', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sessionToken}` },
+      body: JSON.stringify({ id, role }),
+    })
+    const json = await res.json()
+    if (!res.ok) return setError(json.error || 'Failed to update')
+    await loadUsers(sessionToken)
+  }
+
+  const filteredUsers = users.filter(u => {
+    const matchesSearch = u.username.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                         (u.email?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
+    const matchesRole = !filterRole || u.role === filterRole
+    return matchesSearch && matchesRole
+  })
+
+  return (
+    <main className="min-h-screen bg-slate-50">
+      <Navbar 
+        username={profile.username} 
+        role="admin" 
+        roleLabel="Admin"
+        roleColor="bg-indigo-100 text-indigo-800"
+      />
+      <Sidebar role="admin" />
+      
+      <PageContainer>
+        <div className="p-8">
+          <div className="mx-auto max-w-7xl space-y-8">
+            {/* Header */}
+            <div className="flex items-start justify-between">
+              <div>
+                <h1 className="text-4xl font-bold text-slate-900">User management</h1>
+                <p className="mt-2 text-slate-600">Manage your team members and their account permissions here.</p>
+              </div>
+            </div>
+
+            {/* Messages */}
+            {error && (
+              <Alert type="error" message={error} onDismiss={() => setError('')} />
+            )}
+            {success && (
+              <Alert type="success" message="User created successfully!" onDismiss={() => setSuccess(false)} />
+            )}
+
+            {/* User Management Section */}
+            <div className="rounded-lg bg-white border border-slate-200 shadow-sm">
+          {/* Top Bar with Controls */}
+          <div className="flex items-center justify-between gap-4 border-b border-slate-200 p-6">
+            <div className="flex items-center gap-4 flex-1">
+              <div className="relative flex-1 max-w-xs">
+                <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Search by name or email..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              
+              <select
+                value={filterRole}
+                onChange={e => setFilterRole(e.target.value)}
+                className="px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">All Roles</option>
+                {ROLE_CONFIG.map(role => (
+                  <option key={role.value} value={role.value}>
+                    {role.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              onClick={() => setShowForm(!showForm)}
+              className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              + Add User
+            </button>
+          </div>
+
+          {/* Create User Form - Expandable */}
+          {showForm && (
+            <div className="border-b border-slate-200 p-6 bg-slate-50">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-2 uppercase">Username</label>
+                    <input
+                      type="text"
+                      placeholder="john.doe"
+                      value={form.username}
+                      onChange={e => setForm({ ...form, username: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-2 uppercase">Email</label>
+                    <input
+                      type="email"
+                      placeholder="john@example.com"
+                      value={form.email}
+                      onChange={e => setForm({ ...form, email: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-2 uppercase">Password</label>
+                    <input
+                      type="password"
+                      placeholder="••••••••"
+                      value={form.password}
+                      onChange={e => setForm({ ...form, password: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-2 uppercase">Confirm Password</label>
+                    <input
+                      type="password"
+                      placeholder="••••••••"
+                      value={form.confirmPassword}
+                      onChange={e => setForm({ ...form, confirmPassword: e.target.value })}
+                      className={`w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 ${
+                        form.password && form.confirmPassword && form.password !== form.confirmPassword
+                          ? 'border-red-300 focus:ring-red-500 bg-red-50'
+                          : 'border-slate-300 focus:ring-blue-500'
+                      }`}
+                      required
+                    />
+                    {form.password && form.confirmPassword && form.password !== form.confirmPassword && (
+                      <p className="text-xs text-red-600 mt-1">Passwords do not match</p>
+                    )}
+                  </div>
+                </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-2 uppercase">Role</label>
+                    <select
+                      value={form.role}
+                      onChange={e => setForm({ ...form, role: e.target.value as any })}
+                      className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      {ROLE_CONFIG.map(role => (
+                        <option key={role.value} value={role.value}>
+                          {role.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                <div className="flex gap-2 pt-4">
+                  <button
+                    type="submit"
+                    disabled={loading || (form.password !== form.confirmPassword && form.confirmPassword.length > 0)}
+                    className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {loading ? 'Creating…' : 'Create User'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowForm(false)}
+                    className="px-4 py-2 bg-slate-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-300 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* Users Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50">
+                  <th className="px-6 py-3 text-left font-semibold text-slate-900">Full name</th>
+                  <th className="px-6 py-3 text-left font-semibold text-slate-900">Email</th>
+                  <th className="px-6 py-3 text-left font-semibold text-slate-900">Role</th>
+                  <th className="px-6 py-3 text-left font-semibold text-slate-900">Status</th>
+                  <th className="px-6 py-3 text-left font-semibold text-slate-900">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredUsers.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
+                      No users found
+                    </td>
+                  </tr>
+                ) : (
+                  filteredUsers.map(u => {
+                    const roleInfo = getRoleConfig(u.role)
+                    return (
+                      <tr key={u.id} className="border-b border-slate-200 hover:bg-slate-50 transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-xs font-semibold">
+                              {u.username.charAt(0).toUpperCase()}
+                            </div>
+                            <span className="font-medium text-slate-900">{u.username}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-slate-700">{u.email}</td>
+                        <td className="px-6 py-4">
+                          <select
+                            defaultValue={u.role || 'field_volunteer'}
+                            onChange={e => handleRoleChange(u.id, e.target.value)}
+                            className={`px-3 py-1 rounded-full text-xs font-medium border-0 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer ${roleInfo?.color}`}
+                          >
+                            {ROLE_CONFIG.map(role => (
+                              <option key={role.value} value={role.value}>
+                                {role.label}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                            <span className="text-xs font-medium text-slate-700">Active</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <button
+                            onClick={() => handleDelete(u.id)}
+                            className="text-red-600 hover:text-red-700 text-sm font-medium"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Footer */}
+          <div className="flex items-center justify-between border-t border-slate-200 px-6 py-4 bg-slate-50 text-sm text-slate-600">
+            <span>Showing {filteredUsers.length} of {users.length} users</span>
+          </div>
+            </div>
+
+            {/* Centre Management Section */}
+            <div className="rounded-lg bg-white border border-slate-200 shadow-sm">
+              {/* Header */}
+              <div className="border-b border-slate-200 p-6 bg-slate-50">
+                <h2 className="text-2xl font-bold text-slate-900">Centre Management</h2>
+                <p className="text-slate-600 mt-1">Manage data collection centres and their details.</p>
+              </div>
+
+              {/* Top Bar with Controls */}
+              <div className="flex items-center justify-between gap-4 border-b border-slate-200 p-6">
+                <div className="flex items-center gap-4 flex-1">
+                  <div className="relative flex-1 max-w-xs">
+                    <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <input
+                      type="text"
+                      placeholder="Search by centre name..."
+                      className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+                <button className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+                  + Add Centre
+                </button>
+              </div>
+
+              {/* Centres Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-50">
+                      <th className="px-6 py-3 text-left font-semibold text-slate-900">Centre Name</th>
+                      <th className="px-6 py-3 text-left font-semibold text-slate-900">Location</th>
+                      <th className="px-6 py-3 text-left font-semibold text-slate-900">Coordinator</th>
+                      <th className="px-6 py-3 text-left font-semibold text-slate-900">Records</th>
+                      <th className="px-6 py-3 text-left font-semibold text-slate-900">Status</th>
+                      <th className="px-6 py-3 text-left font-semibold text-slate-900">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b border-slate-200 hover:bg-slate-50 transition-colors">
+                      <td className="px-6 py-4">
+                        <span className="font-medium text-slate-900">North Centre</span>
+                      </td>
+                      <td className="px-6 py-4 text-slate-700">Delhi North</td>
+                      <td className="px-6 py-4 text-slate-700">Rajesh Kumar</td>
+                      <td className="px-6 py-4 text-slate-700">245</td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                          <span className="text-xs font-medium text-slate-700">Active</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <button className="text-blue-600 hover:text-blue-700 text-sm font-medium mr-3">Edit</button>
+                        <button className="text-red-600 hover:text-red-700 text-sm font-medium">Delete</button>
+                      </td>
+                    </tr>
+                    <tr className="border-b border-slate-200 hover:bg-slate-50 transition-colors">
+                      <td className="px-6 py-4">
+                        <span className="font-medium text-slate-900">South Centre</span>
+                      </td>
+                      <td className="px-6 py-4 text-slate-700">Delhi South</td>
+                      <td className="px-6 py-4 text-slate-700">Priya Singh</td>
+                      <td className="px-6 py-4 text-slate-700">189</td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                          <span className="text-xs font-medium text-slate-700">Active</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <button className="text-blue-600 hover:text-blue-700 text-sm font-medium mr-3">Edit</button>
+                        <button className="text-red-600 hover:text-red-700 text-sm font-medium">Delete</button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center justify-between border-t border-slate-200 px-6 py-4 bg-slate-50 text-sm text-slate-600">
+                <span>Showing 2 centres</span>
+              </div>
+            </div>
+
+        {/* Delete Confirmation Modal */}
+        {deleteConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6 space-y-4">
+              <h3 className="text-lg font-semibold text-slate-900">Delete user</h3>
+              
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <p className="text-sm text-red-800">
+                  Are you sure you want to delete <span className="font-semibold">{deleteConfirm.username}</span>? This action cannot be undone.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Type the username to confirm deletion:
+                </label>
+                <input
+                  type="text"
+                  value={deleteConfirmText}
+                  onChange={e => setDeleteConfirmText(e.target.value)}
+                  placeholder={deleteConfirm.username}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                  autoFocus
+                />
+              </div>
+
+              {error && deleteConfirm && (
+                <p className="text-sm text-red-600 bg-red-50 p-2 rounded">{error}</p>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => {
+                    setDeleteConfirm(null)
+                    setDeleteConfirmText('')
+                    setError('')
+                  }}
+                  className="flex-1 px-4 py-2 bg-slate-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-300 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  disabled={deleteConfirmText !== deleteConfirm.username || loading}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {loading ? 'Deleting…' : 'Delete User'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+            </div>
+          </div>
+      </PageContainer>
+    </main>
+  )
+}
