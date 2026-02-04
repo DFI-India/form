@@ -312,7 +312,7 @@ type ComputerCourseState = {
   batch_timings: string
   date_of_admission: string
   reg_no: string
-  eac_name: string
+  eac_no: string
   child_name: string
   gender: string
   aadhar_no: string
@@ -518,7 +518,7 @@ const createEmptyComputerCourseForm = (): ComputerCourseState => ({
   batch_timings: '',
   date_of_admission: '',
   reg_no: '',
-  eac_name: '',
+  eac_no: '',
   child_name: '',
   gender: '',
   aadhar_no: '',
@@ -1723,7 +1723,7 @@ export default function ChildForm() {
         batch_timings: toNullableString(computerData.batch_timings),
         date_of_admission: toNullableString(computerData.date_of_admission),
         reg_no: toNullableString(computerData.reg_no),
-        eac_name: toNullableString(computerData.eac_name),
+        eac_no: toNullableString(computerData.eac_no),
         child_name: toNullableString(computerData.child_name),
         gender: toNullableString(computerData.gender),
         aadhar_no: toNullableString(computerData.aadhar_no),
@@ -3494,8 +3494,8 @@ export default function ChildForm() {
                   />
                   <TextInput
                     label="EAC Name"
-                    name="eac_name"
-                    value={computerData.eac_name}
+                    name="eac_no"
+                    value={computerData.eac_no}
                     onChange={handleComputerChange}
                   />
                 </div>

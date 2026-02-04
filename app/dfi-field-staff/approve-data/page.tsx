@@ -10,9 +10,9 @@ import Image from 'next/image'
 import { supabase } from '../../../lib/supabase'
 
 type MainTabType = 'verify' | 'view' | 'history'
-type VerifySubTabType = 'child' | 'family' | 'sibling' | 'uniform' | 'leaving'
-type ViewSubTabType = 'child' | 'family' | 'sibling' | 'uniform' | 'leaving'
-type HistorySubTabType = 'child' | 'family' | 'sibling' | 'uniform' | 'leaving'
+type VerifySubTabType = 'child' | 'family' | 'sibling' | 'uniform' | 'leaving' | 'vocational' | 'computer'
+type ViewSubTabType = 'child' | 'family' | 'sibling' | 'uniform' | 'leaving' | 'vocational' | 'computer'
+type HistorySubTabType = 'child' | 'family' | 'sibling' | 'uniform' | 'leaving' | 'vocational' | 'computer'
 type SearchByType = 'name' | 'reg_no'
 
 type ApprovalRecord = Record<string, unknown> & {
@@ -54,6 +54,8 @@ export default function ApproveDataPage() {
         sibling: [],
         uniform: [],
         leaving: [],
+        vocational: [],
+        computer: [],
     })
 
     const [verifyLoading, setVerifyLoading] = useState<Record<VerifySubTabType, boolean>>({
@@ -62,6 +64,8 @@ export default function ApproveDataPage() {
         sibling: false,
         uniform: false,
         leaving: false,
+        vocational: false,
+        computer: false,
     })
 
     const [verifyPagination, setVerifyPagination] = useState<Record<VerifySubTabType, { page: number; pageSize: number }>>({
@@ -70,6 +74,8 @@ export default function ApproveDataPage() {
         sibling: { page: 1, pageSize: 10 },
         uniform: { page: 1, pageSize: 10 },
         leaving: { page: 1, pageSize: 10 },
+        vocational: { page: 1, pageSize: 10 },
+        computer: { page: 1, pageSize: 10 },
     })
 
     // View Data State
@@ -79,6 +85,8 @@ export default function ApproveDataPage() {
         sibling: [],
         uniform: [],
         leaving: [],
+        vocational: [],
+        computer: [],
     })
 
     const [viewLoading, setViewLoading] = useState<Record<ViewSubTabType, boolean>>({
@@ -87,6 +95,8 @@ export default function ApproveDataPage() {
         sibling: false,
         uniform: false,
         leaving: false,
+        vocational: false,
+        computer: false,
     })
 
     const [viewSearchQuery, setViewSearchQuery] = useState<Record<ViewSubTabType, string>>({
@@ -95,6 +105,8 @@ export default function ApproveDataPage() {
         sibling: '',
         uniform: '',
         leaving: '',
+        vocational: '',
+        computer: '',
     })
 
     const [viewSearchType, setViewSearchType] = useState<Record<ViewSubTabType, SearchByType>>({
@@ -103,6 +115,8 @@ export default function ApproveDataPage() {
         sibling: 'reg_no',
         uniform: 'reg_no',
         leaving: 'reg_no',
+        vocational: 'reg_no',
+        computer: 'reg_no',
     })
 
     // View Data Photo Modal
@@ -120,6 +134,8 @@ export default function ApproveDataPage() {
     const [historySiblingData, setHistorySiblingData] = useState<Record<string, unknown>[]>([])
     const [historyUniformData, setHistoryUniformData] = useState<Record<string, unknown>[]>([])
     const [historyLeavingData, setHistoryLeavingData] = useState<Record<string, unknown>[]>([])
+    const [historyVocationalData, setHistoryVocationalData] = useState<Record<string, unknown>[]>([])
+    const [historyComputerData, setHistoryComputerData] = useState<Record<string, unknown>[]>([])
 
     // Date range filters for each type
     const [historyChildDateRange, setHistoryChildDateRange] = useState({ start: '', end: '' })
@@ -127,6 +143,8 @@ export default function ApproveDataPage() {
     const [historySiblingDateRange, setHistorySiblingDateRange] = useState({ start: '', end: '' })
     const [historyUniformDateRange, setHistoryUniformDateRange] = useState({ start: '', end: '' })
     const [historyLeavingDateRange, setHistoryLeavingDateRange] = useState({ start: '', end: '' })
+    const [historyVocationalDateRange, setHistoryVocationalDateRange] = useState({ start: '', end: '' })
+    const [historyComputerDateRange, setHistoryComputerDateRange] = useState({ start: '', end: '' })
 
     // Loading states for history subtabs
     const [historyChildLoading, setHistoryChildLoading] = useState(false)
@@ -134,6 +152,8 @@ export default function ApproveDataPage() {
     const [historySiblingLoading, setHistorySiblingLoading] = useState(false)
     const [historyUniformLoading, setHistoryUniformLoading] = useState(false)
     const [historyLeavingLoading, setHistoryLeavingLoading] = useState(false)
+    const [historyVocationalLoading, setHistoryVocationalLoading] = useState(false)
+    const [historyComputerLoading, setHistoryComputerLoading] = useState(false)
 
     const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({})
 
@@ -223,6 +243,8 @@ export default function ApproveDataPage() {
                 sibling: 'childsibling_for_approval',
                 uniform: 'childuniform_for_approval',
                 leaving: 'childleaving_for_approval',
+                vocational: 'vocational_course_for_approval',
+                computer: 'computer_course_for_approval',
             }
 
             const viewName = viewMap[tabType]
@@ -239,11 +261,17 @@ export default function ApproveDataPage() {
 
             if (error) throw error
 
+            // Map id to approval_id for consistency with the rest of the code
+            const enrichedData = (data || []).map((record: any) => ({
+                ...record,
+                approval_id: record.id
+            }))
+
+            console.log('Fetched vocational/computer data:', enrichedData);
             setVerifyData((prev) => ({
                 ...prev,
-                [tabType]: data || [],
+                [tabType]: enrichedData,
             }))
-            console.log(data, error);
         } catch (error: unknown) {
             const fallback = error instanceof Error ? error.message : 'Failed to fetch data'
             setMessage({ type: 'error', text: `Unable to load ${tabType} data: ${fallback}` })
@@ -265,6 +293,8 @@ export default function ApproveDataPage() {
                 sibling: 'childsibling',
                 uniform: 'childuniform',
                 leaving: 'childleaving',
+                vocational: 'vocational_course',
+                computer: 'computer_course',
             }
 
             const tableName = tableMap[tabType]
@@ -375,6 +405,12 @@ export default function ApproveDataPage() {
             case 'leaving':
                 fetchHistoryData('childleaving', setHistoryLeavingData, setHistoryLeavingLoading, historyLeavingDateRange)
                 break
+            case 'vocational':
+                fetchHistoryData('vocational_course', setHistoryVocationalData, setHistoryVocationalLoading, historyVocationalDateRange)
+                break
+            case 'computer':
+                fetchHistoryData('computer_course', setHistoryComputerData, setHistoryComputerLoading, historyComputerDateRange)
+                break
         }
     }
 
@@ -398,6 +434,12 @@ export default function ApproveDataPage() {
                 break
             case 'leaving':
                 setHistoryLeavingDateRange(prev => ({ ...prev, [type]: value }))
+                break
+            case 'vocational':
+                setHistoryVocationalDateRange(prev => ({ ...prev, [type]: value }))
+                break
+            case 'computer':
+                setHistoryComputerDateRange(prev => ({ ...prev, [type]: value }))
                 break
         }
     }
@@ -429,6 +471,12 @@ export default function ApproveDataPage() {
             case 'leaving':
                 fetchHistoryData('childleaving', setHistoryLeavingData, setHistoryLeavingLoading, historyLeavingDateRange)
                 break
+            case 'vocational':
+                fetchHistoryData('vocational_course', setHistoryVocationalData, setHistoryVocationalLoading, historyVocationalDateRange)
+                break
+            case 'computer':
+                fetchHistoryData('computer_course', setHistoryComputerData, setHistoryComputerLoading, historyComputerDateRange)
+                break
         }
     }, [historyChildDateRange, historyFamilyDateRange, historySiblingDateRange, historyUniformDateRange, historyLeavingDateRange])
 
@@ -443,6 +491,87 @@ export default function ApproveDataPage() {
                     decided_at: new Date().toISOString(),
                 })
                 .eq('id', recordId)
+
+            if (error) throw error
+
+            // Show toast and remove from current visible list immediately
+            addToast({ type: 'success', text: 'Record approved successfully.' })
+            setVerifyData((prev) => ({
+                ...prev,
+                [verifySubTab]: prev[verifySubTab].filter((r) => r.approval_id !== recordId),
+            }))
+        } catch (error: unknown) {
+            const fallback = error instanceof Error ? error.message : 'Failed to approve'
+            addToast({ type: 'error', text: `Unable to approve: ${fallback}` })
+        } finally {
+            setActionLoading((prev) => ({ ...prev, [recordId]: false }))
+        }
+    }
+
+    const handleVocationalApprove = async (recordId: string) => {
+        setActionLoading((prev) => ({ ...prev, [recordId]: true }))
+        try {
+            console.log('Approving vocational with recordId:', recordId)
+            
+            // First, find the actual vocational_training_approvals record using the entity_id (vocational_course id)
+            const { data: approvalRecord, error: findError } = await supabase
+                .from('vocational_training_approvals')
+                .select('id')
+                .eq('entity_id', recordId)
+                .eq('entity_type', 'vocational_course')
+                .single()
+            
+            if (findError) throw new Error(`Could not find approval record: ${findError.message}`)
+            
+            console.log('Found approval record id:', approvalRecord?.id)
+            
+            const { error, data } = await supabase
+                .from('vocational_training_approvals')
+                .update({
+                    status: 'Approved',
+                    approved_by: (await supabase.auth.getUser()).data.user?.id,
+                    approved_at: new Date().toISOString(),
+                })
+                .eq('id', approvalRecord.id)
+
+            console.log('Update result - error:', error, 'data:', data)
+            if (error) throw error
+
+            // Show toast and remove from current visible list immediately
+            addToast({ type: 'success', text: 'Record approved successfully.' })
+            setVerifyData((prev) => ({
+                ...prev,
+                [verifySubTab]: prev[verifySubTab].filter((r) => r.approval_id !== recordId),
+            }))
+        } catch (error: unknown) {
+            const fallback = error instanceof Error ? error.message : 'Failed to approve'
+            addToast({ type: 'error', text: `Unable to approve: ${fallback}` })
+        } finally {
+            setActionLoading((prev) => ({ ...prev, [recordId]: false }))
+        }
+    }
+
+    const handleComputerApprove = async (recordId: string) => {
+        setActionLoading((prev) => ({ ...prev, [recordId]: true }))
+        try {
+            // First, find the actual vocational_training_approvals record using the entity_id (computer_course id)
+            const { data: approvalRecord, error: findError } = await supabase
+                .from('vocational_training_approvals')
+                .select('id')
+                .eq('entity_id', recordId)
+                .eq('entity_type', 'computer_course')
+                .single()
+            
+            if (findError) throw new Error(`Could not find approval record: ${findError.message}`)
+            
+            const { error } = await supabase
+                .from('vocational_training_approvals')
+                .update({
+                    status: 'Approved',
+                    approved_by: (await supabase.auth.getUser()).data.user?.id,
+                    approved_at: new Date().toISOString(),
+                })
+                .eq('id', approvalRecord.id)
 
             if (error) throw error
 
@@ -496,6 +625,98 @@ export default function ApproveDataPage() {
         }
     }
 
+    const handleVocationalReject = async (recordId: string, reason: string) => {
+        if (!reason.trim()) {
+            setMessage({ type: 'error', text: 'Please provide a rejection reason.' })
+            return
+        }
+
+        setActionLoading((prev) => ({ ...prev, [recordId]: true }))
+        try {
+            const user = (await supabase.auth.getUser()).data.user
+
+            // First, find the actual vocational_training_approvals record using the entity_id (vocational_course id)
+            const { data: approvalRecord, error: findError } = await supabase
+                .from('vocational_training_approvals')
+                .select('id')
+                .eq('entity_id', recordId)
+                .eq('entity_type', 'vocational_course')
+                .single()
+            
+            if (findError) throw new Error(`Could not find approval record: ${findError.message}`)
+
+            const { error } = await supabase
+                .from('vocational_training_approvals')
+                .update({
+                    status: 'Rejected',
+                    rejection_reason: reason,
+                    approved_by: user?.id,
+                    approved_at: new Date().toISOString(),
+                })
+                .eq('id', approvalRecord.id)
+
+            if (error) throw error
+
+            // Show toast and remove from current visible list immediately
+            addToast({ type: 'success', text: 'Record rejected successfully.' })
+            setVerifyData((prev) => ({
+                ...prev,
+                [verifySubTab]: prev[verifySubTab].filter((r) => r.approval_id !== recordId),
+            }))
+        } catch (error: unknown) {
+            const fallback = error instanceof Error ? error.message : 'Failed to reject'
+            addToast({ type: 'error', text: `Unable to reject: ${fallback}` })
+        } finally {
+            setActionLoading((prev) => ({ ...prev, [recordId]: false }))
+        }
+    }
+
+    const handleComputerReject = async (recordId: string, reason: string) => {
+        if (!reason.trim()) {
+            setMessage({ type: 'error', text: 'Please provide a rejection reason.' })
+            return
+        }
+
+        setActionLoading((prev) => ({ ...prev, [recordId]: true }))
+        try {
+            const user = (await supabase.auth.getUser()).data.user
+
+            // First, find the actual vocational_training_approvals record using the entity_id (computer_course id)
+            const { data: approvalRecord, error: findError } = await supabase
+                .from('vocational_training_approvals')
+                .select('id')
+                .eq('entity_id', recordId)
+                .eq('entity_type', 'computer_course')
+                .single()
+            
+            if (findError) throw new Error(`Could not find approval record: ${findError.message}`)
+
+            const { error } = await supabase
+                .from('vocational_training_approvals')
+                .update({
+                    status: 'Rejected',
+                    rejection_reason: reason,
+                    approved_by: user?.id,
+                    approved_at: new Date().toISOString(),
+                })
+                .eq('id', approvalRecord.id)
+
+            if (error) throw error
+
+            // Show toast and remove from current visible list immediately
+            addToast({ type: 'success', text: 'Record rejected successfully.' })
+            setVerifyData((prev) => ({
+                ...prev,
+                [verifySubTab]: prev[verifySubTab].filter((r) => r.approval_id !== recordId),
+            }))
+        } catch (error: unknown) {
+            const fallback = error instanceof Error ? error.message : 'Failed to reject'
+            addToast({ type: 'error', text: `Unable to reject: ${fallback}` })
+        } finally {
+            setActionLoading((prev) => ({ ...prev, [recordId]: false }))
+        }
+    }
+
     if (!checkedAuth) {
         return (
             <main className="flex min-h-screen items-center justify-center bg-slate-100">
@@ -525,6 +746,8 @@ export default function ApproveDataPage() {
         { id: 'sibling', label: 'Child Siblings' },
         { id: 'uniform', label: 'Child Uniform' },
         { id: 'leaving', label: 'Child Leaving' },
+        { id: 'vocational', label: 'Vocational Course' },
+        { id: 'computer', label: 'Computer Course' },
     ]
 
     // Ensure headers and rows use the same visible keys so columns stay aligned
@@ -656,8 +879,20 @@ export default function ApproveDataPage() {
                                                 record={record}
                                                 displayKeys={visibleKeys}
                                                 isLoading={actionLoading[record.approval_id] || false}
-                                                onApprove={() => handleApprove(record.approval_id)}
-                                                onReject={(reason) => handleReject(record.approval_id, reason)}
+                                                onApprove={() => 
+                                                    verifySubTab === 'vocational' 
+                                                        ? handleVocationalApprove(record.approval_id)
+                                                        : verifySubTab === 'computer'
+                                                        ? handleComputerApprove(record.approval_id)
+                                                        : handleApprove(record.approval_id)
+                                                }
+                                                onReject={(reason) => 
+                                                    verifySubTab === 'vocational' 
+                                                        ? handleVocationalReject(record.approval_id, reason)
+                                                        : verifySubTab === 'computer'
+                                                        ? handleComputerReject(record.approval_id, reason)
+                                                        : handleReject(record.approval_id, reason)
+                                                }
                                             />
                                         ))}
                                     </tbody>
@@ -875,6 +1110,8 @@ export default function ApproveDataPage() {
                                 { id: 'sibling' as HistorySubTabType, label: 'Child Sibling' },
                                 { id: 'uniform' as HistorySubTabType, label: 'Child Uniform' },
                                 { id: 'leaving' as HistorySubTabType, label: 'Child Leaving' },
+                                { id: 'vocational' as HistorySubTabType, label: 'Vocational Course' },
+                                { id: 'computer' as HistorySubTabType, label: 'Computer Course' },
                             ].map((tab) => (
                                 <button
                                     key={tab.id}
