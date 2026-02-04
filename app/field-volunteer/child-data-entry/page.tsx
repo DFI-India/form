@@ -1579,6 +1579,13 @@ export default function ChildForm() {
         }
       }
 
+      const { data: userData } = await supabase.auth.getUser()
+      const userId = userData.user?.id
+
+      if (!userId) {
+        throw new Error('User session not found. Please log in again.')
+      }
+
       const toNullableString = (value: string) => (value.trim() === '' ? null : value)
       const toNullableNumber = (value: string) => {
         if (value.trim() === '') return null
@@ -1641,6 +1648,7 @@ export default function ChildForm() {
         verified_by_social_worker: toNullableString(vocationalData.verified_by_social_worker),
         verified_by_dfi_staff: toNullableString(vocationalData.verified_by_dfi_staff),
         photo_link: photoLink,
+        submitted_by: userId,
       }
 
       const { data, error } = await supabase
@@ -1651,19 +1659,13 @@ export default function ChildForm() {
 
       if (error) throw error
 
-      const { data: userData } = await supabase.auth.getUser()
-      const userId = userData.user?.id
-
-      if (!userId) {
-        throw new Error('User session not found. Please log in again.')
-      }
-
       const { error: approvalError } = await supabase
-        .from('child_approvals')
+        .from('vocational_training_approvals')
         .insert([{
           entity_type: 'vocational_course',
           entity_id: data.id,
-          submitted_by: userId
+          submitted_by: userId,
+          status: 'Pending'
         }])
 
       if (approvalError) throw approvalError
@@ -1709,6 +1711,13 @@ export default function ChildForm() {
         return Number.isNaN(parsed) ? null : parsed
       }
 
+      const { data: userData } = await supabase.auth.getUser()
+      const userId = userData.user?.id
+
+      if (!userId) {
+        throw new Error('User session not found. Please log in again.')
+      }
+
       const payload = {
         batch_no: toNullableString(computerData.batch_no),
         batch_timings: toNullableString(computerData.batch_timings),
@@ -1747,6 +1756,7 @@ export default function ChildForm() {
         social_worker_signature: toNullableString(computerData.social_worker_signature),
         dfi_staff_signature: toNullableString(computerData.dfi_staff_signature),
         photo_link: photoLink,
+        submitted_by: userId,
       }
 
       const { data, error } = await supabase
@@ -1757,19 +1767,13 @@ export default function ChildForm() {
 
       if (error) throw error
 
-      const { data: userData } = await supabase.auth.getUser()
-      const userId = userData.user?.id
-
-      if (!userId) {
-        throw new Error('User session not found. Please log in again.')
-      }
-
       const { error: approvalError } = await supabase
-        .from('child_approvals')
+        .from('vocational_training_approvals')
         .insert([{
           entity_type: 'computer_course',
           entity_id: data.id,
-          submitted_by: userId
+          submitted_by: userId,
+          status: 'Pending',
         }])
 
       if (approvalError) throw approvalError
