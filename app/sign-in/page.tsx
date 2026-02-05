@@ -46,6 +46,9 @@ export default function SignInPage() {
       case 'dfi_staff':
         router.replace('/dfi-staff')
         break
+      case 'dfi_staff':
+        router.replace('/dfi-staff/edit-approve-data')
+        break
       case 'admin':
         router.replace('/admin')
         break

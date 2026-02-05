@@ -11,7 +11,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { supabase } from '../../../lib/supabase'
 
-type TabType = 'child' | 'family' | 'sibling' | 'uniform' | 'leaving' | 'rejected' | 'history'
+type TabType = 'child' | 'family' | 'sibling' | 'uniform' | 'leaving' | 'vocational' | 'computer' | 'rejected' | 'history'
 type RejectedSubTabType = 'child' | 'family' | 'sibling' | 'uniform' | 'leaving'
 
 type CentreOption = {
@@ -250,6 +250,103 @@ type ChildLeavingState = {
   leav_remarks: string
 }
 
+type VocationalCourseState = {
+  date_of_admission: string
+  eac_no: string
+  reg_no: string
+  batch_no: string
+  batch_timings: string
+  centre_no: string
+  district: string
+  taluk: string
+  panchayat: string
+  village: string
+  trainee_name: string
+  gender: string
+  aadhar_no: string
+  date_of_birth: string
+  place_of_birth: string
+  blood_group: string
+  marital_status: string
+  mother_tongue: string
+  religion: string
+  caste: string
+  class_standard_studied: string
+  school_name: string
+  medium_of_study: string
+  ambition_in_life: string
+  favourite_subject: string
+  other_information: string
+  father_or_husband_name: string
+  father_occupation: string
+  father_income: string
+  father_aadhar_no: string
+  father_mobile: string
+  mother_name: string
+  mother_occupation: string
+  mother_income: string
+  mother_aadhar_no: string
+  mother_mobile: string
+  parent_guardian_address: string
+  enrolled_course: string
+  attended_other_training: string
+  previous_training_details: string
+  plan_after_course: string
+  present_status: string
+  education_training_employment: string
+  reason_for_leaving: string
+  leaving_date: string
+  present_address: string
+  recommended_by: string
+  recommended_date: string
+  trainee_signature_date: string
+  parent_guardian_name: string
+  parent_guardian_signature_date: string
+  verified_by_social_worker: string
+  verified_by_dfi_staff: string
+  photo_link: string
+}
+
+type ComputerCourseState = {
+  batch_no: string
+  batch_timings: string
+  date_of_admission: string
+  reg_no: string
+  eac_no: string
+  child_name: string
+  gender: string
+  aadhar_no: string
+  date_of_birth: string
+  class_standard: string
+  school_name: string
+  school_type: string
+  prior_computer_knowledge: string
+  father_occupation: string
+  father_income: string
+  father_phone: string
+  mother_occupation: string
+  mother_income: string
+  mother_phone: string
+  guardian_address: string
+  consent_details_confirmed: string
+  consent_course_participation: string
+  consent_pickup_drop: string
+  consent_date: string
+  guardian_signature_name: string
+  verified_by: string
+  verified_date: string
+  course_name: string
+  completion_date: string
+  attendance_percentage: string
+  final_assessment_score: string
+  overall_performance: string
+  instructor_name: string
+  certificate_issued_on: string
+  social_worker_signature: string
+  dfi_staff_signature: string
+  photo_link: string
+}
+
 type MessageState = { type: 'success' | 'error'; text: string } | null
 
 const createEmptyForm = (): FormState => ({
@@ -359,8 +456,106 @@ const createEmptyLeavingForm = (): ChildLeavingState => ({
   leav_remarks: ''
 })
 
+const createEmptyVocationalCourseForm = (): VocationalCourseState => ({
+  date_of_admission: '',
+  eac_no: '',
+  reg_no: '',
+  batch_no: '',
+  batch_timings: '',
+  centre_no: '',
+  district: '',
+  taluk: '',
+  panchayat: '',
+  village: '',
+  trainee_name: '',
+  gender: '',
+  aadhar_no: '',
+  date_of_birth: '',
+  place_of_birth: '',
+  blood_group: '',
+  marital_status: '',
+  mother_tongue: '',
+  religion: '',
+  caste: '',
+  class_standard_studied: '',
+  school_name: '',
+  medium_of_study: '',
+  ambition_in_life: '',
+  favourite_subject: '',
+  other_information: '',
+  father_or_husband_name: '',
+  father_occupation: '',
+  father_income: '',
+  father_aadhar_no: '',
+  father_mobile: '',
+  mother_name: '',
+  mother_occupation: '',
+  mother_income: '',
+  mother_aadhar_no: '',
+  mother_mobile: '',
+  parent_guardian_address: '',
+  enrolled_course: '',
+  attended_other_training: '',
+  previous_training_details: '',
+  plan_after_course: '',
+  present_status: '',
+  education_training_employment: '',
+  reason_for_leaving: '',
+  leaving_date: '',
+  present_address: '',
+  recommended_by: '',
+  recommended_date: '',
+  trainee_signature_date: '',
+  parent_guardian_name: '',
+  parent_guardian_signature_date: '',
+  verified_by_social_worker: '',
+  verified_by_dfi_staff: '',
+  photo_link: ''
+})
+
+const createEmptyComputerCourseForm = (): ComputerCourseState => ({
+  batch_no: '',
+  batch_timings: '',
+  date_of_admission: '',
+  reg_no: '',
+  eac_no: '',
+  child_name: '',
+  gender: '',
+  aadhar_no: '',
+  date_of_birth: '',
+  class_standard: '',
+  school_name: '',
+  school_type: '',
+  prior_computer_knowledge: '',
+  father_occupation: '',
+  father_income: '',
+  father_phone: '',
+  mother_occupation: '',
+  mother_income: '',
+  mother_phone: '',
+  guardian_address: '',
+  consent_details_confirmed: '',
+  consent_course_participation: '',
+  consent_pickup_drop: '',
+  consent_date: '',
+  guardian_signature_name: '',
+  verified_by: '',
+  verified_date: '',
+  course_name: '',
+  completion_date: '',
+  attendance_percentage: '',
+  final_assessment_score: '',
+  overall_performance: '',
+  instructor_name: '',
+  certificate_issued_on: '',
+  social_worker_signature: '',
+  dfi_staff_signature: '',
+  photo_link: ''
+})
+
 const genderOptions = ['Male', 'Female', 'Other']
 const bloodGroupOptions = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
+const vocationalCourseOptions = ['Tailoring', 'Beautician', 'Kuchi/Embroidery', 'Driving']
 
 export default function ChildForm() {
   const router = useRouter()
@@ -394,6 +589,26 @@ export default function ChildForm() {
   const [leavingLoading, setLeavingLoading] = useState(false)
   const [leavingMessage, setLeavingMessage] = useState<MessageState>(null)
 
+  // Vocational Course form state
+  const [vocationalData, setVocationalData] = useState<VocationalCourseState>(() => createEmptyVocationalCourseForm())
+  const [vocationalLoading, setVocationalLoading] = useState(false)
+  const [vocationalMessage, setVocationalMessage] = useState<MessageState>(null)
+  const [vocationalPhotoFile, setVocationalPhotoFile] = useState<File | null>(null)
+  const [vocationalPhotoPreview, setVocationalPhotoPreview] = useState<string>('')
+  const [vocationalPhotoUploading, setVocationalPhotoUploading] = useState(false)
+
+  // Computer Course form state
+  const [computerData, setComputerData] = useState<ComputerCourseState>(() => createEmptyComputerCourseForm())
+  const [computerLoading, setComputerLoading] = useState(false)
+  const [computerMessage, setComputerMessage] = useState<MessageState>(null)
+  const [computerPhotoFile, setComputerPhotoFile] = useState<File | null>(null)
+  const [computerPhotoPreview, setComputerPhotoPreview] = useState<string>('')
+  const [computerPhotoUploading, setComputerPhotoUploading] = useState(false)
+
+  // Submission guard states for new forms
+  const [isSubmittingVocational, setIsSubmittingVocational] = useState(false)
+  const [isSubmittingComputer, setIsSubmittingComputer] = useState(false)
+
   // Rejected data state
   const [activeRejectedSubTab, setActiveRejectedSubTab] = useState<RejectedSubTabType>('child')
   const [rejectedChildData, setRejectedChildData] = useState<RejectedChildRecord[]>([])
@@ -410,11 +625,45 @@ export default function ChildForm() {
   const [editingRecord, setEditingRecord] = useState<any>(null)
   const [editFormData, setEditFormData] = useState<any>(null)
   const [editLoading, setEditLoading] = useState(false)
+  const [editPhotoFile, setEditPhotoFile] = useState<File | null>(null)
+  const [editPhotoInputKey, setEditPhotoInputKey] = useState(() => Date.now())
 
   // Personal history state
   const [historyData, setHistoryData] = useState<HistoryRow[]>([])
   const [historyLoading, setHistoryLoading] = useState(false)
   const [historyMessage, setHistoryMessage] = useState<MessageState>(null)
+
+  // Personal history subtabs state
+  type HistorySubTabType = 'child' | 'family' | 'sibling' | 'uniform' | 'leaving'
+  const [activeHistorySubTab, setActiveHistorySubTab] = useState<HistorySubTabType>('child')
+
+  // History data for each type
+  const [historyChildData, setHistoryChildData] = useState<any[]>([])
+  const [historyFamilyData, setHistoryFamilyData] = useState<any[]>([])
+  const [historySiblingData, setHistorySiblingData] = useState<any[]>([])
+  const [historyUniformData, setHistoryUniformData] = useState<any[]>([])
+  const [historyLeavingData, setHistoryLeavingData] = useState<any[]>([])
+
+  // Date range filters for each type
+  const [historyChildDateRange, setHistoryChildDateRange] = useState({ start: '', end: '' })
+  const [historyFamilyDateRange, setHistoryFamilyDateRange] = useState({ start: '', end: '' })
+  const [historySiblingDateRange, setHistorySiblingDateRange] = useState({ start: '', end: '' })
+  const [historyUniformDateRange, setHistoryUniformDateRange] = useState({ start: '', end: '' })
+  const [historyLeavingDateRange, setHistoryLeavingDateRange] = useState({ start: '', end: '' })
+
+  // Loading states for history subtabs
+  const [historyChildLoading, setHistoryChildLoading] = useState(false)
+  const [historyFamilyLoading, setHistoryFamilyLoading] = useState(false)
+  const [historySiblingLoading, setHistorySiblingLoading] = useState(false)
+  const [historyUniformLoading, setHistoryUniformLoading] = useState(false)
+  const [historyLeavingLoading, setHistoryLeavingLoading] = useState(false)
+
+  // Submission guard states (prevent duplicate submissions)
+  const [isSubmittingChild, setIsSubmittingChild] = useState(false)
+  const [isSubmittingFamily, setIsSubmittingFamily] = useState(false)
+  const [isSubmittingSibling, setIsSubmittingSibling] = useState(false)
+  const [isSubmittingUniform, setIsSubmittingUniform] = useState(false)
+  const [isSubmittingLeaving, setIsSubmittingLeaving] = useState(false)
 
   const [checkedAuth, setCheckedAuth] = useState(false)
   const [authorized, setAuthorized] = useState(false)
@@ -610,6 +859,146 @@ export default function ChildForm() {
     }
   }, [activeTab, authorized])
 
+  const fetchHistoryData = async (
+    tableName: string,
+    entityType: string,
+    setData: (data: any[]) => void,
+    setLoading: (loading: boolean) => void,
+    dateRange: { start: string; end: string }
+  ) => {
+    setLoading(true)
+    try {
+      const { data: userData } = await supabase.auth.getUser()
+      const userId = userData.user?.id
+      if (!userId) throw new Error('No user session found.')
+
+      // First, get entity IDs from child_approvals for this user and entity type
+      const { data: approvals, error: approvalsError } = await supabase
+        .from('child_approvals')
+        .select('entity_id')
+        .eq('submitted_by', userId)
+        .eq('entity_type', entityType)
+
+      if (approvalsError) throw approvalsError
+
+      const ids: number[] = (approvals ?? [])
+        .map((r: any) => (typeof r.entity_id === 'string' ? Number(r.entity_id) : r.entity_id))
+        .filter(Boolean)
+
+      if (ids.length === 0) {
+        setData([])
+        return
+      }
+
+      // Then fetch records from the table using those IDs
+      let query = supabase
+        .from(tableName)
+        .select('*')
+        .in('record_id', ids)
+
+      // Apply date range filter if dates are provided
+      if (dateRange.start) {
+        query = query.gte('created_at', dateRange.start)
+      }
+      if (dateRange.end) {
+        query = query.lte('created_at', dateRange.end)
+      }
+
+      const { data: rows, error: rowsError } = await query
+
+      if (rowsError) throw rowsError
+
+      const sorted = (rows ?? []).slice().sort((a: any, b: any) => {
+        const aDate = new Date(a.created_at || 0).getTime()
+        const bDate = new Date(b.created_at || 0).getTime()
+        return bDate - aDate
+      })
+
+      setData(sorted)
+    } catch (error) {
+      console.error(`Error fetching ${tableName} history:`, error)
+      setData([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleHistorySubTabChange = (subTab: HistorySubTabType) => {
+    setActiveHistorySubTab(subTab)
+
+    // Fetch data for the selected subtab
+    switch (subTab) {
+      case 'child':
+        fetchHistoryData('Child_Data', 'Child_Data', setHistoryChildData, setHistoryChildLoading, historyChildDateRange)
+        break
+      case 'family':
+        fetchHistoryData('childfmly', 'childfmly', setHistoryFamilyData, setHistoryFamilyLoading, historyFamilyDateRange)
+        break
+      case 'sibling':
+        fetchHistoryData('childsibling', 'childsibling', setHistorySiblingData, setHistorySiblingLoading, historySiblingDateRange)
+        break
+      case 'uniform':
+        fetchHistoryData('childuniform', 'childuniform', setHistoryUniformData, setHistoryUniformLoading, historyUniformDateRange)
+        break
+      case 'leaving':
+        fetchHistoryData('childleaving', 'childleaving', setHistoryLeavingData, setHistoryLeavingLoading, historyLeavingDateRange)
+        break
+    }
+  }
+
+  useEffect(() => {
+    if (activeTab === 'history' && authorized && activeHistorySubTab) {
+      handleHistorySubTabChange(activeHistorySubTab)
+    }
+  }, [activeTab, authorized])
+
+  const handleHistoryDateRangeChange = (
+    subTab: HistorySubTabType,
+    type: 'start' | 'end',
+    value: string
+  ) => {
+    switch (subTab) {
+      case 'child':
+        setHistoryChildDateRange(prev => ({ ...prev, [type]: value }))
+        break
+      case 'family':
+        setHistoryFamilyDateRange(prev => ({ ...prev, [type]: value }))
+        break
+      case 'sibling':
+        setHistorySiblingDateRange(prev => ({ ...prev, [type]: value }))
+        break
+      case 'uniform':
+        setHistoryUniformDateRange(prev => ({ ...prev, [type]: value }))
+        break
+      case 'leaving':
+        setHistoryLeavingDateRange(prev => ({ ...prev, [type]: value }))
+        break
+    }
+  }
+
+  useEffect(() => {
+    if (activeTab !== 'history' || !authorized) return
+
+    // Re-fetch data when date range changes
+    switch (activeHistorySubTab) {
+      case 'child':
+        fetchHistoryData('Child_Data', 'Child_Data', setHistoryChildData, setHistoryChildLoading, historyChildDateRange)
+        break
+      case 'family':
+        fetchHistoryData('childfmly', 'childfmly', setHistoryFamilyData, setHistoryFamilyLoading, historyFamilyDateRange)
+        break
+      case 'sibling':
+        fetchHistoryData('childsibling', 'childsibling', setHistorySiblingData, setHistorySiblingLoading, historySiblingDateRange)
+        break
+      case 'uniform':
+        fetchHistoryData('childuniform', 'childuniform', setHistoryUniformData, setHistoryUniformLoading, historyUniformDateRange)
+        break
+      case 'leaving':
+        fetchHistoryData('childleaving', 'childleaving', setHistoryLeavingData, setHistoryLeavingLoading, historyLeavingDateRange)
+        break
+    }
+  }, [historyChildDateRange, historyFamilyDateRange, historySiblingDateRange, historyUniformDateRange, historyLeavingDateRange])
+
   const handleEacChange = (e: ChangeEvent<HTMLSelectElement>) => {
     const selectedEac = e.target.value
     const eacData = eacOptions.find((item) => item.eac_no?.toString() === selectedEac)
@@ -638,6 +1027,122 @@ export default function ChildForm() {
     }))
   }
 
+  const handleVocationalChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    setVocationalData((prev) => ({
+      ...prev,
+      [e.target.name]: e.target.value
+    }))
+  }
+
+  const handleComputerChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    setComputerData((prev) => ({
+      ...prev,
+      [e.target.name]: e.target.value
+    }))
+  }
+
+  const handleVocationalPhotoChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null
+    if (file && file.size > 5 * 1024 * 1024) {
+      setVocationalMessage({ type: 'error', text: 'Photo must be 5MB or smaller.' })
+      event.target.value = ''
+      setVocationalPhotoFile(null)
+      setVocationalPhotoPreview('')
+    } else if (file && !file.type.startsWith('image/')) {
+      setVocationalMessage({ type: 'error', text: 'Please select a valid image file.' })
+      event.target.value = ''
+      setVocationalPhotoFile(null)
+      setVocationalPhotoPreview('')
+    } else if (file) {
+      setVocationalPhotoFile(file)
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        setVocationalPhotoPreview(e.target?.result as string)
+      }
+      reader.readAsDataURL(file)
+      setVocationalMessage(null)
+    }
+  }
+
+  const handleComputerPhotoChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null
+    if (file && file.size > 5 * 1024 * 1024) {
+      setComputerMessage({ type: 'error', text: 'Photo must be 5MB or smaller.' })
+      event.target.value = ''
+      setComputerPhotoFile(null)
+      setComputerPhotoPreview('')
+    } else if (file && !file.type.startsWith('image/')) {
+      setComputerMessage({ type: 'error', text: 'Please select a valid image file.' })
+      event.target.value = ''
+      setComputerPhotoFile(null)
+      setComputerPhotoPreview('')
+    } else if (file) {
+      setComputerPhotoFile(file)
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        setComputerPhotoPreview(e.target?.result as string)
+      }
+      reader.readAsDataURL(file)
+      setComputerMessage(null)
+    }
+  }
+
+  const uploadVocationalPhoto = async (): Promise<string | null> => {
+    if (!vocationalPhotoFile) return null
+
+    try {
+      setVocationalPhotoUploading(true)
+      const fileName = `${Date.now()}-${vocationalPhotoFile.name}`
+      const filePath = `vocational_photos/${fileName}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('profiles')
+        .upload(filePath, vocationalPhotoFile)
+
+      if (uploadError) throw uploadError
+
+      const { data } = supabase.storage
+        .from('profiles')
+        .getPublicUrl(filePath)
+
+      return data.publicUrl
+    } catch (error) {
+      console.error('Error uploading vocational photo:', error)
+      setVocationalMessage({ type: 'error', text: 'Failed to upload photo' })
+      return null
+    } finally {
+      setVocationalPhotoUploading(false)
+    }
+  }
+
+  const uploadComputerPhoto = async (): Promise<string | null> => {
+    if (!computerPhotoFile) return null
+
+    try {
+      setComputerPhotoUploading(true)
+      const fileName = `${Date.now()}-${computerPhotoFile.name}`
+      const filePath = `profiles/${fileName}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('profiles')
+        .upload(filePath, computerPhotoFile)
+
+      if (uploadError) throw uploadError
+
+      const { data } = supabase.storage
+        .from('profiles')
+        .getPublicUrl(filePath)
+
+      return data.publicUrl
+    } catch (error) {
+      console.error('Error uploading computer photo:', error)
+      setComputerMessage({ type: 'error', text: 'Failed to upload photo' })
+      return null
+    } finally {
+      setComputerPhotoUploading(false)
+    }
+  }
+
   const handlePhotoChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] ?? null
 
@@ -656,6 +1161,9 @@ export default function ChildForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (isSubmittingChild) return
+    setIsSubmittingChild(true)
     setLoading(true)
     setMessage(null)
 
@@ -774,11 +1282,15 @@ export default function ChildForm() {
       setMessage({ type: 'error', text: `Unable to save the form: ${fallback}` })
     } finally {
       setLoading(false)
+      setIsSubmittingChild(false)
     }
   }
 
   const handleFamilySubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (isSubmittingFamily) return
+    setIsSubmittingFamily(true)
     setFamilyLoading(true)
     setFamilyMessage(null)
 
@@ -843,11 +1355,15 @@ export default function ChildForm() {
       setFamilyMessage({ type: 'error', text: `Unable to save: ${fallback}` })
     } finally {
       setFamilyLoading(false)
+      setIsSubmittingFamily(false)
     }
   }
 
   const handleSiblingSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (isSubmittingSibling) return
+    setIsSubmittingSibling(true)
     setSiblingLoading(true)
     setSiblingMessage(null)
 
@@ -918,11 +1434,15 @@ export default function ChildForm() {
       setSiblingMessage({ type: 'error', text: `Unable to save: ${fallback}` })
     } finally {
       setSiblingLoading(false)
+      setIsSubmittingSibling(false)
     }
   }
 
   const handleUniformSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (isSubmittingUniform) return
+    setIsSubmittingUniform(true)
     setUniformLoading(true)
     setUniformMessage(null)
 
@@ -974,11 +1494,15 @@ export default function ChildForm() {
       setUniformMessage({ type: 'error', text: `Unable to save: ${fallback}` })
     } finally {
       setUniformLoading(false)
+      setIsSubmittingUniform(false)
     }
   }
 
   const handleLeavingSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (isSubmittingLeaving) return
+    setIsSubmittingLeaving(true)
     setLeavingLoading(true)
     setLeavingMessage(null)
 
@@ -1030,6 +1554,240 @@ export default function ChildForm() {
       setLeavingMessage({ type: 'error', text: `Unable to save: ${fallback}` })
     } finally {
       setLeavingLoading(false)
+      setIsSubmittingLeaving(false)
+    }
+  }
+
+  const handleVocationalSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (isSubmittingVocational) return
+    setIsSubmittingVocational(true)
+    setVocationalLoading(true)
+    setVocationalMessage(null)
+
+    try {
+      if (!vocationalData.trainee_name) {
+        throw new Error('Trainee name is required.')
+      }
+
+      let photoLink: string | null = null
+      if (vocationalPhotoFile) {
+        photoLink = await uploadVocationalPhoto()
+        if (!photoLink && vocationalPhotoFile) {
+          throw new Error('Photo upload failed. Please try again.')
+        }
+      }
+
+      const { data: userData } = await supabase.auth.getUser()
+      const userId = userData.user?.id
+
+      if (!userId) {
+        throw new Error('User session not found. Please log in again.')
+      }
+
+      const toNullableString = (value: string) => (value.trim() === '' ? null : value)
+      const toNullableNumber = (value: string) => {
+        if (value.trim() === '') return null
+        const parsed = Number(value)
+        return Number.isNaN(parsed) ? null : parsed
+      }
+
+      const payload = {
+        date_of_admission: toNullableString(vocationalData.date_of_admission),
+        eac_no: toNullableNumber(vocationalData.eac_no),
+        reg_no: toNullableString(vocationalData.reg_no),
+        batch_no: toNullableString(vocationalData.batch_no),
+        batch_timings: toNullableString(vocationalData.batch_timings),
+        centre_no: toNullableString(vocationalData.centre_no),
+        district: toNullableString(vocationalData.district),
+        taluk: toNullableString(vocationalData.taluk),
+        panchayat: toNullableString(vocationalData.panchayat),
+        village: toNullableString(vocationalData.village),
+        trainee_name: toNullableString(vocationalData.trainee_name),
+        gender: toNullableString(vocationalData.gender),
+        aadhar_no: toNullableString(vocationalData.aadhar_no),
+        date_of_birth: toNullableString(vocationalData.date_of_birth),
+        place_of_birth: toNullableString(vocationalData.place_of_birth),
+        blood_group: toNullableString(vocationalData.blood_group),
+        marital_status: toNullableString(vocationalData.marital_status),
+        mother_tongue: toNullableString(vocationalData.mother_tongue),
+        religion: toNullableString(vocationalData.religion),
+        caste: toNullableString(vocationalData.caste),
+        class_standard_studied: toNullableString(vocationalData.class_standard_studied),
+        school_name: toNullableString(vocationalData.school_name),
+        medium_of_study: toNullableString(vocationalData.medium_of_study),
+        ambition_in_life: toNullableString(vocationalData.ambition_in_life),
+        favourite_subject: toNullableString(vocationalData.favourite_subject),
+        other_information: toNullableString(vocationalData.other_information),
+        father_or_husband_name: toNullableString(vocationalData.father_or_husband_name),
+        father_occupation: toNullableString(vocationalData.father_occupation),
+        father_income: toNullableNumber(vocationalData.father_income),
+        father_aadhar_no: toNullableString(vocationalData.father_aadhar_no),
+        father_mobile: toNullableString(vocationalData.father_mobile),
+        mother_name: toNullableString(vocationalData.mother_name),
+        mother_occupation: toNullableString(vocationalData.mother_occupation),
+        mother_income: toNullableNumber(vocationalData.mother_income),
+        mother_aadhar_no: toNullableString(vocationalData.mother_aadhar_no),
+        mother_mobile: toNullableString(vocationalData.mother_mobile),
+        parent_guardian_address: toNullableString(vocationalData.parent_guardian_address),
+        enrolled_course: toNullableString(vocationalData.enrolled_course),
+        attended_other_training: vocationalData.attended_other_training === 'true' ? true : vocationalData.attended_other_training === 'false' ? false : null,
+        previous_training_details: toNullableString(vocationalData.previous_training_details),
+        plan_after_course: toNullableString(vocationalData.plan_after_course),
+        present_status: toNullableString(vocationalData.present_status),
+        education_training_employment: toNullableString(vocationalData.education_training_employment),
+        reason_for_leaving: toNullableString(vocationalData.reason_for_leaving),
+        leaving_date: toNullableString(vocationalData.leaving_date),
+        present_address: toNullableString(vocationalData.present_address),
+        recommended_by: toNullableString(vocationalData.recommended_by),
+        recommended_date: toNullableString(vocationalData.recommended_date),
+        trainee_signature_date: toNullableString(vocationalData.trainee_signature_date),
+        parent_guardian_name: toNullableString(vocationalData.parent_guardian_name),
+        parent_guardian_signature_date: toNullableString(vocationalData.parent_guardian_signature_date),
+        verified_by_social_worker: toNullableString(vocationalData.verified_by_social_worker),
+        verified_by_dfi_staff: toNullableString(vocationalData.verified_by_dfi_staff),
+        photo_link: photoLink,
+        submitted_by: userId,
+      }
+
+      const { data, error } = await supabase
+        .from('vocational_course')
+        .insert([payload])
+        .select()
+        .single()
+
+      if (error) throw error
+
+      const { error: approvalError } = await supabase
+        .from('vocational_training_approvals')
+        .insert([{
+          entity_type: 'vocational_course',
+          entity_id: data.id,
+          submitted_by: userId,
+          status: 'Pending'
+        }])
+
+      if (approvalError) throw approvalError
+
+      setVocationalMessage({ type: 'success', text: 'Vocational course data submitted for approval.' })
+      setVocationalData(createEmptyVocationalCourseForm())
+      setVocationalPhotoFile(null)
+      setVocationalPhotoPreview('')
+    } catch (error: unknown) {
+      const fallback = error instanceof Error ? error.message : 'Unexpected error occurred.'
+      setVocationalMessage({ type: 'error', text: `Unable to save: ${fallback}` })
+    } finally {
+      setVocationalLoading(false)
+      setIsSubmittingVocational(false)
+    }
+  }
+
+  const handleComputerSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (isSubmittingComputer) return
+    setIsSubmittingComputer(true)
+    setComputerLoading(true)
+    setComputerMessage(null)
+
+    try {
+      if (!computerData.child_name) {
+        throw new Error('Child name is required.')
+      }
+
+      let photoLink: string | null = null
+      if (computerPhotoFile) {
+        photoLink = await uploadComputerPhoto()
+        if (!photoLink && computerPhotoFile) {
+          throw new Error('Photo upload failed. Please try again.')
+        }
+      }
+
+      const toNullableString = (value: string) => (value.trim() === '' ? null : value)
+      const toNullableNumber = (value: string) => {
+        if (value.trim() === '') return null
+        const parsed = Number(value)
+        return Number.isNaN(parsed) ? null : parsed
+      }
+
+      const { data: userData } = await supabase.auth.getUser()
+      const userId = userData.user?.id
+
+      if (!userId) {
+        throw new Error('User session not found. Please log in again.')
+      }
+
+      const payload = {
+        batch_no: toNullableString(computerData.batch_no),
+        batch_timings: toNullableString(computerData.batch_timings),
+        date_of_admission: toNullableString(computerData.date_of_admission),
+        reg_no: toNullableString(computerData.reg_no),
+        eac_no: toNullableString(computerData.eac_no),
+        child_name: toNullableString(computerData.child_name),
+        gender: toNullableString(computerData.gender),
+        aadhar_no: toNullableString(computerData.aadhar_no),
+        date_of_birth: toNullableString(computerData.date_of_birth),
+        class_standard: toNullableString(computerData.class_standard),
+        school_name: toNullableString(computerData.school_name),
+        school_type: toNullableString(computerData.school_type),
+        prior_computer_knowledge: computerData.prior_computer_knowledge === 'true' ? true : computerData.prior_computer_knowledge === 'false' ? false : null,
+        father_occupation: toNullableString(computerData.father_occupation),
+        father_income: toNullableNumber(computerData.father_income),
+        father_phone: toNullableString(computerData.father_phone),
+        mother_occupation: toNullableString(computerData.mother_occupation),
+        mother_income: toNullableNumber(computerData.mother_income),
+        mother_phone: toNullableString(computerData.mother_phone),
+        guardian_address: toNullableString(computerData.guardian_address),
+        consent_details_confirmed: computerData.consent_details_confirmed === 'true' ? true : computerData.consent_details_confirmed === 'false' ? false : null,
+        consent_course_participation: computerData.consent_course_participation === 'true' ? true : computerData.consent_course_participation === 'false' ? false : null,
+        consent_pickup_drop: computerData.consent_pickup_drop === 'true' ? true : computerData.consent_pickup_drop === 'false' ? false : null,
+        consent_date: toNullableString(computerData.consent_date),
+        guardian_signature_name: toNullableString(computerData.guardian_signature_name),
+        verified_by: toNullableString(computerData.verified_by),
+        verified_date: toNullableString(computerData.verified_date),
+        course_name: toNullableString(computerData.course_name),
+        completion_date: toNullableString(computerData.completion_date),
+        attendance_percentage: toNullableNumber(computerData.attendance_percentage),
+        final_assessment_score: toNullableNumber(computerData.final_assessment_score),
+        overall_performance: toNullableString(computerData.overall_performance),
+        instructor_name: toNullableString(computerData.instructor_name),
+        certificate_issued_on: toNullableString(computerData.certificate_issued_on),
+        social_worker_signature: toNullableString(computerData.social_worker_signature),
+        dfi_staff_signature: toNullableString(computerData.dfi_staff_signature),
+        photo_link: photoLink,
+        submitted_by: userId,
+      }
+
+      const { data, error } = await supabase
+        .from('computer_course')
+        .insert([payload])
+        .select()
+        .single()
+
+      if (error) throw error
+
+      const { error: approvalError } = await supabase
+        .from('vocational_training_approvals')
+        .insert([{
+          entity_type: 'computer_course',
+          entity_id: data.id,
+          submitted_by: userId,
+          status: 'Pending',
+        }])
+
+      if (approvalError) throw approvalError
+
+      setComputerMessage({ type: 'success', text: 'Computer course data submitted for approval.' })
+      setComputerData(createEmptyComputerCourseForm())
+      setComputerPhotoFile(null)
+      setComputerPhotoPreview('')
+    } catch (error: unknown) {
+      const fallback = error instanceof Error ? error.message : 'Unexpected error occurred.'
+      setComputerMessage({ type: 'error', text: `Unable to save: ${fallback}` })
+    } finally {
+      setComputerLoading(false)
+      setIsSubmittingComputer(false)
     }
   }
 
@@ -1044,6 +1802,8 @@ export default function ChildForm() {
     setEditModalOpen(false)
     setEditingRecord(null)
     setEditFormData(null)
+    setEditPhotoFile(null)
+    setEditPhotoInputKey(Date.now())
   }
 
   const handleEditFormChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -1051,6 +1811,22 @@ export default function ChildForm() {
       ...prev,
       [e.target.name]: e.target.value
     }))
+  }
+
+  const handleEditPhotoChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null
+
+    if (file && file.size > 5 * 1024 * 1024) {
+      setRejectedMessage({ type: 'error', text: 'Image must be 5MB or smaller.' })
+      event.target.value = ''
+      setEditPhotoFile(null)
+      setEditFormData((prev: any) => ({ ...prev, photo_link: prev.photo_link }))
+      setEditPhotoInputKey(Date.now())
+      return
+    }
+
+    setEditPhotoFile(file)
+    setEditFormData((prev: any) => ({ ...prev, photo_link: file ? file.name : prev.photo_link }))
   }
 
   const handleEditSubmit = async () => {
@@ -1089,6 +1865,38 @@ export default function ChildForm() {
         case 'leaving':
           tableName = 'childleaving'
           break
+      }
+
+      // Handle photo upload for child data
+      let photoUrl: string | null = editFormData.photo_link
+      if (editPhotoFile && editModalType === 'child') {
+        const registrationNumber = editFormData.reg_no?.toString().trim() || ''
+        if (registrationNumber === '') {
+          throw new Error('Registration number is required to upload a photo.')
+        }
+
+        const extension = (editPhotoFile.name.split('.').pop() || 'jpg').toLowerCase()
+        const sanitizedIdentifier = registrationNumber.replace(/[^a-zA-Z0-9_-]+/g, '-').toLowerCase()
+        const uniqueFallback =
+          typeof crypto !== 'undefined' && 'randomUUID' in crypto
+            ? crypto.randomUUID()
+            : Date.now().toString(36)
+        const safeIdentifier = sanitizedIdentifier || uniqueFallback
+        const filePath = `${safeIdentifier}.${extension}`
+
+        const { error: uploadError } = await supabase.storage.from('profiles').upload(filePath, editPhotoFile, {
+          cacheControl: '3600',
+          upsert: true,
+        })
+
+        if (uploadError) {
+          throw uploadError
+        }
+
+        const { data: publicData } = supabase.storage.from('profiles').getPublicUrl(filePath)
+        photoUrl =
+          publicData.publicUrl ??
+          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/profile/${filePath}`
       }
 
       // Helper functions for type conversion
@@ -1142,7 +1950,7 @@ export default function ChildForm() {
           life_ambition: toNullableString(updatePayload.life_ambition),
           fav_subject: toNullableString(updatePayload.fav_subject),
           child_other_info: toNullableString(updatePayload.child_other_info),
-          photo_link: toNullableString(updatePayload.photo_link),
+          photo_link: photoUrl,
         }
       } else if (editModalType === 'family') {
         updatePayload = {
@@ -1344,6 +2152,8 @@ export default function ChildForm() {
     { id: 'sibling', label: 'Child Sibling' },
     { id: 'uniform', label: 'Child Uniform' },
     { id: 'leaving', label: 'Child Leaving' },
+    { id: 'vocational', label: 'Vocational Course' },
+    { id: 'computer', label: 'Computer Course' },
     { id: 'rejected', label: 'Rejected Data' },
     { id: 'history', label: 'Personal History' },
   ]
@@ -2100,6 +2910,890 @@ export default function ChildForm() {
           </div>
         )}
 
+        {/* Vocational Course Tab */}
+        {activeTab === 'vocational' && (
+          <div className="space-y-8">
+            {vocationalMessage && (
+              <div
+                className={`rounded-lg border px-4 py-3 text-sm font-medium ${vocationalMessage.type === 'success'
+                  ? 'border-green-200 bg-green-50 text-green-700'
+                  : 'border-red-200 bg-red-50 text-red-700'
+                  }`}
+              >
+                {vocationalMessage.text}
+              </div>
+            )}
+            <form onSubmit={handleVocationalSubmit} className="space-y-8">
+              {/* Photo Section */}
+              <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="mb-4 text-lg font-semibold text-slate-900">Photo</h2>
+                <div className="space-y-4">
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-slate-700">
+                      Upload Photo
+                    </label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleVocationalPhotoChange}
+                      disabled={vocationalPhotoUploading}
+                      className="block w-full text-sm text-slate-500 file:mr-4 file:rounded-lg file:border file:border-slate-200 file:bg-slate-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-slate-700 hover:file:bg-slate-100"
+                    />
+                    <p className="mt-1 text-xs text-slate-500">JPG, PNG or GIF (max. 5MB)</p>
+                  </div>
+                  {vocationalPhotoPreview && (
+                    <div className="flex flex-col items-center gap-4">
+                      <img
+                        src={vocationalPhotoPreview}
+                        alt="Preview"
+                        className="h-32 w-32 rounded-lg border border-slate-200 object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setVocationalPhotoFile(null)
+                          setVocationalPhotoPreview('')
+                        }}
+                        className="text-sm text-red-600 hover:text-red-700"
+                      >
+                        Remove Photo
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </section>
+
+              {/* Registration & Admission Section */}
+              <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="mb-4 text-lg font-semibold text-slate-900">Registration & Admission</h2>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <TextInput
+                    label="Date of Admission"
+                    name="date_of_admission"
+                    value={vocationalData.date_of_admission}
+                    onChange={handleVocationalChange}
+                    type="date"
+                  />
+                  <TextInput
+                    label="EAC No"
+                    name="eac_no"
+                    value={vocationalData.eac_no}
+                    onChange={handleVocationalChange}
+                  />
+                  <TextInput
+                    label="Registration No"
+                    name="reg_no"
+                    value={vocationalData.reg_no}
+                    onChange={handleVocationalChange}
+                  />
+                  <TextInput
+                    label="Batch No"
+                    name="batch_no"
+                    value={vocationalData.batch_no}
+                    onChange={handleVocationalChange}
+                  />
+                  <TextInput
+                    label="Batch Timings"
+                    name="batch_timings"
+                    value={vocationalData.batch_timings}
+                    onChange={handleVocationalChange}
+                  />
+                  <TextInput
+                    label="Centre No"
+                    name="centre_no"
+                    value={vocationalData.centre_no}
+                    onChange={handleVocationalChange}
+                  />
+                  <TextInput
+                    label="District"
+                    name="district"
+                    value={vocationalData.district}
+                    onChange={handleVocationalChange}
+                  />
+                  <TextInput
+                    label="Taluk"
+                    name="taluk"
+                    value={vocationalData.taluk}
+                    onChange={handleVocationalChange}
+                  />
+                  <TextInput
+                    label="Panchayat"
+                    name="panchayat"
+                    value={vocationalData.panchayat}
+                    onChange={handleVocationalChange}
+                  />
+                  <TextInput
+                    label="Village"
+                    name="village"
+                    value={vocationalData.village}
+                    onChange={handleVocationalChange}
+                  />
+                </div>
+              </section>
+
+              {/* Personal Information Section */}
+              <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="mb-4 text-lg font-semibold text-slate-900">Personal Information</h2>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <TextInput
+                    label="Trainee Name *"
+                    name="trainee_name"
+                    value={vocationalData.trainee_name}
+                    onChange={handleVocationalChange}
+                  />
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-slate-700">Gender</label>
+                    <select
+                      name="gender"
+                      value={vocationalData.gender}
+                      onChange={handleVocationalChange}
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                    >
+                      <option value="">Select gender</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                    </select>
+                  </div>
+                  <TextInput
+                    label="Aadhar No"
+                    name="aadhar_no"
+                    value={vocationalData.aadhar_no}
+                    onChange={handleVocationalChange}
+                  />
+                  <TextInput
+                    label="Date of Birth"
+                    name="date_of_birth"
+                    value={vocationalData.date_of_birth}
+                    onChange={handleVocationalChange}
+                    type="date"
+                  />
+                  <TextInput
+                    label="Place of Birth"
+                    name="place_of_birth"
+                    value={vocationalData.place_of_birth}
+                    onChange={handleVocationalChange}
+                  />
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-slate-700">Blood Group</label>
+                    <select
+                      name="blood_group"
+                      value={vocationalData.blood_group}
+                      onChange={handleVocationalChange}
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                    >
+                      <option value="">Select blood group</option>
+                      {bloodGroupOptions.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-slate-700">Marital Status</label>
+                    <select
+                      name="marital_status"
+                      value={vocationalData.marital_status}
+                      onChange={handleVocationalChange}
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                    >
+                      <option value="">Select status</option>
+                      <option value="Unmarried">Unmarried</option>
+                      <option value="Married">Married</option>
+                      <option value="Widow">Widow</option>
+                      <option value="Divorced">Divorced</option>
+                    </select>
+                  </div>
+                  <TextInput
+                    label="Mother Tongue"
+                    name="mother_tongue"
+                    value={vocationalData.mother_tongue}
+                    onChange={handleVocationalChange}
+                  />
+                  <TextInput
+                    label="Religion"
+                    name="religion"
+                    value={vocationalData.religion}
+                    onChange={handleVocationalChange}
+                  />
+                  <TextInput
+                    label="Caste"
+                    name="caste"
+                    value={vocationalData.caste}
+                    onChange={handleVocationalChange}
+                  />
+                </div>
+              </section>
+
+              {/* Educational Background Section */}
+              <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="mb-4 text-lg font-semibold text-slate-900">Educational Background</h2>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <TextInput
+                    label="Class/Standard Studied"
+                    name="class_standard_studied"
+                    value={vocationalData.class_standard_studied}
+                    onChange={handleVocationalChange}
+                  />
+                  <TextInput
+                    label="School Name"
+                    name="school_name"
+                    value={vocationalData.school_name}
+                    onChange={handleVocationalChange}
+                  />
+                  <TextInput
+                    label="Medium of Study"
+                    name="medium_of_study"
+                    value={vocationalData.medium_of_study}
+                    onChange={handleVocationalChange}
+                  />
+                  <TextInput
+                    label="Ambition in Life"
+                    name="ambition_in_life"
+                    value={vocationalData.ambition_in_life}
+                    onChange={handleVocationalChange}
+                  />
+                  <TextInput
+                    label="Favourite Subject"
+                    name="favourite_subject"
+                    value={vocationalData.favourite_subject}
+                    onChange={handleVocationalChange}
+                  />
+                  <div className="md:col-span-2">
+                    <label className="mb-1 block text-sm font-medium text-slate-700">Other Information</label>
+                    <textarea
+                      name="other_information"
+                      value={vocationalData.other_information}
+                      onChange={handleVocationalChange}
+                      rows={3}
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
+                </div>
+              </section>
+
+              {/* Family Information Section */}
+              <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="mb-4 text-lg font-semibold text-slate-900">Family Information</h2>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <TextInput
+                    label="Father/Husband Name"
+                    name="father_or_husband_name"
+                    value={vocationalData.father_or_husband_name}
+                    onChange={handleVocationalChange}
+                  />
+                  <TextInput
+                    label="Father Occupation"
+                    name="father_occupation"
+                    value={vocationalData.father_occupation}
+                    onChange={handleVocationalChange}
+                  />
+                  <TextInput
+                    label="Father Income"
+                    name="father_income"
+                    value={vocationalData.father_income}
+                    onChange={handleVocationalChange}
+                    type="number"
+                  />
+                  <TextInput
+                    label="Father Aadhar No"
+                    name="father_aadhar_no"
+                    value={vocationalData.father_aadhar_no}
+                    onChange={handleVocationalChange}
+                  />
+                  <TextInput
+                    label="Father Mobile"
+                    name="father_mobile"
+                    value={vocationalData.father_mobile}
+                    onChange={handleVocationalChange}
+                  />
+                  <TextInput
+                    label="Mother Name"
+                    name="mother_name"
+                    value={vocationalData.mother_name}
+                    onChange={handleVocationalChange}
+                  />
+                  <TextInput
+                    label="Mother Occupation"
+                    name="mother_occupation"
+                    value={vocationalData.mother_occupation}
+                    onChange={handleVocationalChange}
+                  />
+                  <TextInput
+                    label="Mother Income"
+                    name="mother_income"
+                    value={vocationalData.mother_income}
+                    onChange={handleVocationalChange}
+                    type="number"
+                  />
+                  <TextInput
+                    label="Mother Aadhar No"
+                    name="mother_aadhar_no"
+                    value={vocationalData.mother_aadhar_no}
+                    onChange={handleVocationalChange}
+                  />
+                  <TextInput
+                    label="Mother Mobile"
+                    name="mother_mobile"
+                    value={vocationalData.mother_mobile}
+                    onChange={handleVocationalChange}
+                  />
+                  <div className="md:col-span-2">
+                    <label className="mb-1 block text-sm font-medium text-slate-700">Parent/Guardian Address</label>
+                    <textarea
+                      name="parent_guardian_address"
+                      value={vocationalData.parent_guardian_address}
+                      onChange={handleVocationalChange}
+                      rows={3}
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
+                </div>
+              </section>
+
+              {/* Course & Training Section */}
+              <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="mb-4 text-lg font-semibold text-slate-900">Course & Training Details</h2>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-slate-700">Enrolled Course</label>
+                    <select
+                      name="enrolled_course"
+                      value={vocationalData.enrolled_course}
+                      onChange={handleVocationalChange}
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                    >
+                      <option value="">Select a course</option>
+                      {vocationalCourseOptions.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-slate-700">Attended Other Training</label>
+                    <select
+                      name="attended_other_training"
+                      value={vocationalData.attended_other_training}
+                      onChange={handleVocationalChange}
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                    >
+                      <option value="">Select</option>
+                      <option value="true">Yes</option>
+                      <option value="false">No</option>
+                    </select>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="mb-1 block text-sm font-medium text-slate-700">Previous Training Details</label>
+                    <textarea
+                      name="previous_training_details"
+                      value={vocationalData.previous_training_details}
+                      onChange={handleVocationalChange}
+                      rows={3}
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
+                  <TextInput
+                    label="Plan After Course"
+                    name="plan_after_course"
+                    value={vocationalData.plan_after_course}
+                    onChange={handleVocationalChange}
+                  />
+                  <TextInput
+                    label="Present Status"
+                    name="present_status"
+                    value={vocationalData.present_status}
+                    onChange={handleVocationalChange}
+                  />
+                  <TextInput
+                    label="Education/Training/Employment"
+                    name="education_training_employment"
+                    value={vocationalData.education_training_employment}
+                    onChange={handleVocationalChange}
+                  />
+                </div>
+              </section>
+
+              {/* Leaving & Follow-up Section */}
+              <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="mb-4 text-lg font-semibold text-slate-900">Leaving & Follow-up</h2>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <TextInput
+                    label="Reason for Leaving"
+                    name="reason_for_leaving"
+                    value={vocationalData.reason_for_leaving}
+                    onChange={handleVocationalChange}
+                  />
+                  <TextInput
+                    label="Leaving Date"
+                    name="leaving_date"
+                    value={vocationalData.leaving_date}
+                    onChange={handleVocationalChange}
+                    type="date"
+                  />
+                  <div className="md:col-span-2">
+                    <label className="mb-1 block text-sm font-medium text-slate-700">Present Address</label>
+                    <textarea
+                      name="present_address"
+                      value={vocationalData.present_address}
+                      onChange={handleVocationalChange}
+                      rows={3}
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
+                  <TextInput
+                    label="Recommended By"
+                    name="recommended_by"
+                    value={vocationalData.recommended_by}
+                    onChange={handleVocationalChange}
+                  />
+                  <TextInput
+                    label="Recommended Date"
+                    name="recommended_date"
+                    value={vocationalData.recommended_date}
+                    onChange={handleVocationalChange}
+                    type="date"
+                  />
+                </div>
+              </section>
+
+              {/* Signatures & Verification Section */}
+              <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="mb-4 text-lg font-semibold text-slate-900">Signatures & Verification</h2>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <TextInput
+                    label="Trainee Signature Date"
+                    name="trainee_signature_date"
+                    value={vocationalData.trainee_signature_date}
+                    onChange={handleVocationalChange}
+                    type="date"
+                  />
+                  <TextInput
+                    label="Parent/Guardian Name"
+                    name="parent_guardian_name"
+                    value={vocationalData.parent_guardian_name}
+                    onChange={handleVocationalChange}
+                  />
+                  <TextInput
+                    label="Parent/Guardian Signature Date"
+                    name="parent_guardian_signature_date"
+                    value={vocationalData.parent_guardian_signature_date}
+                    onChange={handleVocationalChange}
+                    type="date"
+                  />
+                  <TextInput
+                    label="Verified by Social Worker"
+                    name="verified_by_social_worker"
+                    value={vocationalData.verified_by_social_worker}
+                    onChange={handleVocationalChange}
+                  />
+                  <TextInput
+                    label="Verified by DFI Staff"
+                    name="verified_by_dfi_staff"
+                    value={vocationalData.verified_by_dfi_staff}
+                    onChange={handleVocationalChange}
+                  />
+                </div>
+              </section>
+
+              <div className="flex justify-end pt-2">
+                <button
+                  type="submit"
+                  disabled={vocationalLoading}
+                  className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+                >
+                  {vocationalLoading ? 'Saving...' : 'Submit Vocational Course Data'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* Computer Course Tab */}
+        {activeTab === 'computer' && (
+          <div className="space-y-8">
+            {computerMessage && (
+              <div
+                className={`rounded-lg border px-4 py-3 text-sm font-medium ${computerMessage.type === 'success'
+                  ? 'border-green-200 bg-green-50 text-green-700'
+                  : 'border-red-200 bg-red-50 text-red-700'
+                  }`}
+              >
+                {computerMessage.text}
+              </div>
+            )}
+            <form onSubmit={handleComputerSubmit} className="space-y-8">
+              {/* Photo Section */}
+              <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="mb-4 text-lg font-semibold text-slate-900">Photo</h2>
+                <div className="space-y-4">
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-slate-700">
+                      Upload Photo
+                    </label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleComputerPhotoChange}
+                      disabled={computerPhotoUploading}
+                      className="block w-full text-sm text-slate-500 file:mr-4 file:rounded-lg file:border file:border-slate-200 file:bg-slate-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-slate-700 hover:file:bg-slate-100"
+                    />
+                    <p className="mt-1 text-xs text-slate-500">JPG, PNG or GIF (max. 5MB)</p>
+                  </div>
+                  {computerPhotoPreview && (
+                    <div className="flex flex-col items-center gap-4">
+                      <img
+                        src={computerPhotoPreview}
+                        alt="Preview"
+                        className="h-32 w-32 rounded-lg border border-slate-200 object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setComputerPhotoFile(null)
+                          setComputerPhotoPreview('')
+                        }}
+                        className="text-sm text-red-600 hover:text-red-700"
+                      >
+                        Remove Photo
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </section>
+
+              {/* Batch & Registration Section */}
+              <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="mb-4 text-lg font-semibold text-slate-900">Batch & Registration</h2>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <TextInput
+                    label="Batch No"
+                    name="batch_no"
+                    value={computerData.batch_no}
+                    onChange={handleComputerChange}
+                  />
+                  <TextInput
+                    label="Batch Timings"
+                    name="batch_timings"
+                    value={computerData.batch_timings}
+                    onChange={handleComputerChange}
+                  />
+                  <TextInput
+                    label="Date of Admission"
+                    name="date_of_admission"
+                    value={computerData.date_of_admission}
+                    onChange={handleComputerChange}
+                    type="date"
+                  />
+                  <TextInput
+                    label="Registration No"
+                    name="reg_no"
+                    value={computerData.reg_no}
+                    onChange={handleComputerChange}
+                  />
+                  <TextInput
+                    label="EAC Name"
+                    name="eac_no"
+                    value={computerData.eac_no}
+                    onChange={handleComputerChange}
+                  />
+                </div>
+              </section>
+
+              {/* Child Information Section */}
+              <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="mb-4 text-lg font-semibold text-slate-900">Child Information</h2>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <TextInput
+                    label="Child Name *"
+                    name="child_name"
+                    value={computerData.child_name}
+                    onChange={handleComputerChange}
+                  />
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-slate-700">Gender</label>
+                    <select
+                      name="gender"
+                      value={computerData.gender}
+                      onChange={handleComputerChange}
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                    >
+                      <option value="">Select gender</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                    </select>
+                  </div>
+                  <TextInput
+                    label="Aadhar No"
+                    name="aadhar_no"
+                    value={computerData.aadhar_no}
+                    onChange={handleComputerChange}
+                  />
+                  <TextInput
+                    label="Date of Birth"
+                    name="date_of_birth"
+                    value={computerData.date_of_birth}
+                    onChange={handleComputerChange}
+                    type="date"
+                  />
+                  <TextInput
+                    label="Class/Standard"
+                    name="class_standard"
+                    value={computerData.class_standard}
+                    onChange={handleComputerChange}
+                  />
+                  <TextInput
+                    label="School Name"
+                    name="school_name"
+                    value={computerData.school_name}
+                    onChange={handleComputerChange}
+                  />
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-slate-700">School Type</label>
+                    <select
+                      name="school_type"
+                      value={computerData.school_type}
+                      onChange={handleComputerChange}
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                    >
+                      <option value="">Select type</option>
+                      <option value="Govt">Govt</option>
+                      <option value="Private">Private</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-slate-700">Prior Computer Knowledge</label>
+                    <select
+                      name="prior_computer_knowledge"
+                      value={computerData.prior_computer_knowledge}
+                      onChange={handleComputerChange}
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                    >
+                      <option value="">Select</option>
+                      <option value="true">Yes</option>
+                      <option value="false">No</option>
+                    </select>
+                  </div>
+                </div>
+              </section>
+
+              {/* Family Information Section */}
+              <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="mb-4 text-lg font-semibold text-slate-900">Family Information</h2>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <TextInput
+                    label="Father Occupation"
+                    name="father_occupation"
+                    value={computerData.father_occupation}
+                    onChange={handleComputerChange}
+                  />
+                  <TextInput
+                    label="Father Income"
+                    name="father_income"
+                    value={computerData.father_income}
+                    onChange={handleComputerChange}
+                    type="number"
+                  />
+                  <TextInput
+                    label="Father Phone"
+                    name="father_phone"
+                    value={computerData.father_phone}
+                    onChange={handleComputerChange}
+                  />
+                  <TextInput
+                    label="Mother Occupation"
+                    name="mother_occupation"
+                    value={computerData.mother_occupation}
+                    onChange={handleComputerChange}
+                  />
+                  <TextInput
+                    label="Mother Income"
+                    name="mother_income"
+                    value={computerData.mother_income}
+                    onChange={handleComputerChange}
+                    type="number"
+                  />
+                  <TextInput
+                    label="Mother Phone"
+                    name="mother_phone"
+                    value={computerData.mother_phone}
+                    onChange={handleComputerChange}
+                  />
+                  <div className="md:col-span-2">
+                    <label className="mb-1 block text-sm font-medium text-slate-700">Guardian Address</label>
+                    <textarea
+                      name="guardian_address"
+                      value={computerData.guardian_address}
+                      onChange={handleComputerChange}
+                      rows={3}
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
+                </div>
+              </section>
+
+              {/* Consent & Verification Section */}
+              <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="mb-4 text-lg font-semibold text-slate-900">Consent & Verification</h2>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-slate-700">Consent Details Confirmed</label>
+                    <select
+                      name="consent_details_confirmed"
+                      value={computerData.consent_details_confirmed}
+                      onChange={handleComputerChange}
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                    >
+                      <option value="">Select</option>
+                      <option value="true">Yes</option>
+                      <option value="false">No</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-slate-700">Consent Course Participation</label>
+                    <select
+                      name="consent_course_participation"
+                      value={computerData.consent_course_participation}
+                      onChange={handleComputerChange}
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                    >
+                      <option value="">Select</option>
+                      <option value="true">Yes</option>
+                      <option value="false">No</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-slate-700">Consent Pickup/Drop</label>
+                    <select
+                      name="consent_pickup_drop"
+                      value={computerData.consent_pickup_drop}
+                      onChange={handleComputerChange}
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                    >
+                      <option value="">Select</option>
+                      <option value="true">Yes</option>
+                      <option value="false">No</option>
+                    </select>
+                  </div>
+                  <TextInput
+                    label="Consent Date"
+                    name="consent_date"
+                    value={computerData.consent_date}
+                    onChange={handleComputerChange}
+                    type="date"
+                  />
+                  <TextInput
+                    label="Guardian Signature Name"
+                    name="guardian_signature_name"
+                    value={computerData.guardian_signature_name}
+                    onChange={handleComputerChange}
+                  />
+                  <TextInput
+                    label="Verified By"
+                    name="verified_by"
+                    value={computerData.verified_by}
+                    onChange={handleComputerChange}
+                  />
+                  <TextInput
+                    label="Verified Date"
+                    name="verified_date"
+                    value={computerData.verified_date}
+                    onChange={handleComputerChange}
+                    type="date"
+                  />
+                </div>
+              </section>
+
+              {/* Course Details Section */}
+              <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="mb-4 text-lg font-semibold text-slate-900">Course Details</h2>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <TextInput
+                    label="Course Name"
+                    name="course_name"
+                    value={computerData.course_name}
+                    onChange={handleComputerChange}
+                  />
+                  <TextInput
+                    label="Completion Date"
+                    name="completion_date"
+                    value={computerData.completion_date}
+                    onChange={handleComputerChange}
+                    type="date"
+                  />
+                  <TextInput
+                    label="Attendance Percentage"
+                    name="attendance_percentage"
+                    value={computerData.attendance_percentage}
+                    onChange={handleComputerChange}
+                    type="number"
+                    step="0.01"
+                  />
+                  <TextInput
+                    label="Final Assessment Score"
+                    name="final_assessment_score"
+                    value={computerData.final_assessment_score}
+                    onChange={handleComputerChange}
+                    type="number"
+                    step="0.01"
+                  />
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-slate-700">Overall Performance</label>
+                    <select
+                      name="overall_performance"
+                      value={computerData.overall_performance}
+                      onChange={handleComputerChange}
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                    >
+                      <option value="">Select performance</option>
+                      <option value="Excellent">Excellent</option>
+                      <option value="Good">Good</option>
+                      <option value="Satisfactory">Satisfactory</option>
+                      <option value="Needs Improvement">Needs Improvement</option>
+                    </select>
+                  </div>
+                  <TextInput
+                    label="Instructor Name"
+                    name="instructor_name"
+                    value={computerData.instructor_name}
+                    onChange={handleComputerChange}
+                  />
+                  <TextInput
+                    label="Certificate Issued On"
+                    name="certificate_issued_on"
+                    value={computerData.certificate_issued_on}
+                    onChange={handleComputerChange}
+                    type="date"
+                  />
+                  <TextInput
+                    label="Social Worker Signature"
+                    name="social_worker_signature"
+                    value={computerData.social_worker_signature}
+                    onChange={handleComputerChange}
+                  />
+                  <TextInput
+                    label="DFI Staff Signature"
+                    name="dfi_staff_signature"
+                    value={computerData.dfi_staff_signature}
+                    onChange={handleComputerChange}
+                  />
+                </div>
+              </section>
+
+              <div className="flex justify-end pt-2">
+                <button
+                  type="submit"
+                  disabled={computerLoading}
+                  className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+                >
+                  {computerLoading ? 'Saving...' : 'Submit Computer Course Data'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
         {/* Rejected Data Tab */}
         {activeTab === 'rejected' && (
           <div className="space-y-8">
@@ -2144,7 +3838,7 @@ export default function ChildForm() {
                   <p className="text-slate-500">Loading...</p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto max-h-96 overflow-y-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-slate-200">
@@ -2353,6 +4047,9 @@ export default function ChildForm() {
                 loading={editLoading}
                 onFormChange={handleEditFormChange}
                 onSubmit={handleEditSubmit}
+                onPhotoChange={handleEditPhotoChange}
+                photoInputKey={editPhotoInputKey}
+                setPhotoInputKey={setEditPhotoInputKey}
               />
             )}
           </div>
@@ -2363,56 +4060,359 @@ export default function ChildForm() {
           <div className="space-y-8">
             <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
               <h2 className="mb-4 text-lg font-semibold text-slate-900">Personal History</h2>
-              <p className="text-sm text-slate-600 mb-4">Track all updates and changes to child records.</p>
-              <div className="max-h-[60vh] overflow-auto rounded border border-slate-100 bg-white">
-                {historyLoading ? (
-                  <div className="p-4 text-sm text-slate-600">Loading history…</div>
-                ) : historyMessage ? (
-                  <div className={`p-4 text-sm font-medium ${historyMessage.type === 'success' ? 'text-green-700' : 'text-red-700'}`}>
-                    {historyMessage.text}
+              <p className="text-sm text-slate-600 mb-6">Track all updates and changes to child records.</p>
+
+              {/* History Subtabs */}
+              <div className="mb-6">
+                <div className="flex gap-2 flex-wrap border-b border-slate-200">
+                  {(['child', 'family', 'sibling', 'uniform', 'leaving'] as HistorySubTabType[]).map((subTab) => (
+                    <button
+                      key={subTab}
+                      onClick={() => handleHistorySubTabChange(subTab)}
+                      className={`px-4 py-2 font-medium text-sm transition-colors ${activeHistorySubTab === subTab
+                        ? 'text-blue-600 border-b-2 border-blue-600'
+                        : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                    >
+                      {subTab === 'child' && 'Child Data'}
+                      {subTab === 'family' && 'Child Family'}
+                      {subTab === 'sibling' && 'Child Sibling'}
+                      {subTab === 'uniform' && 'Child Uniform'}
+                      {subTab === 'leaving' && 'Child Leaving'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Date Range Filter */}
+              <div className="mb-6 flex gap-4 items-end">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">From Date</label>
+                  <input
+                    type="date"
+                    value={
+                      activeHistorySubTab === 'child' ? historyChildDateRange.start :
+                        activeHistorySubTab === 'family' ? historyFamilyDateRange.start :
+                          activeHistorySubTab === 'sibling' ? historySiblingDateRange.start :
+                            activeHistorySubTab === 'uniform' ? historyUniformDateRange.start :
+                              historyLeavingDateRange.start
+                    }
+                    onChange={(e) => handleHistoryDateRangeChange(activeHistorySubTab, 'start', e.target.value)}
+                    className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">To Date</label>
+                  <input
+                    type="date"
+                    value={
+                      activeHistorySubTab === 'child' ? historyChildDateRange.end :
+                        activeHistorySubTab === 'family' ? historyFamilyDateRange.end :
+                          activeHistorySubTab === 'sibling' ? historySiblingDateRange.end :
+                            activeHistorySubTab === 'uniform' ? historyUniformDateRange.end :
+                              historyLeavingDateRange.end
+                    }
+                    onChange={(e) => handleHistoryDateRangeChange(activeHistorySubTab, 'end', e.target.value)}
+                    className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                  />
+                </div>
+              </div>
+
+              {/* History Tables */}
+              <div className="rounded border border-slate-100 bg-white overflow-hidden">
+                {/* Child Data Table */}
+                {activeHistorySubTab === 'child' && (
+                  <div>
+                    {historyChildLoading ? (
+                      <div className="p-4 text-sm text-slate-600">Loading data…</div>
+                    ) : historyChildData.length === 0 ? (
+                      <div className="p-4 text-sm text-slate-600">No child data history found.</div>
+                    ) : (
+                      <div className="overflow-x-auto overflow-y-auto max-h-[60vh]">
+                        <table className="min-w-full table-auto text-sm">
+                          <thead className="sticky top-0">
+                            <tr className="bg-slate-50 text-left text-slate-700">
+                              <th className="px-4 py-3 whitespace-nowrap">Record ID</th>
+                              <th className="px-4 py-3 whitespace-nowrap">EAC No</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Reg No</th>
+                              <th className="px-4 py-3 whitespace-nowrap">First Name</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Last Name</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Gender</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Aadhar No</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Birth Place</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Height</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Weight</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Blood Group</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Health</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Caste</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Mother Tongue</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Class</th>
+                              <th className="px-4 py-3 whitespace-nowrap">School Name</th>
+                              <th className="px-4 py-3 whitespace-nowrap">School Category</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Life Ambition</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Fav Subject</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Created At</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {historyChildData.map((row) => (
+                              <tr key={row.record_id} className="border-t border-slate-200 hover:bg-slate-50">
+                                <td className="px-4 py-3 text-slate-700">{row.record_id}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.eac_no}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.reg_no}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.first_name}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.last_name}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.gender}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.aadhar_no}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.birth_place}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.height}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.weight}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.blood_group}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.health}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.caste}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.mother_tongue}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.class_std}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.school_name}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.school_category}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.life_ambition}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.fav_subject}</td>
+                                <td className="px-4 py-3 text-slate-700 whitespace-nowrap">{row.created_at ? new Date(row.created_at).toLocaleDateString() : ''}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </div>
-                ) : historyData.length === 0 ? (
-                  <div className="p-4 text-sm text-slate-600">No history found.</div>
-                ) : (
-                  <div className="min-w-full">
-                    <table className="min-w-[900px] w-full table-auto">
-                      <thead>
-                        <tr className="bg-slate-50 text-left text-sm text-slate-700">
-                          <th className="px-4 py-3">Record</th>
-                          <th className="px-4 py-3">Adm Date</th>
-                          <th className="px-4 py-3">EAC No</th>
-                          <th className="px-4 py-3">Reg No</th>
-                          <th className="px-4 py-3">First Name</th>
-                          <th className="px-4 py-3">Last Name</th>
-                          <th className="px-4 py-3">Gender</th>
-                          <th className="px-4 py-3">Class</th>
-                          <th className="px-4 py-3">School</th>
-                          <th className="px-4 py-3">Photo</th>
-                        </tr>
-                      </thead>
-                      <tbody className="text-sm text-slate-700">
-                        {historyData.map((row) => (
-                          <tr key={(row.record_id ?? '') + '-' + (row.reg_no ?? '')} className="border-t">
-                            <td className="px-4 py-3">{row.record_id}</td>
-                            <td className="px-4 py-3">{row.adm_date ?? ''}</td>
-                            <td className="px-4 py-3">{row.eac_no}</td>
-                            <td className="px-4 py-3">{row.reg_no}</td>
-                            <td className="px-4 py-3">{row.first_name}</td>
-                            <td className="px-4 py-3">{row.last_name}</td>
-                            <td className="px-4 py-3">{row.gender}</td>
-                            <td className="px-4 py-3">{row.class_std}</td>
-                            <td className="px-4 py-3">{row.school_name}</td>
-                            <td className="px-4 py-3">
-                              {row.photo_link ? (
-                                <a href={row.photo_link} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">View</a>
-                              ) : (
-                                <span className="text-slate-500">—</span>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                )}
+
+                {/* Child Family Table */}
+                {activeHistorySubTab === 'family' && (
+                  <div>
+                    {historyFamilyLoading ? (
+                      <div className="p-4 text-sm text-slate-600">Loading data…</div>
+                    ) : historyFamilyData.length === 0 ? (
+                      <div className="p-4 text-sm text-slate-600">No family data history found.</div>
+                    ) : (
+                      <div className="overflow-x-auto overflow-y-auto max-h-[60vh]">
+                        <table className="min-w-full table-auto text-sm">
+                          <thead className="sticky top-0">
+                            <tr className="bg-slate-50 text-left text-slate-700">
+                              <th className="px-4 py-3 whitespace-nowrap">Record ID</th>
+                              <th className="px-4 py-3 whitespace-nowrap">EAC No</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Reg No</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Father's Name</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Father's Occupation</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Father's Income</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Father's Aadhar</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Father's Mobile</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Mother's Name</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Mother's Occupation</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Mother's Income</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Mother's Aadhar</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Mother's Mobile</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Address 1</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Address 2</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Address 3</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Pincode</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Remarks</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Created At</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {historyFamilyData.map((row) => (
+                              <tr key={row.record_id} className="border-t border-slate-200 hover:bg-slate-50">
+                                <td className="px-4 py-3 text-slate-700">{row.record_id}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.eac_no}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.reg_no}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.f_name}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.f_occup}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.f_inc}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.f_aadhar}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.f_mobile}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.m_name}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.m_occup}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.m_inc}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.m_aadhar}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.m_mobile}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.fmly_addr1}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.fmly_addr2}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.fmly_addr3}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.fmly_pincode}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.fmly_remarks}</td>
+                                <td className="px-4 py-3 text-slate-700 whitespace-nowrap">{row.created_at ? new Date(row.created_at).toLocaleDateString() : ''}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Child Sibling Table */}
+                {activeHistorySubTab === 'sibling' && (
+                  <div>
+                    {historySiblingLoading ? (
+                      <div className="p-4 text-sm text-slate-600">Loading data…</div>
+                    ) : historySiblingData.length === 0 ? (
+                      <div className="p-4 text-sm text-slate-600">No sibling data history found.</div>
+                    ) : (
+                      <div className="overflow-x-auto overflow-y-auto max-h-[60vh]">
+                        <table className="min-w-full table-auto text-sm">
+                          <thead className="sticky top-0">
+                            <tr className="bg-slate-50 text-left text-slate-700">
+                              <th className="px-4 py-3 whitespace-nowrap">Record ID</th>
+                              <th className="px-4 py-3 whitespace-nowrap">EAC No</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Reg No</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Sibling 1 Name</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Sibling 1 Age</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Sibling 1 Gender</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Sibling 1 Class/Occup</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Sibling 2 Name</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Sibling 2 Age</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Sibling 2 Gender</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Sibling 2 Class/Occup</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Sibling 3 Name</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Sibling 3 Age</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Sibling 3 Gender</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Sibling 3 Class/Occup</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Sibling 4 Name</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Sibling 4 Age</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Sibling 4 Gender</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Sibling 4 Class/Occup</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Remarks</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Created At</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {historySiblingData.map((row) => (
+                              <tr key={row.record_id} className="border-t border-slate-200 hover:bg-slate-50">
+                                <td className="px-4 py-3 text-slate-700">{row.record_id}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.eac_no}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.reg_no}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.names_1}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.ages_1}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.genders_1}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.class_occup_1}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.names_2}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.ages_2}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.genders_2}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.class_occup_2}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.names_3}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.ages_3}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.genders_3}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.class_occup_3}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.names_4}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.ages_4}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.genders_4}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.class_occup_4}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.sibling_remarks}</td>
+                                <td className="px-4 py-3 text-slate-700 whitespace-nowrap">{row.created_at ? new Date(row.created_at).toLocaleDateString() : ''}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Child Uniform Table */}
+                {activeHistorySubTab === 'uniform' && (
+                  <div>
+                    {historyUniformLoading ? (
+                      <div className="p-4 text-sm text-slate-600">Loading data…</div>
+                    ) : historyUniformData.length === 0 ? (
+                      <div className="p-4 text-sm text-slate-600">No uniform data history found.</div>
+                    ) : (
+                      <div className="overflow-x-auto overflow-y-auto max-h-[60vh]">
+                        <table className="min-w-full table-auto text-sm">
+                          <thead className="sticky top-0">
+                            <tr className="bg-slate-50 text-left text-slate-700">
+                              <th className="px-4 py-3 whitespace-nowrap">Record ID</th>
+                              <th className="px-4 py-3 whitespace-nowrap">EAC No</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Reg No</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Shirt Size</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Knicker Size</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Pant/Skirt Size</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Chudidhar Size</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Top/Pant Size</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Footwear Size</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Uniform Updated</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Created At</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {historyUniformData.map((row) => (
+                              <tr key={row.record_id} className="border-t border-slate-200 hover:bg-slate-50">
+                                <td className="px-4 py-3 text-slate-700">{row.record_id}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.eac_no}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.reg_no}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.shirtsize}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.knickersize}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.pant_skirtsize}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.chudidharsize}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.top_pantsize}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.footwearsize}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.uniform_updated ? new Date(row.uniform_updated).toLocaleDateString() : ''}</td>
+                                <td className="px-4 py-3 text-slate-700 whitespace-nowrap">{row.created_at ? new Date(row.created_at).toLocaleDateString() : ''}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Child Leaving Table */}
+                {activeHistorySubTab === 'leaving' && (
+                  <div>
+                    {historyLeavingLoading ? (
+                      <div className="p-4 text-sm text-slate-600">Loading data…</div>
+                    ) : historyLeavingData.length === 0 ? (
+                      <div className="p-4 text-sm text-slate-600">No leaving data history found.</div>
+                    ) : (
+                      <div className="overflow-x-auto overflow-y-auto max-h-[60vh]">
+                        <table className="min-w-full table-auto text-sm">
+                          <thead className="sticky top-0">
+                            <tr className="bg-slate-50 text-left text-slate-700">
+                              <th className="px-4 py-3 whitespace-nowrap">Record ID</th>
+                              <th className="px-4 py-3 whitespace-nowrap">EAC No</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Reg No</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Reason</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Leaving Class</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Leaving Date</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Address 1</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Address 2</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Address 3</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Pincode</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Remarks</th>
+                              <th className="px-4 py-3 whitespace-nowrap">Created At</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {historyLeavingData.map((row) => (
+                              <tr key={row.record_id} className="border-t border-slate-200 hover:bg-slate-50">
+                                <td className="px-4 py-3 text-slate-700">{row.record_id}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.eac_no}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.reg_no}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.reason}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.leav_class}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.leav_date ? new Date(row.leav_date).toLocaleDateString() : ''}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.leav_addr1}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.leav_addr2}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.leav_addr3}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.leav_pincode}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.leav_remarks}</td>
+                                <td className="px-4 py-3 text-slate-700 whitespace-nowrap">{row.created_at ? new Date(row.created_at).toLocaleDateString() : ''}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -2433,6 +4433,9 @@ interface EditModalProps {
   loading: boolean
   onFormChange: (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void
   onSubmit: () => void
+  onPhotoChange: (e: ChangeEvent<HTMLInputElement>) => void
+  photoInputKey: number
+  setPhotoInputKey: (key: number) => void
 }
 
 function EditModal({
@@ -2444,6 +4447,9 @@ function EditModal({
   loading,
   onFormChange,
   onSubmit,
+  onPhotoChange,
+  photoInputKey,
+  setPhotoInputKey,
 }: EditModalProps) {
   if (!isOpen) return null
 
@@ -2469,6 +4475,21 @@ function EditModal({
         <div className="space-y-4">
           {modalType === 'child' && (
             <>
+              <div className="grid grid-cols-2 gap-4">
+                <TextInput
+                  label="Registration Number"
+                  name="reg_no"
+                  value={formData.reg_no}
+                  onChange={onFormChange}
+                />
+                <TextInput
+                  label="Admission Date"
+                  name="adm_date"
+                  value={formData.adm_date}
+                  onChange={onFormChange}
+                  type="date"
+                />
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <TextInput
                   label="First Name"
@@ -2547,9 +4568,23 @@ function EditModal({
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <TextInput
-                  label="School Name"
-                  name="school_name"
-                  value={formData.school_name}
+                  label="Health Status"
+                  name="health"
+                  value={formData.health}
+                  onChange={onFormChange}
+                />
+                <TextInput
+                  label="Caste"
+                  name="caste"
+                  value={formData.caste}
+                  onChange={onFormChange}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <TextInput
+                  label="Mother Tongue"
+                  name="mother_tongue"
+                  value={formData.mother_tongue}
                   onChange={onFormChange}
                 />
                 <NumberInput
@@ -2558,6 +4593,79 @@ function EditModal({
                   value={formData.class_std}
                   onChange={onFormChange}
                 />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <TextInput
+                  label="School Name"
+                  name="school_name"
+                  value={formData.school_name}
+                  onChange={onFormChange}
+                />
+                <TextInput
+                  label="School Category"
+                  name="school_category"
+                  value={formData.school_category}
+                  onChange={onFormChange}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <NumberInput
+                  label="SATS No"
+                  name="sats_no"
+                  value={formData.sats_no}
+                  onChange={onFormChange}
+                />
+                <NumberInput
+                  label="PEN No"
+                  name="pen_no"
+                  value={formData.pen_no}
+                  onChange={onFormChange}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <TextInput
+                  label="Medium of Study"
+                  name="medium_of_study"
+                  value={formData.medium_of_study}
+                  onChange={onFormChange}
+                />
+                <TextInput
+                  label="Life Ambition"
+                  name="life_ambition"
+                  value={formData.life_ambition}
+                  onChange={onFormChange}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <TextInput
+                  label="Favourite Subject"
+                  name="fav_subject"
+                  value={formData.fav_subject}
+                  onChange={onFormChange}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Other Information</label>
+                <textarea
+                  name="child_other_info"
+                  value={formData.child_other_info}
+                  onChange={onFormChange}
+                  rows={2}
+                  className={baseInputClass}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Photo Upload</label>
+                <input
+                  key={photoInputKey}
+                  type="file"
+                  accept="image/*"
+                  onChange={onPhotoChange}
+                  className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                />
+                {formData.photo_link && (
+                  <p className="mt-2 text-sm text-slate-600">Current: {formData.photo_link}</p>
+                )}
               </div>
             </>
           )}
@@ -2762,12 +4870,13 @@ type InputProps = {
   value: string
   onChange: ChangeEventHandler<HTMLInputElement>
   type?: HTMLInputTypeAttribute
+  step?: string
 }
 
 const baseInputClass =
   'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100'
 
-function TextInput({ label, name, value, onChange, type = 'text' }: InputProps) {
+function TextInput({ label, name, value, onChange, type = 'text', step }: InputProps) {
   return (
     <div>
       <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor={name}>
@@ -2779,6 +4888,7 @@ function TextInput({ label, name, value, onChange, type = 'text' }: InputProps) 
         name={name}
         value={value}
         onChange={onChange}
+        step={step}
         className={baseInputClass}
       />
     </div>
