@@ -3,7 +3,13 @@ import { NextRequest, NextResponse } from 'next/server'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
 )
 
 export async function GET(request: NextRequest) {
@@ -66,14 +72,10 @@ export async function GET(request: NextRequest) {
       const { count } = await countQuery
       counts[type] = count || 0
 
-      // Get data with submitter info
+      // Get data without joins (foreign keys not set up)
       let dataQuery = supabaseAdmin
         .from(tableName)
-        .select(`
-          *,
-          submitter:profiles!submitted_by(username, role),
-          approver:profiles!approved_by(username, role)
-        `)
+        .select('*')
         .eq('status', status)
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1)

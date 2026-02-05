@@ -3,7 +3,13 @@ import { NextRequest, NextResponse } from 'next/server'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
 )
 
 export async function GET(request: NextRequest) {
@@ -45,14 +51,10 @@ export async function GET(request: NextRequest) {
     let tableName = entityType
     if (entityType === 'child_data') tableName = 'Child_Data'
 
-    // Get the record with related data
+    // Get the record without joins (foreign keys not set up)
     const { data: record, error } = await supabaseAdmin
       .from(tableName)
-      .select(`
-        *,
-        submitter:profiles!submitted_by(id, username, role, email),
-        approver:profiles!approved_by(id, username, role, email)
-      `)
+      .select('*')
       .eq('record_id', entityId)
       .single()
 
@@ -84,10 +86,7 @@ export async function GET(request: NextRequest) {
     // Get activity history for this record
     const { data: history } = await supabaseAdmin
       .from('activity_logs')
-      .select(`
-        *,
-        user:profiles!user_id(username, role)
-      `)
+      .select('*')
       .eq('entity_type', entityType)
       .eq('entity_id', String(entityId))
       .order('created_at', { ascending: false })

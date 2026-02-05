@@ -69,7 +69,6 @@ export function Sidebar({ role }: SidebarProps) {
     ],
     admin: [
       { label: 'Dashboard', href: '/admin', icon: '📊' },
-      { label: 'User Management', href: '/admin', icon: '👥' },
       { label: 'Approvals Queue', href: '/admin/approvals', icon: '✅' },
       { label: 'All Records', href: '/admin/records', icon: '📋' },
       { label: 'Analytics', href: '/admin/analytics', icon: '📈' },

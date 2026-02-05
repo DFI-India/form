@@ -3,6 +3,11 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+
+if (!supabaseUrl || !serviceRoleKey) {
+  throw new Error('Missing Supabase environment variables')
+}
+
 const supabase = createClient(supabaseUrl, serviceRoleKey, {
   auth: {
     autoRefreshToken: false,
@@ -28,20 +33,21 @@ async function requireAdmin(req: Request) {
   return data.user
 }
 
-export async function DELETE(req: Request) {
+export async function GET(req: Request) {
   try {
     await requireAdmin(req)
-    const body = await req.json()
-    const { id } = body
-    if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
 
-    const { error: delAuthErr } = await supabase.auth.admin.deleteUser(id)
-    if (delAuthErr) return NextResponse.json({ error: delAuthErr.message }, { status: 500 })
+    const { data, error } = await supabase
+      .from('centre_data')
+      .select('*')
+      .order('eac_no', { ascending: true })
 
-    const { error: delProfileErr } = await supabase.from('profiles').delete().eq('id', id)
-    if (delProfileErr) return NextResponse.json({ error: delProfileErr.message }, { status: 500 })
+    if (error) {
+      console.error('Centre fetch error:', error)
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ centres: data || [] })
   } catch (err: any) {
     const message = err?.message || String(err)
     if (message === 'Unauthorized' || message === 'Forbidden') {
