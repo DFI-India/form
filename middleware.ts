@@ -40,14 +40,18 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
+  console.log('[Middleware]', pathname, 'User:', user ? user.id : 'none')
+
   // Public routes - no auth required
   const publicRoutes = ['/sign-in', '/unauthorized']
   if (publicRoutes.includes(pathname)) {
+    console.log('[Middleware] Public route, allowing')
     return response
   }
 
   // Protect all other routes - must be authenticated
   if (!user) {
+    console.log('[Middleware] No user, redirecting to /sign-in')
     return NextResponse.redirect(new URL('/sign-in', request.url))
   }
 

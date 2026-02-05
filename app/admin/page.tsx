@@ -15,6 +15,7 @@ export default function AdminPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [users, setUsers] = useState<UserProfile[]>([])
+  const [centres, setCentres] = useState<any[]>([])
   const [sessionToken, setSessionToken] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -22,6 +23,83 @@ export default function AdminPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirmState | null>(null)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
 
+  // ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS
+  useEffect(() => {
+    const init = async () => {
+      const { data } = await supabase.auth.getSession()
+      const token = data.session?.access_token || null
+      if (!token) {
+        setError('Not signed in')
+        return
+      }
+      setSessionToken(token)
+      await loadUsers(token)
+      await loadCentres(token)
+    }
+    if (isAuthorized) {
+      init()
+    }
+  }, [isAuthorized])
+
+  async function loadUsers(token: string) {
+    setError('')
+    try {
+      const res = await fetch('/api/admin/list-users', { headers: { Authorization: `Bearer ${token}` } })
+      
+      // Check content type
+      const contentType = res.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await res.text()
+        console.error('Non-JSON response:', text.substring(0, 200))
+        setError('Server returned invalid response. Check console for details.')
+        return
+      }
+
+      if (res.status === 401 || res.status === 403) {
+        const json = await res.json()
+        setError(json.error || 'Not authorized')
+        return
+      }
+
+      if (!res.ok) {
+        const json = await res.json()
+        setError(json.error || `HTTP ${res.status}`)
+        return
+      }
+
+      const json = await res.json()
+      setUsers(json.users || [])
+    } catch (err: any) {
+      console.error('Load users error:', err)
+      setError(err.message || String(err))
+    }
+  }
+async function loadCentres(token: string) {
+    try {
+      const res = await fetch('/api/admin/list-centres', { headers: { Authorization: `Bearer ${token}` } })
+      
+      const contentType = res.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await res.text()
+        console.error('Non-JSON response from centres:', text.substring(0, 200))
+        return
+      }
+
+      if (!res.ok) {
+        const json = await res.json()
+        console.error('Failed to load centres:', json.error)
+        return
+      }
+
+      const json = await res.json()
+      setCentres(json.centres || [])
+    } catch (err: any) {
+      console.error('Load centres error:', err)
+    }
+  }
+
+  
+  // NOW CONDITIONAL RETURNS AFTER ALL HOOKS
   if (authLoading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -39,37 +117,6 @@ export default function AdminPage() {
         </div>
       </main>
     )
-  }
-
-  useEffect(() => {
-    const init = async () => {
-      const { data } = await supabase.auth.getSession()
-      const token = data.session?.access_token || null
-      if (!token) {
-        setError('Not signed in')
-        return
-      }
-      setSessionToken(token)
-      await loadUsers(token)
-    }
-    if (isAuthorized) {
-      init()
-    }
-  }, [isAuthorized])
-
-  async function loadUsers(token: string) {
-    setError('')
-    try {
-      const res = await fetch('/api/admin/list-users', { headers: { Authorization: `Bearer ${token}` } })
-      if (res.status === 401 || res.status === 403) {
-        setError('Not authorized')
-        return
-      }
-      const json = await res.json()
-      setUsers(json.users || [])
-    } catch (err: any) {
-      setError(err.message || String(err))
-    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -189,9 +236,51 @@ export default function AdminPage() {
             {/* Header */}
             <div className="flex items-start justify-between">
               <div>
-                <h1 className="text-4xl font-bold text-slate-900">User management</h1>
-                <p className="mt-2 text-slate-600">Manage your team members and their account permissions here.</p>
+                <h1 className="text-4xl font-bold text-slate-900">Admin Dashboard</h1>
+                <p className="mt-2 text-slate-600">Manage users, approvals, and system settings.</p>
               </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <a
+                href="/admin/approvals"
+                className="bg-white rounded-lg border border-slate-200 p-6 hover:border-blue-400 hover:shadow-md transition-all group"
+              >
+                <div className="text-3xl mb-2">✅</div>
+                <h3 className="font-semibold text-slate-900 group-hover:text-blue-600">Approvals Queue</h3>
+                <p className="text-sm text-slate-600 mt-1">Review pending submissions</p>
+              </a>
+              <a
+                href="/admin/records"
+                className="bg-white rounded-lg border border-slate-200 p-6 hover:border-blue-400 hover:shadow-md transition-all group"
+              >
+                <div className="text-3xl mb-2">📋</div>
+                <h3 className="font-semibold text-slate-900 group-hover:text-blue-600">All Records</h3>
+                <p className="text-sm text-slate-600 mt-1">View and edit all data</p>
+              </a>
+              <a
+                href="/admin/analytics"
+                className="bg-white rounded-lg border border-slate-200 p-6 hover:border-blue-400 hover:shadow-md transition-all group"
+              >
+                <div className="text-3xl mb-2">📈</div>
+                <h3 className="font-semibold text-slate-900 group-hover:text-blue-600">Analytics</h3>
+                <p className="text-sm text-slate-600 mt-1">View reports & statistics</p>
+              </a>
+              <a
+                href="/admin/logs"
+                className="bg-white rounded-lg border border-slate-200 p-6 hover:border-blue-400 hover:shadow-md transition-all group"
+              >
+                <div className="text-3xl mb-2">📝</div>
+                <h3 className="font-semibold text-slate-900 group-hover:text-blue-600">Activity Logs</h3>
+                <p className="text-sm text-slate-600 mt-1">View system activity</p>
+              </a>
+            </div>
+
+            {/* User Management Section Header */}
+            <div>
+              <h2 className="text-2xl font-bold text-slate-900">User Management</h2>
+              <p className="text-slate-600 mt-1">Manage your team members and their account permissions.</p>
             </div>
 
             {/* Messages */}
@@ -417,82 +506,49 @@ export default function AdminPage() {
                 <p className="text-slate-600 mt-1">Manage data collection centres and their details.</p>
               </div>
 
-              {/* Top Bar with Controls */}
-              <div className="flex items-center justify-between gap-4 border-b border-slate-200 p-6">
-                <div className="flex items-center gap-4 flex-1">
-                  <div className="relative flex-1 max-w-xs">
-                    <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                    <input
-                      type="text"
-                      placeholder="Search by centre name..."
-                      className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-                <button className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
-                  + Add Centre
-                </button>
-              </div>
-
               {/* Centres Table */}
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-slate-200 bg-slate-50">
-                      <th className="px-6 py-3 text-left font-semibold text-slate-900">Centre Name</th>
-                      <th className="px-6 py-3 text-left font-semibold text-slate-900">Location</th>
-                      <th className="px-6 py-3 text-left font-semibold text-slate-900">Coordinator</th>
-                      <th className="px-6 py-3 text-left font-semibold text-slate-900">Records</th>
-                      <th className="px-6 py-3 text-left font-semibold text-slate-900">Status</th>
-                      <th className="px-6 py-3 text-left font-semibold text-slate-900">Actions</th>
+                      <th className="px-6 py-3 text-left font-semibold text-slate-900">EAC No</th>
+                      <th className="px-6 py-3 text-left font-semibold text-slate-900">Village Name</th>
+                      <th className="px-6 py-3 text-left font-semibold text-slate-900">Centre ID</th>
+                      <th className="px-6 py-3 text-left font-semibold text-slate-900">District</th>
+                      <th className="px-6 py-3 text-left font-semibold text-slate-900">Taluk</th>
+                      <th className="px-6 py-3 text-left font-semibold text-slate-900">Panchayat</th>
+                      <th className="px-6 py-3 text-left font-semibold text-slate-900">Village</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr className="border-b border-slate-200 hover:bg-slate-50 transition-colors">
-                      <td className="px-6 py-4">
-                        <span className="font-medium text-slate-900">North Centre</span>
-                      </td>
-                      <td className="px-6 py-4 text-slate-700">Delhi North</td>
-                      <td className="px-6 py-4 text-slate-700">Rajesh Kumar</td>
-                      <td className="px-6 py-4 text-slate-700">245</td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                          <span className="text-xs font-medium text-slate-700">Active</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <button className="text-blue-600 hover:text-blue-700 text-sm font-medium mr-3">Edit</button>
-                        <button className="text-red-600 hover:text-red-700 text-sm font-medium">Delete</button>
-                      </td>
-                    </tr>
-                    <tr className="border-b border-slate-200 hover:bg-slate-50 transition-colors">
-                      <td className="px-6 py-4">
-                        <span className="font-medium text-slate-900">South Centre</span>
-                      </td>
-                      <td className="px-6 py-4 text-slate-700">Delhi South</td>
-                      <td className="px-6 py-4 text-slate-700">Priya Singh</td>
-                      <td className="px-6 py-4 text-slate-700">189</td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                          <span className="text-xs font-medium text-slate-700">Active</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <button className="text-blue-600 hover:text-blue-700 text-sm font-medium mr-3">Edit</button>
-                        <button className="text-red-600 hover:text-red-700 text-sm font-medium">Delete</button>
-                      </td>
-                    </tr>
+                    {centres.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="px-6 py-12 text-center text-slate-500">
+                          No centres found
+                        </td>
+                      </tr>
+                    ) : (
+                      centres.map((centre) => (
+                        <tr key={centre.id} className="border-b border-slate-200 hover:bg-slate-50 transition-colors">
+                          <td className="px-6 py-4">
+                            <span className="font-medium text-slate-900">{centre.eac_no}</span>
+                          </td>
+                          <td className="px-6 py-4 text-slate-700">{centre.village_name}</td>
+                          <td className="px-6 py-4 text-slate-700">{centre.centre_id}</td>
+                          <td className="px-6 py-4 text-slate-700">{centre.district}</td>
+                          <td className="px-6 py-4 text-slate-700">{centre.taluk}</td>
+                          <td className="px-6 py-4 text-slate-700">{centre.panchayat}</td>
+                          <td className="px-6 py-4 text-slate-700">{centre.village}</td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
 
               {/* Footer */}
               <div className="flex items-center justify-between border-t border-slate-200 px-6 py-4 bg-slate-50 text-sm text-slate-600">
-                <span>Showing 2 centres</span>
+                <span>Showing {centres.length} centre{centres.length !== 1 ? 's' : ''}</span>
               </div>
             </div>
 
