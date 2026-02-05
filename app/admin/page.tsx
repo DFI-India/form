@@ -189,9 +189,51 @@ export default function AdminPage() {
             {/* Header */}
             <div className="flex items-start justify-between">
               <div>
-                <h1 className="text-4xl font-bold text-slate-900">User management</h1>
-                <p className="mt-2 text-slate-600">Manage your team members and their account permissions here.</p>
+                <h1 className="text-4xl font-bold text-slate-900">Admin Dashboard</h1>
+                <p className="mt-2 text-slate-600">Manage users, approvals, and system settings.</p>
               </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <a
+                href="/admin/approvals"
+                className="bg-white rounded-lg border border-slate-200 p-6 hover:border-blue-400 hover:shadow-md transition-all group"
+              >
+                <div className="text-3xl mb-2">✅</div>
+                <h3 className="font-semibold text-slate-900 group-hover:text-blue-600">Approvals Queue</h3>
+                <p className="text-sm text-slate-600 mt-1">Review pending submissions</p>
+              </a>
+              <a
+                href="/admin/records"
+                className="bg-white rounded-lg border border-slate-200 p-6 hover:border-blue-400 hover:shadow-md transition-all group"
+              >
+                <div className="text-3xl mb-2">📋</div>
+                <h3 className="font-semibold text-slate-900 group-hover:text-blue-600">All Records</h3>
+                <p className="text-sm text-slate-600 mt-1">View and edit all data</p>
+              </a>
+              <a
+                href="/admin/analytics"
+                className="bg-white rounded-lg border border-slate-200 p-6 hover:border-blue-400 hover:shadow-md transition-all group"
+              >
+                <div className="text-3xl mb-2">📈</div>
+                <h3 className="font-semibold text-slate-900 group-hover:text-blue-600">Analytics</h3>
+                <p className="text-sm text-slate-600 mt-1">View reports & statistics</p>
+              </a>
+              <a
+                href="/admin/logs"
+                className="bg-white rounded-lg border border-slate-200 p-6 hover:border-blue-400 hover:shadow-md transition-all group"
+              >
+                <div className="text-3xl mb-2">📝</div>
+                <h3 className="font-semibold text-slate-900 group-hover:text-blue-600">Activity Logs</h3>
+                <p className="text-sm text-slate-600 mt-1">View system activity</p>
+              </a>
+            </div>
+
+            {/* User Management Section Header */}
+            <div>
+              <h2 className="text-2xl font-bold text-slate-900">User Management</h2>
+              <p className="text-slate-600 mt-1">Manage your team members and their account permissions.</p>
             </div>
 
             {/* Messages */}

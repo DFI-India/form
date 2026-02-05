@@ -4,9 +4,10 @@ interface AlertProps {
   type: 'error' | 'success' | 'info' | 'warning'
   message: string
   onDismiss?: () => void
+  className?: string
 }
 
-export function Alert({ type, message, onDismiss }: AlertProps) {
+export function Alert({ type, message, onDismiss, className = '' }: AlertProps) {
   const styles = {
     error: 'bg-red-50 text-red-700 border-red-200',
     success: 'bg-green-50 text-green-700 border-green-200',
@@ -15,7 +16,7 @@ export function Alert({ type, message, onDismiss }: AlertProps) {
   }
 
   return (
-    <div className={`rounded-lg p-4 text-sm border ${styles[type]} flex items-start justify-between`}>
+    <div className={`rounded-lg p-4 text-sm border ${styles[type]} flex items-start justify-between ${className}`}>
       <span>{message}</span>
       {onDismiss && (
         <button onClick={onDismiss} className="ml-4 hover:opacity-70">

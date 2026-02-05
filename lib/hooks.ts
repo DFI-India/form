@@ -37,6 +37,7 @@ export function useAuth() {
         })
 
         // Get user profile with better error handling
+        console.log('Fetching profile for user:', data.session.user.id)
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('*')
@@ -46,19 +47,26 @@ export function useAuth() {
         if (!isMounted) return
 
         if (profileError) {
-          console.error('Profile fetch error:', profileError)
-          throw profileError
+          console.error('Profile fetch error:', profileError.message)
+          setError(profileError.message || 'Failed to load profile')
+          setLoading(false)
+          return
         }
 
         if (profileData) {
+          console.log('Profile loaded:', profileData.role)
           setProfile(profileData as UserProfile)
+          setError(null)
+        } else {
+          console.error('No profile data returned')
+          setError('Profile not found')
         }
+        setLoading(false)
       } catch (err: any) {
         if (!isMounted) return
-        console.error('Auth error:', err)
+        console.error('Auth error:', err.message || err)
         setError(err.message || 'Failed to load auth')
-      } finally {
-        if (isMounted) setLoading(false)
+        setLoading(false)
       }
     }
 
@@ -99,7 +107,7 @@ export function useRequireRole(allowedRoles: string[]) {
     if (!loading && profile && !allowedRoles.includes(profile.role || '')) {
       router.replace('/unauthorized')
     }
-  }, [profile, loading, router, allowedRoles])
+  }, [profile, loading, router, allowedRoles.join(',')])
 
   return { profile, loading, isAuthorized: profile ? allowedRoles.includes(profile.role || '') : false }
 }

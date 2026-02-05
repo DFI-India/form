@@ -14,6 +14,7 @@ export default function SignInPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [checkingAuth, setCheckingAuth] = useState(true)
+  const [redirecting, setRedirecting] = useState(false)
 
   const normalizedUsername = useMemo(
     () => username.trim().toLowerCase(),
@@ -21,59 +22,75 @@ export default function SignInPage() {
   )
 
   // 🔁 Redirect user based on role
-  const redirectByRole = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+  const redirectByRole = async (routerInstance: any) => {
+    try {
+      console.log('redirectByRole called')
+      
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
 
-    if (!user) return
+      if (!user) {
+        console.log('No user found in redirectByRole')
+        return
+      }
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
+      console.log('User found:', user.id)
 
-    if (!profile) return
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
 
-    switch (profile.role) {
-      case 'field_volunteer':
-        router.replace('/field-volunteer')
-        break
-      case 'dfi_field_staff':
-        router.replace('/dfi-field-staff')
-        break
-      case 'dfi_staff':
-        router.replace('/dfi-staff')
-        break
-      case 'dfi_staff':
-        router.replace('/dfi-staff/edit-approve-data')
-        break
-      case 'admin':
-        router.replace('/admin')
-        break
-      case 'tech_support':
-        router.replace('/tech-support')
-        break
-      default:
-        router.replace('/unauthorized')
+      if (profileError) {
+        console.error('Profile fetch error:', profileError)
+        return
+      }
+
+      if (!profile) {
+        console.log('No profile found for user')
+        return
+      }
+
+      console.log('Profile found, role:', profile.role)
+      const redirectPath = 
+        profile.role === 'field_volunteer' ? '/field-volunteer' :
+        profile.role === 'dfi_field_staff' ? '/dfi-field-staff' :
+        profile.role === 'dfi_staff' ? '/dfi-staff' :
+        profile.role === 'admin' ? '/admin' :
+        profile.role === 'tech_support' ? '/tech-support' :
+        '/unauthorized'
+
+      console.log('Navigating to:', redirectPath)
+      routerInstance.replace(redirectPath)
+    } catch (err: any) {
+      console.error('Redirect error:', err)
     }
   }
 
   // ✅ Handle existing session
   useEffect(() => {
+    let isMounted = true
     const checkSession = async () => {
       try {
+        console.log('Checking for existing session...')
         const { data } = await supabase.auth.getSession()
 
+        if (!isMounted) return
+
         if (data.session) {
-          await redirectByRole()
+          console.log('Existing session found, redirecting...')
+          setRedirecting(true)
+          await redirectByRole(router)
           return
         }
 
         // No session → allow sign-in page to render
+        console.log('No session found, showing sign-in page')
         setCheckingAuth(false)
       } catch (err: any) {
+        if (!isMounted) return
         console.error('Session check error:', err?.message || err)
         // If session check fails, still allow sign-in page to render
         setCheckingAuth(false)
@@ -81,7 +98,11 @@ export default function SignInPage() {
     }
 
     checkSession()
-  }, [])
+    
+    return () => {
+      isMounted = false
+    }
+  }, [router])
   if (checkingAuth) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-100">
@@ -98,27 +119,42 @@ export default function SignInPage() {
     setLoading(true)
 
     try {
+      console.log('Submitting sign-in form with username:', normalizedUsername)
       const res = await fetch('/api/auth/signin', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
         body: JSON.stringify({
           username: normalizedUsername,
           password,
         }),
       })
 
-      const json = await res.json()
-      console.log('SIGNIN API RESPONSE:', res.status, json)
+      console.log('API Response status:', res.status, 'Content-Type:', res.headers.get('content-type'))
 
       if (!res.ok) {
+        const text = await res.text()
+        console.log('Error response text:', text)
+        let json
+        try {
+          json = JSON.parse(text)
+        } catch {
+          json = { error: text || `HTTP ${res.status}` }
+        }
         setError(json.error || `Sign in failed (${res.status})`)
         setLoading(false)
         return
       }
 
+      const json = await res.json()
+      console.log('SIGNIN API RESPONSE:', res.status, json)
+
       // Create Supabase session
       if (json.email) {
         try {
+          console.log('Attempting Supabase login with email:', json.email)
           const { error: signInError } =
             await supabase.auth.signInWithPassword({
               email: json.email,
@@ -126,10 +162,23 @@ export default function SignInPage() {
             })
 
           if (signInError) {
+            console.error('Supabase sign-in error:', signInError)
             setError(signInError.message)
             setLoading(false)
             return
           }
+
+          console.log('Supabase sign-in successful, waiting for session...')
+          
+          // Wait for session to be fully established
+          await new Promise(resolve => setTimeout(resolve, 1000))
+
+          console.log('Calling redirectByRole after login...')
+          setRedirecting(true)
+          // Now redirect based on role
+          await redirectByRole(router)
+          
+          // Don't stop loading - let the page redirect
         } catch (supabaseErr: any) {
           console.error('Supabase auth error:', supabaseErr?.message || supabaseErr)
           setError('Authentication service error: ' + (supabaseErr?.message || 'Unknown error'))
@@ -137,14 +186,20 @@ export default function SignInPage() {
           return
         }
       }
-
-      setLoading(false)
-      await redirectByRole()
     } catch (err: any) {
       console.error('Signin error:', err?.message || err)
       setError(err?.message || 'Unexpected error')
       setLoading(false)
     }
+  }
+
+  // Show loading spinner while redirecting
+  if (redirecting) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-100">
+        <LoadingSpinner size="lg" />
+      </main>
+    )
   }
 
   return (
