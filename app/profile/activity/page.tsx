@@ -5,6 +5,7 @@ import { useRequireRole } from '../../../lib/hooks'
 import { supabase } from '../../../lib/supabase'
 import { LoadingSpinner, Alert } from '../../components/UI'
 import { Navbar, Sidebar, PageContainer } from '../../components/Navbar'
+import { CheckCircle, XCircle, Edit, Plus, Trash2, Send, ClipboardList } from 'lucide-react'
 
 interface ActivityLog {
   id: string
@@ -26,13 +27,17 @@ const ACTION_COLORS: Record<string, string> = {
   submit: 'bg-indigo-100 text-indigo-800'
 }
 
-const ACTION_ICONS: Record<string, string> = {
-  approve: '✅',
-  reject: '❌',
-  edit: '✏️',
-  create: '➕',
-  delete: '🗑️',
-  submit: '📤'
+const getActionIcon = (actionType: string) => {
+  const iconProps = { className: "w-6 h-6" }
+  switch (actionType) {
+    case 'approve': return <CheckCircle {...iconProps} />
+    case 'reject': return <XCircle {...iconProps} />
+    case 'edit': return <Edit {...iconProps} />
+    case 'create': return <Plus {...iconProps} />
+    case 'delete': return <Trash2 {...iconProps} />
+    case 'submit': return <Send {...iconProps} />
+    default: return <ClipboardList {...iconProps} />
+  }
 }
 
 export default function MyActivityPage() {
@@ -240,8 +245,8 @@ export default function MyActivityPage() {
                   {activities.map((activity) => (
                     <div key={activity.id} className="px-6 py-4 hover:bg-slate-50 transition-colors">
                       <div className="flex items-start gap-4">
-                        <div className="text-2xl mt-1">
-                          {ACTION_ICONS[activity.action_type] || '📋'}
+                        <div className="text-slate-700 mt-1">
+                          {getActionIcon(activity.action_type)}
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">

@@ -5,6 +5,7 @@ import { useRequireRole } from '../../../lib/hooks'
 import { supabase } from '../../../lib/supabase'
 import { LoadingSpinner, Alert } from '../../components/UI'
 import { Navbar, Sidebar, PageContainer } from '../../components/Navbar'
+import { FileText, Columns, Search, Download, Lightbulb } from 'lucide-react'
 
 interface ColumnDef {
   key: string
@@ -275,7 +276,9 @@ export default function EnhancedReportsPage() {
             {/* Filters Section */}
             <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm space-y-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-slate-900">📋 Data Filters</h2>
+                <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                  <FileText className="w-6 h-6" /> Data Filters
+                </h2>
                 <button
                   onClick={() => {
                     setDateFrom('')
@@ -394,7 +397,9 @@ export default function EnhancedReportsPage() {
             {/* Column Selection */}
             <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm space-y-4">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-slate-900">📊 Column Selection</h2>
+                <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                  <Columns className="w-6 h-6" /> Column Selection
+                </h2>
                 <div className="flex gap-2">
                   <button
                     onClick={selectAllColumns}
@@ -457,16 +462,20 @@ export default function EnhancedReportsPage() {
               <button
                 onClick={loadPreview}
                 disabled={loading || selectedColumns.length === 0}
-                className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
               >
-                {loading ? 'Loading...' : '🔍 Load Preview'}
+                {loading ? 'Loading...' : (
+                  <>
+                    <Search className="w-5 h-5" /> Load Preview
+                  </>
+                )}
               </button>
               <button
                 onClick={exportToCSV}
                 disabled={!showPreview || previewData.length === 0}
-                className="px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
               >
-                ⬇️ Export to CSV
+                <Download className="w-5 h-5" /> Export to CSV
               </button>
             </div>
 
@@ -513,7 +522,9 @@ export default function EnhancedReportsPage() {
 
             {/* Help Section */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-              <h3 className="font-semibold text-blue-900 mb-2">💡 How to Use</h3>
+              <h3 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                <Lightbulb className="w-5 h-5" /> How to Use
+              </h3>
               <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
                 <li>Apply filters to narrow down your data (date range, EAC, status, etc.)</li>
                 <li>Select the columns you want to include in your report</li>

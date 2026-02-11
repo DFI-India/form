@@ -4,6 +4,7 @@ import { useRequireRole } from '../../lib/hooks'
 import { LoadingSpinner } from '../components/UI'
 import { Navbar, Sidebar, PageContainer } from '../components/Navbar'
 import { ROLE_CONFIG, getRoleCapabilities } from '../../lib/types'
+import { Zap, Settings, BarChart, Database, RefreshCw, Ticket, Lock, Users, Building } from 'lucide-react'
 
 export default function TechSupportPage() {
   const { profile, loading, isAuthorized } = useRequireRole(['tech_support'])
@@ -71,26 +72,30 @@ export default function TechSupportPage() {
 
           {/* SECTION 2: System Management */}
           <div className="mb-12">
-            <h3 className="text-lg font-bold text-slate-900 mb-4">⚡ System Management</h3>
+            <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+              <Zap className="w-5 h-5" /> System Management
+            </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <button className="bg-white border border-slate-200 text-slate-900 px-4 py-4 rounded-lg hover:bg-slate-50 transition-colors font-medium text-center">
-                🔧 System Monitoring
+              <button className="bg-white border border-slate-200 text-slate-900 px-4 py-4 rounded-lg hover:bg-slate-50 transition-colors font-medium text-center flex items-center justify-center gap-2">
+                <Settings className="w-5 h-5" /> System Monitoring
               </button>
-              <button className="bg-white border border-slate-200 text-slate-900 px-4 py-4 rounded-lg hover:bg-slate-50 transition-colors font-medium text-center">
-                📊 View Logs
+              <button className="bg-white border border-slate-200 text-slate-900 px-4 py-4 rounded-lg hover:bg-slate-50 transition-colors font-medium text-center flex items-center justify-center gap-2">
+                <BarChart className="w-5 h-5" /> View Logs
               </button>
-              <button className="bg-white border border-slate-200 text-slate-900 px-4 py-4 rounded-lg hover:bg-slate-50 transition-colors font-medium text-center">
-                🗄️ Database Access
+              <button className="bg-white border border-slate-200 text-slate-900 px-4 py-4 rounded-lg hover:bg-slate-50 transition-colors font-medium text-center flex items-center justify-center gap-2">
+                <Database className="w-5 h-5" /> Database Access
               </button>
-              <button className="bg-white border border-slate-200 text-slate-900 px-4 py-4 rounded-lg hover:bg-slate-50 transition-colors font-medium text-center">
-                🔄 System Updates
+              <button className="bg-white border border-slate-200 text-slate-900 px-4 py-4 rounded-lg hover:bg-slate-50 transition-colors font-medium text-center flex items-center justify-center gap-2">
+                <RefreshCw className="w-5 h-5" /> System Updates
               </button>
             </div>
           </div>
 
           {/* SECTION 3: Support & Maintenance */}
           <div className="mb-12">
-            <h3 className="text-lg font-bold text-slate-900 mb-4">🎫 Support Tickets & Maintenance</h3>
+            <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+              <Ticket className="w-5 h-5" /> Support Tickets & Maintenance
+            </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <button className="bg-orange-600 text-white px-6 py-4 rounded-lg hover:bg-orange-700 transition-colors font-medium text-center">
                 Manage Support Tickets
@@ -106,14 +111,16 @@ export default function TechSupportPage() {
 
           {/* SECTION 4: Administrative Access */}
           <div className="mb-12">
-            <h3 className="text-lg font-bold text-slate-900 mb-4">🔐 Administrative Access</h3>
+            <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+              <Lock className="w-5 h-5" /> Administrative Access
+            </h3>
             <p className="text-slate-600 mb-4">As Tech Support, you have highest-level system access:</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <a href="/admin" className="bg-indigo-600 text-white px-6 py-4 rounded-lg hover:bg-indigo-700 transition-colors font-medium text-center">
-                👥 User Management
+              <a href="/admin" className="bg-indigo-600 text-white px-6 py-4 rounded-lg hover:bg-indigo-700 transition-colors font-medium text-center flex items-center justify-center gap-2">
+                <Users className="w-5 h-5" /> User Management
               </a>
-              <a href="/admin" className="bg-blue-600 text-white px-6 py-4 rounded-lg hover:bg-blue-700 transition-colors font-medium text-center">
-                🏢 Centre Management
+              <a href="/admin" className="bg-blue-600 text-white px-6 py-4 rounded-lg hover:bg-blue-700 transition-colors font-medium text-center flex items-center justify-center gap-2">
+                <Building className="w-5 h-5" /> Centre Management
               </a>
             </div>
           </div>

@@ -7,6 +7,7 @@ import { supabase } from '../../../lib/supabase'
 import { LoadingSpinner, Alert } from '../../components/UI'
 import { Navbar, Sidebar, PageContainer } from '../../components/Navbar'
 import { ROLE_CONFIG } from '../../../lib/types'
+import { Baby, Users, UserPlus, Shirt, DoorOpen, GraduationCap, Monitor, CheckCircle } from 'lucide-react'
 
 type EntityType = 'child_data' | 'childfmly' | 'childsibling' | 'childuniform' | 'childleaving' | 'vocational_course' | 'computer_course'
 
@@ -35,14 +36,17 @@ const ENTITY_LABELS: Record<EntityType, string> = {
   computer_course: 'Computer'
 }
 
-const ENTITY_ICONS: Record<EntityType, string> = {
-  child_data: '👶',
-  childfmly: '👨‍👩‍👧',
-  childsibling: '👧‍👦',
-  childuniform: '👕',
-  childleaving: '🚪',
-  vocational_course: '🎓',
-  computer_course: '💻'
+const getEntityIcon = (type: EntityType, className = 'w-5 h-5') => {
+  const iconProps = { className }
+  switch (type) {
+    case 'child_data': return <Baby {...iconProps} />
+    case 'childfmly': return <Users {...iconProps} />
+    case 'childsibling': return <UserPlus {...iconProps} />
+    case 'childuniform': return <Shirt {...iconProps} />
+    case 'childleaving': return <DoorOpen {...iconProps} />
+    case 'vocational_course': return <GraduationCap {...iconProps} />
+    case 'computer_course': return <Monitor {...iconProps} />
+  }
 }
 
 // Fields that should be verified
@@ -302,7 +306,7 @@ export default function DFIStaffReviewQueuePage() {
                       : 'border-transparent text-slate-600 hover:bg-slate-50'
                   }`}
                 >
-                  <span className="mr-2">{ENTITY_ICONS[type]}</span>
+                  <span className="mr-2">{getEntityIcon(type, 'w-5 h-5')}</span>
                   {ENTITY_LABELS[type]}
                   <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
                     counts[type] > 0 ? 'bg-yellow-100 text-yellow-800' : 'bg-slate-100 text-slate-600'
@@ -323,7 +327,7 @@ export default function DFIStaffReviewQueuePage() {
               </div>
             ) : currentTabData.length === 0 ? (
               <div className="p-12 text-center">
-                <p className="text-4xl mb-4">✅</p>
+                <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
                 <p className="text-slate-600 font-medium">No pending {ENTITY_LABELS[activeTab]} records to review</p>
               </div>
             ) : (
@@ -333,7 +337,7 @@ export default function DFIStaffReviewQueuePage() {
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
                         <div className="flex items-center gap-3">
-                          <span className="text-2xl">{ENTITY_ICONS[activeTab]}</span>
+                          {getEntityIcon(activeTab, 'w-6 h-6 text-slate-700')}
                           <div>
                             <h3 className="font-semibold text-slate-900">{getRecordName(record)}</h3>
                             <p className="text-sm text-slate-600">
@@ -485,9 +489,13 @@ export default function DFIStaffReviewQueuePage() {
                   <button
                     onClick={handleSaveAndApprove}
                     disabled={saving}
-                    className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 font-medium"
+                    className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 font-medium flex items-center justify-center gap-2"
                   >
-                    {saving ? 'Processing...' : '✅ Verify & Approve'}
+                    {saving ? 'Processing...' : (
+                      <>
+                        <CheckCircle className="w-5 h-5" /> Verify & Approve
+                      </>
+                    )}
                   </button>
                 )}
               </div>

@@ -4,6 +4,7 @@ import { useRequireRole } from '../../lib/hooks'
 import { LoadingSpinner } from '../components/UI'
 import { Navbar, Sidebar, PageContainer } from '../components/Navbar'
 import { ROLE_CONFIG, getRoleCapabilities } from '../../lib/types'
+import { ClipboardList, FileEdit } from 'lucide-react'
 
 export default function FieldVolunteerPage() {
   const { profile, loading, isAuthorized } = useRequireRole(['field_volunteer'])
@@ -84,11 +85,11 @@ export default function FieldVolunteerPage() {
 
           {/* Action Buttons */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <button className="bg-blue-600 text-white px-6 py-4 rounded-lg hover:bg-blue-700 transition-colors font-medium text-lg">
-              📋 View Assigned Tasks
+            <button className="bg-blue-600 text-white px-6 py-4 rounded-lg hover:bg-blue-700 transition-colors font-medium text-lg flex items-center justify-center gap-2">
+              <ClipboardList className="w-5 h-5" /> View Assigned Tasks
             </button>
-            <button className="bg-green-600 text-white px-6 py-4 rounded-lg hover:bg-green-700 transition-colors font-medium text-lg">
-              📝 Submit New Report
+            <button className="bg-green-600 text-white px-6 py-4 rounded-lg hover:bg-green-700 transition-colors font-medium text-lg flex items-center justify-center gap-2">
+              <FileEdit className="w-5 h-5" /> Submit New Report
             </button>
           </div>
         </div>

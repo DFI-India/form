@@ -5,6 +5,7 @@ import { useRequireRole } from '../../../lib/hooks'
 import { supabase } from '../../../lib/supabase'
 import { LoadingSpinner, Alert } from '../../components/UI'
 import { Navbar, Sidebar, PageContainer } from '../../components/Navbar'
+import { CheckCircle } from 'lucide-react'
 
 interface AnalyticsData {
   summary: {
@@ -510,7 +511,7 @@ export default function AdminAnalyticsPage() {
                         {analytics.summary.totalApproved} approved out of {analytics.summary.totalChildren} total submissions
                       </p>
                     </div>
-                    <div className="text-6xl">✅</div>
+                    <CheckCircle className="w-16 h-16 text-green-600" />
                   </div>
                 </div>
               </div>
