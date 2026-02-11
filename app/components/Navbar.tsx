@@ -18,9 +18,12 @@ export function Navbar({ username, role, roleLabel, roleColor }: NavbarProps) {
   return (
     <div className="bg-white border-b border-slate-200 sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-8 py-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">{username}</h1>
-          <p className="text-sm text-slate-600">Welcome back!</p>
+        <div className="flex items-center gap-4">
+          <img src="/DFI.png" alt="DFI Logo" className="h-12 w-12 object-contain" />
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">{username}</h1>
+            <p className="text-sm text-slate-600">Welcome back!</p>
+          </div>
         </div>
         <div className="flex items-center gap-4">
           <span className={`px-4 py-2 rounded-full text-sm font-semibold ${roleColor}`}>
@@ -74,6 +77,7 @@ export function Sidebar({ role }: SidebarProps) {
       { label: 'Approvals Queue', href: '/admin/approvals', icon: '✅' },
       { label: 'All Records', href: '/admin/records', icon: '📋' },
       { label: 'Analytics', href: '/admin/analytics', icon: '📈' },
+      { label: 'Reports & Export', href: '/tech-support/reports', icon: '📥' },
       { label: 'Activity Logs', href: '/admin/logs', icon: '📝' },
       { label: 'My Activity', href: '/profile/activity', icon: '👤' },
     ],
