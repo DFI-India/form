@@ -3,6 +3,8 @@
 import { useRouter } from 'next/navigation'
 import { useSignOut } from '../../lib/hooks'
 import type { UserRole } from '../../lib/types'
+import DFILogo from '../../public/DFI.png'
+import Image from 'next/image'
 import { 
   LayoutDashboard, 
   UserPlus, 
@@ -35,7 +37,7 @@ export function Navbar({ username, role, roleLabel, roleColor }: NavbarProps) {
     <div className="bg-white border-b border-slate-200 fixed top-0 left-0 right-0 z-50">
       <div className="max-w-full px-8 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <img src="/DFI.png" alt="DFI Logo" className="h-12 w-12 object-contain" />
+          <Image src={DFILogo} alt="DFI Logo" className="h-12 w-12 object-contain" />
           <div>
             <h1 className="text-2xl font-bold text-slate-900">{username}</h1>
             <p className="text-sm text-slate-600">Welcome back!</p>

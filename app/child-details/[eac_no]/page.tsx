@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
+import DFILogo from '../../../public/DFI.png'
 import { supabase } from '../../../lib/supabase'
 import TablePagination from '@mui/material/TablePagination'
 
@@ -87,7 +88,7 @@ export default function ChildDetailsPage({ params }: { params: { eac_no: string 
                 <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
                     <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:justify-start sm:text-left">
                         <Image
-                            src="/DFI.png"
+                            src={DFILogo}
                             alt="Debora Foundation India logo"
                             width={180}
                             height={60}
