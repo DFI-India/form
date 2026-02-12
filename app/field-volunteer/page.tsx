@@ -33,14 +33,14 @@ export default function FieldVolunteerPage() {
 
   return (
     <main className="min-h-screen bg-slate-50">
-      <Navbar 
-        username={profile.username} 
-        role="field_volunteer" 
+      <Navbar
+        username={profile.username}
+        role="field_volunteer"
         roleLabel={roleInfo.label}
         roleColor={roleInfo.color}
       />
       <Sidebar role="field_volunteer" />
-      
+
       <PageContainer>
         <div className="p-8">
           {/* Welcome Section */}
