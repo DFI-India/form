@@ -7,6 +7,7 @@ import { ROLE_CONFIG, ROLE_CAPABILITIES, getRoleConfig, getRoleCapabilities } fr
 import type { UserProfile, CreateUserForm, DeleteConfirmState } from '../../lib/types'
 import { Alert, LoadingSpinner } from '../components/UI'
 import { Navbar, Sidebar, PageContainer } from '../components/Navbar'
+import { CheckCircle, ClipboardList, TrendingUp, FileEdit } from 'lucide-react'
 
 export default function AdminPage() {
   const { profile, loading: authLoading, isAuthorized } = useRequireRole(['admin'])
@@ -247,7 +248,7 @@ async function loadCentres(token: string) {
                 href="/admin/approvals"
                 className="bg-white rounded-lg border border-slate-200 p-6 hover:border-blue-400 hover:shadow-md transition-all group"
               >
-                <div className="text-3xl mb-2">✅</div>
+                <CheckCircle className="w-8 h-8 mb-2 text-slate-700 group-hover:text-blue-600" />
                 <h3 className="font-semibold text-slate-900 group-hover:text-blue-600">Approvals Queue</h3>
                 <p className="text-sm text-slate-600 mt-1">Review pending submissions</p>
               </a>
@@ -255,7 +256,7 @@ async function loadCentres(token: string) {
                 href="/admin/records"
                 className="bg-white rounded-lg border border-slate-200 p-6 hover:border-blue-400 hover:shadow-md transition-all group"
               >
-                <div className="text-3xl mb-2">📋</div>
+                <ClipboardList className="w-8 h-8 mb-2 text-slate-700 group-hover:text-blue-600" />
                 <h3 className="font-semibold text-slate-900 group-hover:text-blue-600">All Records</h3>
                 <p className="text-sm text-slate-600 mt-1">View and edit all data</p>
               </a>
@@ -263,7 +264,7 @@ async function loadCentres(token: string) {
                 href="/admin/analytics"
                 className="bg-white rounded-lg border border-slate-200 p-6 hover:border-blue-400 hover:shadow-md transition-all group"
               >
-                <div className="text-3xl mb-2">📈</div>
+                <TrendingUp className="w-8 h-8 mb-2 text-slate-700 group-hover:text-blue-600" />
                 <h3 className="font-semibold text-slate-900 group-hover:text-blue-600">Analytics</h3>
                 <p className="text-sm text-slate-600 mt-1">View reports & statistics</p>
               </a>
@@ -271,7 +272,7 @@ async function loadCentres(token: string) {
                 href="/admin/logs"
                 className="bg-white rounded-lg border border-slate-200 p-6 hover:border-blue-400 hover:shadow-md transition-all group"
               >
-                <div className="text-3xl mb-2">📝</div>
+                <FileEdit className="w-8 h-8 mb-2 text-slate-700 group-hover:text-blue-600" />
                 <h3 className="font-semibold text-slate-900 group-hover:text-blue-600">Activity Logs</h3>
                 <p className="text-sm text-slate-600 mt-1">View system activity</p>
               </a>

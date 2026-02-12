@@ -140,6 +140,38 @@ export async function GET(request: NextRequest) {
       }
     })
 
+    // Get gender distribution
+    const { data: allChildren } = await supabaseAdmin
+      .from('Child_Data')
+      .select('gender, adm_date, class_std')
+
+    const genderStats = allChildren?.reduce((acc: any, child: any) => {
+      const gender = child.gender || 'Unknown'
+      acc[gender] = (acc[gender] || 0) + 1
+      return acc
+    }, {}) || {}
+
+    // Age distribution - using class_std as proxy since no DOB field exists
+    const ageGroups = allChildren?.reduce((acc: any, child: any) => {
+      if (!child.class_std) return acc
+      const classNum = parseInt(String(child.class_std))
+      let group = 'Unknown'
+      if (isNaN(classNum)) group = 'Unknown'
+      else if (classNum <= 5) group = '6-10'
+      else if (classNum <= 8) group = '11-14'
+      else if (classNum <= 12) group = '15-18'
+      else group = '18+'
+      acc[group] = (acc[group] || 0) + 1
+      return acc
+    }, {}) || {}
+
+    // Grade distribution
+    const gradeStats = allChildren?.reduce((acc: any, child: any) => {
+      const grade = child.class_std || 'Unknown'
+      acc[grade] = (acc[grade] || 0) + 1
+      return acc
+    }, {}) || {}
+
     return NextResponse.json({
       success: true,
       summary: {
@@ -157,7 +189,10 @@ export async function GET(request: NextRequest) {
       topVolunteers: volunteerData,
       vocationalCourses: vocationCourses,
       computerCourses: computerCourses,
-      timeline: timeline
+      timeline: timeline,
+      genderDistribution: genderStats,
+      ageDistribution: ageGroups,
+      gradeDistribution: gradeStats
     })
   } catch (error: any) {
     console.error('Analytics error:', error)

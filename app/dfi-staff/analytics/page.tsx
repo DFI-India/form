@@ -5,6 +5,7 @@ import { useRequireRole } from '../../../lib/hooks'
 import { supabase } from '../../../lib/supabase'
 import { LoadingSpinner, Alert } from '../../components/UI'
 import { Navbar, Sidebar, PageContainer } from '../../components/Navbar'
+import { Search, CheckCircle } from 'lucide-react'
 
 interface AnalyticsData {
   summary: {
@@ -203,7 +204,7 @@ export default function DFIStaffAnalyticsPage() {
                     href="/dfi-staff/review-queue"
                     className="bg-white rounded-lg border border-slate-200 p-6 hover:border-blue-400 hover:shadow-md transition-all group"
                   >
-                    <div className="text-3xl mb-2">🔍</div>
+                    <Search className="w-8 h-8 mb-2 text-slate-700 group-hover:text-blue-600" />
                     <h3 className="font-semibold text-slate-900 group-hover:text-blue-600">Review Queue</h3>
                     <p className="text-sm text-slate-600 mt-1">Review submitted data before approval</p>
                   </a>
@@ -211,7 +212,7 @@ export default function DFIStaffAnalyticsPage() {
                     href="/dfi-staff/approvals"
                     className="bg-white rounded-lg border border-slate-200 p-6 hover:border-blue-400 hover:shadow-md transition-all group"
                   >
-                    <div className="text-3xl mb-2">✅</div>
+                    <CheckCircle className="w-8 h-8 mb-2 text-slate-700 group-hover:text-blue-600" />
                     <h3 className="font-semibold text-slate-900 group-hover:text-blue-600">Approvals</h3>
                     <p className="text-sm text-slate-600 mt-1">Approve or reject reviewed data</p>
                   </a>
