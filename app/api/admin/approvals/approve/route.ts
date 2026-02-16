@@ -22,20 +22,20 @@ export async function POST(request: NextRequest) {
 
     const token = authHeader.split(' ')[1]
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
-    
+
     if (authError || !user) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    // Check if user is admin or dfi_staff
+    // Check if user is admin, dfi_staff, or dfi_field_staff
     const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('role, username')
       .eq('id', user.id)
       .single()
 
-    if (!profile || !['admin', 'dfi_staff'].includes(profile.role)) {
-      return NextResponse.json({ error: 'Forbidden - Only admin and DFI staff can approve' }, { status: 403 })
+    if (!profile || !['admin', 'dfi_staff', 'dfi_field_staff'].includes(profile.role)) {
+      return NextResponse.json({ error: 'Forbidden - Only admin, DFI staff, and DFI field staff can approve' }, { status: 403 })
     }
 
     const body = await request.json()

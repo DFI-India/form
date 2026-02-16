@@ -47,6 +47,7 @@ export default function ApproveDataPage() {
     const [authorized, setAuthorized] = useState(false)
     const [message, setMessage] = useState<MessageState>(null)
     const [userEacNo, setUserEacNo] = useState<number | null>(null)
+    const [userId, setUserId] = useState<string | null>(null)
 
     // Verify Data State
     const [verifyData, setVerifyData] = useState<Record<VerifySubTabType, ApprovalRecord[]>>({
@@ -174,6 +175,7 @@ export default function ApproveDataPage() {
     useEffect(() => {
         let isMounted = true
 
+
         const verifySession = async () => {
             const { data } = await supabase.auth.getSession()
             if (!isMounted) return
@@ -185,9 +187,11 @@ export default function ApproveDataPage() {
             if (!hasSession) {
                 router.replace('/sign-in')
             } else {
-                // Fetch user's eac_no from profile
+                // Fetch user's eac_no from profile and user id
                 const { data: user } = await supabase.auth.getUser()
                 if (user.user?.id) {
+                    setUserId(user.user.id)
+                    console.log('[Auth] Set userId after login:', user.user.id)
                     const { data: profile } = await supabase
                         .from('profiles')
                         .select('centre_eac_no_int')
@@ -197,21 +201,35 @@ export default function ApproveDataPage() {
                     if (profile?.centre_eac_no_int) {
                         setUserEacNo(profile.centre_eac_no_int)
                     }
+                } else {
+                    setUserId(null)
+                    console.warn('[Auth] No userId found after login')
                 }
             }
         }
 
         verifySession()
 
+
         const {
             data: { subscription },
-        } = supabase.auth.onAuthStateChange((_event, session) => {
+        } = supabase.auth.onAuthStateChange(async (_event, session) => {
             if (!isMounted) return
 
             const hasSession = Boolean(session)
             setAuthorized(hasSession)
             if (!hasSession) {
                 router.replace('/sign-in')
+            } else {
+                // Update userId on auth state change
+                const { data: user } = await supabase.auth.getUser()
+                if (user.user?.id) {
+                    setUserId(user.user.id)
+                    console.log('[AuthStateChange] Set userId:', user.user.id)
+                } else {
+                    setUserId(null)
+                    console.warn('[AuthStateChange] No userId found')
+                }
             }
         })
 
@@ -262,10 +280,11 @@ export default function ApproveDataPage() {
 
             if (error) throw error
 
-            // Map id to approval_id for consistency with the rest of the code
+            // Map id to approval_id and preserve record_id for API
             const enrichedData = (data || []).map((record: any) => ({
                 ...record,
-                approval_id: record.id
+                approval_id: record.id, // approval table id
+                record_id: record.record_id // main data table record_id
             }))
 
             console.log('Fetched vocational/computer data:', enrichedData);
@@ -484,18 +503,36 @@ export default function ApproveDataPage() {
     const handleApprove = async (recordId: string) => {
         setActionLoading((prev) => ({ ...prev, [recordId]: true }))
         try {
-            const { error } = await supabase
-                .from('child_approvals')
-                .update({
-                    status: 'Approved',
-                    decided_by: (await supabase.auth.getUser()).data.user?.id,
-                    decided_at: new Date().toISOString(),
-                })
-                .eq('id', recordId)
-
-            if (error) throw error
-
-            // Show toast and remove from current visible list immediately
+            // Map verifySubTab to entityType used by the API
+            const entityTypeMap: Record<VerifySubTabType, string> = {
+                child: 'child_data',
+                family: 'childfmly',
+                sibling: 'childsibling',
+                uniform: 'childuniform',
+                leaving: 'childleaving',
+                vocational: 'vocational_course',
+                computer: 'computer_course',
+            }
+            const entityType = entityTypeMap[verifySubTab]
+            // Find the record in verifyData to get the correct record_id
+            const record = verifyData[verifySubTab].find(r => r.approval_id === recordId)
+            const entityId = record?.record_id
+            if (!entityId) throw new Error('No record_id found for this record.');
+            // Get access token
+            const { data: { session } } = await supabase.auth.getSession();
+            const accessToken = session?.access_token;
+            if (!accessToken) throw new Error('No access token found. Please sign in again.');
+            const res = await fetch('/api/admin/approvals/approve', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`
+                },
+                body: JSON.stringify({ entityType, entityId }),
+                credentials: 'include',
+            })
+            const json = await res.json()
+            if (!res.ok) throw new Error(json.error || 'Approval failed')
             addToast({ type: 'success', text: 'Record approved successfully.' })
             setVerifyData((prev) => ({
                 ...prev,
@@ -513,7 +550,7 @@ export default function ApproveDataPage() {
         setActionLoading((prev) => ({ ...prev, [recordId]: true }))
         try {
             console.log('Approving vocational with recordId:', recordId)
-            
+
             // First, find the actual vocational_training_approvals record using the entity_id (vocational_course id)
             const { data: approvalRecord, error: findError } = await supabase
                 .from('vocational_training_approvals')
@@ -521,11 +558,11 @@ export default function ApproveDataPage() {
                 .eq('entity_id', recordId)
                 .eq('entity_type', 'vocational_course')
                 .single()
-            
+
             if (findError) throw new Error(`Could not find approval record: ${findError.message}`)
-            
+
             console.log('Found approval record id:', approvalRecord?.id)
-            
+
             const { error, data } = await supabase
                 .from('vocational_training_approvals')
                 .update({
@@ -562,9 +599,9 @@ export default function ApproveDataPage() {
                 .eq('entity_id', recordId)
                 .eq('entity_type', 'computer_course')
                 .single()
-            
+
             if (findError) throw new Error(`Could not find approval record: ${findError.message}`)
-            
+
             const { error } = await supabase
                 .from('vocational_training_approvals')
                 .update({
@@ -598,21 +635,36 @@ export default function ApproveDataPage() {
 
         setActionLoading((prev) => ({ ...prev, [recordId]: true }))
         try {
-            const user = (await supabase.auth.getUser()).data.user
-
-            const { error } = await supabase
-                .from('child_approvals')
-                .update({
-                    status: 'Rejected',
-                    rejection_reason: reason,
-                    decided_by: user?.id,
-                    decided_at: new Date().toISOString(),
-                })
-                .eq('id', recordId)
-
-            if (error) throw error
-
-            // Show toast and remove from current visible list immediately
+            // Map verifySubTab to entityType used by the API
+            const entityTypeMap: Record<VerifySubTabType, string> = {
+                child: 'child_data',
+                family: 'childfmly',
+                sibling: 'childsibling',
+                uniform: 'childuniform',
+                leaving: 'childleaving',
+                vocational: 'vocational_course',
+                computer: 'computer_course',
+            }
+            const entityType = entityTypeMap[verifySubTab]
+            // Find the record in verifyData to get the correct record_id
+            const record = verifyData[verifySubTab].find(r => r.approval_id === recordId)
+            const entityId = record?.record_id
+            if (!entityId) throw new Error('No record_id found for this record.');
+            // Get access token
+            const { data: { session } } = await supabase.auth.getSession();
+            const accessToken = session?.access_token;
+            if (!accessToken) throw new Error('No access token found. Please sign in again.');
+            const res = await fetch('/api/admin/approvals/reject', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`
+                },
+                body: JSON.stringify({ entityType, entityId, reason }),
+                credentials: 'include',
+            })
+            const json = await res.json()
+            if (!res.ok) throw new Error(json.error || 'Rejection failed')
             addToast({ type: 'success', text: 'Record rejected successfully.' })
             setVerifyData((prev) => ({
                 ...prev,
@@ -643,7 +695,7 @@ export default function ApproveDataPage() {
                 .eq('entity_id', recordId)
                 .eq('entity_type', 'vocational_course')
                 .single()
-            
+
             if (findError) throw new Error(`Could not find approval record: ${findError.message}`)
 
             const { error } = await supabase
@@ -689,7 +741,7 @@ export default function ApproveDataPage() {
                 .eq('entity_id', recordId)
                 .eq('entity_type', 'computer_course')
                 .single()
-            
+
             if (findError) throw new Error(`Could not find approval record: ${findError.message}`)
 
             const { error } = await supabase
@@ -880,19 +932,19 @@ export default function ApproveDataPage() {
                                                 record={record}
                                                 displayKeys={visibleKeys}
                                                 isLoading={actionLoading[record.approval_id] || false}
-                                                onApprove={() => 
-                                                    verifySubTab === 'vocational' 
+                                                onApprove={() =>
+                                                    verifySubTab === 'vocational'
                                                         ? handleVocationalApprove(record.approval_id)
                                                         : verifySubTab === 'computer'
-                                                        ? handleComputerApprove(record.approval_id)
-                                                        : handleApprove(record.approval_id)
+                                                            ? handleComputerApprove(record.approval_id)
+                                                            : handleApprove(record.approval_id)
                                                 }
-                                                onReject={(reason) => 
-                                                    verifySubTab === 'vocational' 
+                                                onReject={(reason) =>
+                                                    verifySubTab === 'vocational'
                                                         ? handleVocationalReject(record.approval_id, reason)
                                                         : verifySubTab === 'computer'
-                                                        ? handleComputerReject(record.approval_id, reason)
-                                                        : handleReject(record.approval_id, reason)
+                                                            ? handleComputerReject(record.approval_id, reason)
+                                                            : handleReject(record.approval_id, reason)
                                                 }
                                             />
                                         ))}
