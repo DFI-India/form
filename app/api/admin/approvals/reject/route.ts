@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
 
     const token = authHeader.split(' ')[1]
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
-    
+
     if (authError || !user) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
@@ -53,6 +53,10 @@ export async function POST(request: NextRequest) {
     let tableName = entityType
     if (entityType === 'child_data') tableName = 'Child_Data'
 
+    // Determine the ID column to use based on entity type
+    const isVocationalOrComputer = ['vocational_course', 'computer_course'].includes(entityType)
+    const idColumn = isVocationalOrComputer ? 'id' : 'record_id'
+
     // Update the entity record
     const { data: updatedRecord, error: updateError } = await supabaseAdmin
       .from(tableName)
@@ -61,7 +65,7 @@ export async function POST(request: NextRequest) {
         approved_by: user.id,
         approved_at: new Date().toISOString()
       })
-      .eq('record_id', entityId)
+      .eq(idColumn, entityId)
       .select()
       .single()
 
@@ -70,9 +74,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to reject record' }, { status: 500 })
     }
 
-    // Update child_approvals table if exists
+    // Determine which approval table to update based on entity type
+    const approvalTableName = isVocationalOrComputer ? 'vocational_training_approvals' : 'child_approvals'
+
+    // Update the appropriate approval table
     await supabaseAdmin
-      .from('child_approvals')
+      .from(approvalTableName)
       .update({
         status: 'Rejected',
         decided_by: user.id,

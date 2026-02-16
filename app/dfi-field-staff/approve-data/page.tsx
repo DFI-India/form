@@ -281,10 +281,11 @@ export default function ApproveDataPage() {
             if (error) throw error
 
             // Map id to approval_id and preserve record_id for API
+            // For vocational/computer courses, use id as the entity ID; for others use record_id
             const enrichedData = (data || []).map((record: any) => ({
                 ...record,
                 approval_id: record.id, // approval table id
-                record_id: record.record_id // main data table record_id
+                record_id: ['vocational', 'computer'].includes(tabType) ? record.id : record.record_id // use id for vocational/computer
             }))
 
             console.log('Fetched vocational/computer data:', enrichedData);
@@ -546,86 +547,9 @@ export default function ApproveDataPage() {
         }
     }
 
-    const handleVocationalApprove = async (recordId: string) => {
-        setActionLoading((prev) => ({ ...prev, [recordId]: true }))
-        try {
-            console.log('Approving vocational with recordId:', recordId)
 
-            // First, find the actual vocational_training_approvals record using the entity_id (vocational_course id)
-            const { data: approvalRecord, error: findError } = await supabase
-                .from('vocational_training_approvals')
-                .select('id')
-                .eq('entity_id', recordId)
-                .eq('entity_type', 'vocational_course')
-                .single()
 
-            if (findError) throw new Error(`Could not find approval record: ${findError.message}`)
 
-            console.log('Found approval record id:', approvalRecord?.id)
-
-            const { error, data } = await supabase
-                .from('vocational_training_approvals')
-                .update({
-                    status: 'Approved',
-                    approved_by: (await supabase.auth.getUser()).data.user?.id,
-                    approved_at: new Date().toISOString(),
-                })
-                .eq('id', approvalRecord.id)
-
-            console.log('Update result - error:', error, 'data:', data)
-            if (error) throw error
-
-            // Show toast and remove from current visible list immediately
-            addToast({ type: 'success', text: 'Record approved successfully.' })
-            setVerifyData((prev) => ({
-                ...prev,
-                [verifySubTab]: prev[verifySubTab].filter((r) => r.approval_id !== recordId),
-            }))
-        } catch (error: unknown) {
-            const fallback = error instanceof Error ? error.message : 'Failed to approve'
-            addToast({ type: 'error', text: `Unable to approve: ${fallback}` })
-        } finally {
-            setActionLoading((prev) => ({ ...prev, [recordId]: false }))
-        }
-    }
-
-    const handleComputerApprove = async (recordId: string) => {
-        setActionLoading((prev) => ({ ...prev, [recordId]: true }))
-        try {
-            // First, find the actual vocational_training_approvals record using the entity_id (computer_course id)
-            const { data: approvalRecord, error: findError } = await supabase
-                .from('vocational_training_approvals')
-                .select('id')
-                .eq('entity_id', recordId)
-                .eq('entity_type', 'computer_course')
-                .single()
-
-            if (findError) throw new Error(`Could not find approval record: ${findError.message}`)
-
-            const { error } = await supabase
-                .from('vocational_training_approvals')
-                .update({
-                    status: 'Approved',
-                    approved_by: (await supabase.auth.getUser()).data.user?.id,
-                    approved_at: new Date().toISOString(),
-                })
-                .eq('id', approvalRecord.id)
-
-            if (error) throw error
-
-            // Show toast and remove from current visible list immediately
-            addToast({ type: 'success', text: 'Record approved successfully.' })
-            setVerifyData((prev) => ({
-                ...prev,
-                [verifySubTab]: prev[verifySubTab].filter((r) => r.approval_id !== recordId),
-            }))
-        } catch (error: unknown) {
-            const fallback = error instanceof Error ? error.message : 'Failed to approve'
-            addToast({ type: 'error', text: `Unable to approve: ${fallback}` })
-        } finally {
-            setActionLoading((prev) => ({ ...prev, [recordId]: false }))
-        }
-    }
 
     const handleReject = async (recordId: string, reason: string) => {
         if (!reason.trim()) {
@@ -678,97 +602,9 @@ export default function ApproveDataPage() {
         }
     }
 
-    const handleVocationalReject = async (recordId: string, reason: string) => {
-        if (!reason.trim()) {
-            setMessage({ type: 'error', text: 'Please provide a rejection reason.' })
-            return
-        }
 
-        setActionLoading((prev) => ({ ...prev, [recordId]: true }))
-        try {
-            const user = (await supabase.auth.getUser()).data.user
 
-            // First, find the actual vocational_training_approvals record using the entity_id (vocational_course id)
-            const { data: approvalRecord, error: findError } = await supabase
-                .from('vocational_training_approvals')
-                .select('id')
-                .eq('entity_id', recordId)
-                .eq('entity_type', 'vocational_course')
-                .single()
 
-            if (findError) throw new Error(`Could not find approval record: ${findError.message}`)
-
-            const { error } = await supabase
-                .from('vocational_training_approvals')
-                .update({
-                    status: 'Rejected',
-                    rejection_reason: reason,
-                    approved_by: user?.id,
-                    approved_at: new Date().toISOString(),
-                })
-                .eq('id', approvalRecord.id)
-
-            if (error) throw error
-
-            // Show toast and remove from current visible list immediately
-            addToast({ type: 'success', text: 'Record rejected successfully.' })
-            setVerifyData((prev) => ({
-                ...prev,
-                [verifySubTab]: prev[verifySubTab].filter((r) => r.approval_id !== recordId),
-            }))
-        } catch (error: unknown) {
-            const fallback = error instanceof Error ? error.message : 'Failed to reject'
-            addToast({ type: 'error', text: `Unable to reject: ${fallback}` })
-        } finally {
-            setActionLoading((prev) => ({ ...prev, [recordId]: false }))
-        }
-    }
-
-    const handleComputerReject = async (recordId: string, reason: string) => {
-        if (!reason.trim()) {
-            setMessage({ type: 'error', text: 'Please provide a rejection reason.' })
-            return
-        }
-
-        setActionLoading((prev) => ({ ...prev, [recordId]: true }))
-        try {
-            const user = (await supabase.auth.getUser()).data.user
-
-            // First, find the actual vocational_training_approvals record using the entity_id (computer_course id)
-            const { data: approvalRecord, error: findError } = await supabase
-                .from('vocational_training_approvals')
-                .select('id')
-                .eq('entity_id', recordId)
-                .eq('entity_type', 'computer_course')
-                .single()
-
-            if (findError) throw new Error(`Could not find approval record: ${findError.message}`)
-
-            const { error } = await supabase
-                .from('vocational_training_approvals')
-                .update({
-                    status: 'Rejected',
-                    rejection_reason: reason,
-                    approved_by: user?.id,
-                    approved_at: new Date().toISOString(),
-                })
-                .eq('id', approvalRecord.id)
-
-            if (error) throw error
-
-            // Show toast and remove from current visible list immediately
-            addToast({ type: 'success', text: 'Record rejected successfully.' })
-            setVerifyData((prev) => ({
-                ...prev,
-                [verifySubTab]: prev[verifySubTab].filter((r) => r.approval_id !== recordId),
-            }))
-        } catch (error: unknown) {
-            const fallback = error instanceof Error ? error.message : 'Failed to reject'
-            addToast({ type: 'error', text: `Unable to reject: ${fallback}` })
-        } finally {
-            setActionLoading((prev) => ({ ...prev, [recordId]: false }))
-        }
-    }
 
     if (!checkedAuth) {
         return (
@@ -932,20 +768,8 @@ export default function ApproveDataPage() {
                                                 record={record}
                                                 displayKeys={visibleKeys}
                                                 isLoading={actionLoading[record.approval_id] || false}
-                                                onApprove={() =>
-                                                    verifySubTab === 'vocational'
-                                                        ? handleVocationalApprove(record.approval_id)
-                                                        : verifySubTab === 'computer'
-                                                            ? handleComputerApprove(record.approval_id)
-                                                            : handleApprove(record.approval_id)
-                                                }
-                                                onReject={(reason) =>
-                                                    verifySubTab === 'vocational'
-                                                        ? handleVocationalReject(record.approval_id, reason)
-                                                        : verifySubTab === 'computer'
-                                                            ? handleComputerReject(record.approval_id, reason)
-                                                            : handleReject(record.approval_id, reason)
-                                                }
+                                                onApprove={() => handleApprove(record.approval_id)}
+                                                onReject={(reason) => handleReject(record.approval_id, reason)}
                                             />
                                         ))}
                                     </tbody>
