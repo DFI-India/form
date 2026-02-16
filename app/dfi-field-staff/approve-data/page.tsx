@@ -35,6 +35,13 @@ const HIDDEN_COLUMNS = [
     'approved_at',
 ]
 
+const HISTORY_HIDDEN_COLUMNS = [
+    'status',
+    'submitted_by',
+    'approved_by',
+    'approved_at',
+]
+
 type Toast = { id: string; type: 'success' | 'error'; text: string }
 
 export default function ApproveDataPage() {
@@ -499,7 +506,15 @@ export default function ApproveDataPage() {
                 fetchHistoryData('computer_course', setHistoryComputerData, setHistoryComputerLoading, historyComputerDateRange)
                 break
         }
-    }, [historyChildDateRange, historyFamilyDateRange, historySiblingDateRange, historyUniformDateRange, historyLeavingDateRange])
+    }, [
+        historyChildDateRange,
+        historyFamilyDateRange,
+        historySiblingDateRange,
+        historyUniformDateRange,
+        historyLeavingDateRange,
+        historyVocationalDateRange,
+        historyComputerDateRange,
+    ])
 
     const handleApprove = async (recordId: string) => {
         setActionLoading((prev) => ({ ...prev, [recordId]: true }))
@@ -1012,7 +1027,9 @@ export default function ApproveDataPage() {
                                     activeHistorySubTab === 'family' ? 'Family' :
                                         activeHistorySubTab === 'sibling' ? 'Sibling' :
                                             activeHistorySubTab === 'uniform' ? 'Uniform' :
-                                                'Leaving'} Records
+                                                activeHistorySubTab === 'vocational' ? 'Vocational Course' :
+                                                    activeHistorySubTab === 'computer' ? 'Computer Course' :
+                                                        'Leaving'} Records
                             </h2>
                             <p className="mt-1 text-sm text-slate-600">
                                 View all records you have approved.
@@ -1030,7 +1047,9 @@ export default function ApproveDataPage() {
                                             activeHistorySubTab === 'family' ? historyFamilyDateRange.start :
                                                 activeHistorySubTab === 'sibling' ? historySiblingDateRange.start :
                                                     activeHistorySubTab === 'uniform' ? historyUniformDateRange.start :
-                                                        historyLeavingDateRange.start
+                                                        activeHistorySubTab === 'vocational' ? historyVocationalDateRange.start :
+                                                            activeHistorySubTab === 'computer' ? historyComputerDateRange.start :
+                                                                historyLeavingDateRange.start
                                     }
                                     onChange={(e) => handleHistoryDateRangeChange(activeHistorySubTab, 'start', e.target.value)}
                                     className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
@@ -1045,7 +1064,9 @@ export default function ApproveDataPage() {
                                             activeHistorySubTab === 'family' ? historyFamilyDateRange.end :
                                                 activeHistorySubTab === 'sibling' ? historySiblingDateRange.end :
                                                     activeHistorySubTab === 'uniform' ? historyUniformDateRange.end :
-                                                        historyLeavingDateRange.end
+                                                        activeHistorySubTab === 'vocational' ? historyVocationalDateRange.end :
+                                                            activeHistorySubTab === 'computer' ? historyComputerDateRange.end :
+                                                                historyLeavingDateRange.end
                                     }
                                     onChange={(e) => handleHistoryDateRangeChange(activeHistorySubTab, 'end', e.target.value)}
                                     className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
@@ -1054,7 +1075,7 @@ export default function ApproveDataPage() {
                         </div>
 
                         {/* History Table */}
-                        {historyChildLoading || historyFamilyLoading || historySiblingLoading || historyUniformLoading || historyLeavingLoading ? (
+                        {historyChildLoading || historyFamilyLoading || historySiblingLoading || historyUniformLoading || historyLeavingLoading || historyVocationalLoading || historyComputerLoading ? (
                             <div className="flex items-center justify-center py-8">
                                 <p className="text-sm text-slate-500">Loading records...</p>
                             </div>
@@ -1064,7 +1085,9 @@ export default function ApproveDataPage() {
                                     activeHistorySubTab === 'family' ? historyFamilyData :
                                         activeHistorySubTab === 'sibling' ? historySiblingData :
                                             activeHistorySubTab === 'uniform' ? historyUniformData :
-                                                historyLeavingData
+                                                activeHistorySubTab === 'vocational' ? historyVocationalData :
+                                                    activeHistorySubTab === 'computer' ? historyComputerData :
+                                                        historyLeavingData
 
                                 return currentData.length === 0 ? (
                                     <div className="flex items-center justify-center py-8">
@@ -1075,40 +1098,44 @@ export default function ApproveDataPage() {
                                         <table className="w-full text-sm">
                                             <thead className="sticky top-0 bg-slate-50 border-b border-slate-200">
                                                 <tr>
-                                                    {Object.keys(currentData[0] || {}).map((key) => (
-                                                        <th
-                                                            key={key}
-                                                            className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap"
-                                                        >
-                                                            {key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}
-                                                        </th>
-                                                    ))}
+                                                    {Object.keys(currentData[0] || {})
+                                                        .filter((key) => !HISTORY_HIDDEN_COLUMNS.includes(key.toLowerCase()))
+                                                        .map((key) => (
+                                                            <th
+                                                                key={key}
+                                                                className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap"
+                                                            >
+                                                                {key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}
+                                                            </th>
+                                                        ))}
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {currentData.map((record, idx) => (
                                                     <tr key={idx} className="border-b border-slate-200 hover:bg-slate-50">
-                                                        {Object.entries(record).map(([key, value]) => {
-                                                            const displayValue = value === null || value === undefined ? '-' : String(value)
-                                                            const isPhoto = (key.toLowerCase().includes('photo') || key.toLowerCase().includes('image')) && value
+                                                        {Object.entries(record)
+                                                            .filter(([key]) => !HISTORY_HIDDEN_COLUMNS.includes(key.toLowerCase()))
+                                                            .map(([key, value]) => {
+                                                                const displayValue = value === null || value === undefined ? '-' : String(value)
+                                                                const isPhoto = (key.toLowerCase().includes('photo') || key.toLowerCase().includes('image')) && value
 
-                                                            return (
-                                                                <td key={key} className="px-4 py-3 text-sm text-slate-700 max-w-xs truncate">
-                                                                    {isPhoto ? (
-                                                                        <a
-                                                                            href={String(value)}
-                                                                            target="_blank"
-                                                                            rel="noopener noreferrer"
-                                                                            className="rounded-lg bg-blue-600 px-3 py-1 text-xs font-semibold text-white transition hover:bg-blue-700"
-                                                                        >
-                                                                            View
-                                                                        </a>
-                                                                    ) : (
-                                                                        displayValue
-                                                                    )}
-                                                                </td>
-                                                            )
-                                                        })}
+                                                                return (
+                                                                    <td key={key} className="px-4 py-3 text-sm text-slate-700 max-w-xs truncate">
+                                                                        {isPhoto ? (
+                                                                            <a
+                                                                                href={String(value)}
+                                                                                target="_blank"
+                                                                                rel="noopener noreferrer"
+                                                                                className="rounded-lg bg-blue-600 px-3 py-1 text-xs font-semibold text-white transition hover:bg-blue-700"
+                                                                            >
+                                                                                View
+                                                                            </a>
+                                                                        ) : (
+                                                                            displayValue
+                                                                        )}
+                                                                    </td>
+                                                                )
+                                                            })}
                                                     </tr>
                                                 ))}
                                             </tbody>
