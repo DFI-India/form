@@ -76,9 +76,9 @@ export function Sidebar({ role }: SidebarProps) {
     ],
     dfi_field_staff: [
       { label: 'Dashboard', href: '/dfi-field-staff', icon: LayoutDashboard },
-      { label: 'Review Queue', href: '/dfi-staff/review-queue', icon: Search },
+      { label: 'Review Queue', href: '/dfi-field-staff/review-queue', icon: Search },
       { label: 'Approve Data', href: '/dfi-field-staff/approve-data', icon: CheckCircle },
-      { label: 'Analytics', href: '/dfi-staff/analytics', icon: TrendingUp },
+      { label: 'Analytics', href: '/dfi-field-staff/analytics', icon: TrendingUp },
       { label: 'Activity History', href: '/dfi-field-staff/history', icon: ScrollText },
     ],
     dfi_staff: [
