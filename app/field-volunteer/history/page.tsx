@@ -109,9 +109,14 @@ export default function ActivityHistoryPage() {
 
       if (approvalsError) throw approvalsError
 
-      const ids: number[] = (approvals ?? [])
-        .map((r: any) => (typeof r.entity_id === 'string' ? Number(r.entity_id) : r.entity_id))
-        .filter(Boolean)
+      const ids: (string | number)[] = (approvals ?? [])
+        .map((r: any) => {
+          const v = r?.entity_id
+          if (v === null || v === undefined || v === '') return null
+          if (typeof v === 'string' && /^\d+$/.test(v)) return Number(v)
+          return v
+        })
+        .filter((v): v is string | number => v !== null && v !== undefined && v !== '')
 
       if (ids.length === 0) {
         setHistoryData([])
@@ -142,7 +147,8 @@ export default function ActivityHistoryPage() {
     entityType: string,
     setData: (data: any[]) => void,
     setLoading: (loading: boolean) => void,
-    dateRange: { start: string; end: string }
+    dateRange: { start: string; end: string },
+    approvalsTable: string = 'child_approvals'
   ) => {
     setLoading(true)
     try {
@@ -150,41 +156,66 @@ export default function ActivityHistoryPage() {
       const userId = userData.user?.id
       if (!userId) throw new Error('No user session found.')
 
-      // First, get entity IDs from child_approvals for this user and entity type
+      // First, get entity IDs from the appropriate approvals table for this user and entity type
       const { data: approvals, error: approvalsError } = await supabase
-        .from('child_approvals')
+        .from(approvalsTable)
         .select('entity_id')
         .eq('submitted_by', userId)
         .eq('entity_type', entityType)
 
-      if (approvalsError) throw approvalsError
+      if (approvalsError) {
+        console.error('[History][fetch] approvals query error', { approvalsTable, entityType, error: approvalsError })
+        throw approvalsError
+      }
 
-      const ids: number[] = (approvals ?? [])
-        .map((r: any) => (typeof r.entity_id === 'string' ? Number(r.entity_id) : r.entity_id))
-        .filter(Boolean)
+      const ids: (string | number)[] = (approvals ?? [])
+        .map((r: any) => {
+          const v = r?.entity_id
+          if (v === null || v === undefined || v === '') return null
+          if (typeof v === 'string' && /^\d+$/.test(v)) return Number(v)
+          return v
+        })
+        .filter((v): v is string | number => v !== null && v !== undefined && v !== '')
 
       if (ids.length === 0) {
         setData([])
         return
       }
 
-      // Then fetch records from the table using those IDs
-      let query = supabase
-        .from(tableName)
-        .select('*')
-        .in('record_id', ids)
+      // Then fetch records from the table using those IDs.
+      // Try common `record_id` column first (used by legacy child tables),
+      // fall back to `id` column if the former doesn't exist.
+      let rows: any[] | null = null
+      let rowsError: any = null
 
-      // Apply date range filter if dates are provided
-      if (dateRange.start) {
-        query = query.gte('created_at', dateRange.start)
+      const tryQuery = async (col: string) => {
+        try {
+          let q = supabase.from(tableName).select('*').in(col, ids)
+          if (dateRange.start) q = q.gte('created_at', dateRange.start)
+          if (dateRange.end) q = q.lte('created_at', dateRange.end)
+          return await q
+        } catch (e) {
+          return { data: null, error: e }
+        }
       }
-      if (dateRange.end) {
-        query = query.lte('created_at', dateRange.end)
+
+      try {
+        const res = await tryQuery('record_id')
+        rows = res.data
+        rowsError = res.error
+        if (rowsError && rowsError.code === '42703') {
+          const res2 = await tryQuery('id')
+          rows = res2.data
+          rowsError = res2.error
+        }
+      } catch (e) {
+        rowsError = e
       }
 
-      const { data: rows, error: rowsError } = await query
-
-      if (rowsError) throw rowsError
+      if (rowsError) {
+        console.error('[History][fetch] rows query error', { tableName, error: rowsError })
+        throw rowsError
+      }
 
       const sorted = (rows ?? []).slice().sort((a: any, b: any) => {
         const aDate = new Date(a.created_at || 0).getTime()
@@ -222,10 +253,10 @@ export default function ActivityHistoryPage() {
         fetchHistoryData('childleaving', 'childleaving', setHistoryLeavingData, setHistoryLeavingLoading, historyLeavingDateRange)
         break
       case 'vocational':
-        fetchHistoryData('vocational_training_approvals', 'vocational_course', setHistoryVocationalData, setHistoryVocationalLoading, historyVocationalDateRange)
+        fetchHistoryData('vocational_training_approvals', 'vocational_course', setHistoryVocationalData, setHistoryVocationalLoading, historyVocationalDateRange, 'vocational_training_approvals')
         break
       case 'computer':
-        fetchHistoryData('vocational_training_approvals', 'computer_course', setHistoryComputerData, setHistoryComputerLoading, historyComputerDateRange)
+        fetchHistoryData('vocational_training_approvals', 'computer_course', setHistoryComputerData, setHistoryComputerLoading, historyComputerDateRange, 'vocational_training_approvals')
         break
     }
   }
@@ -287,10 +318,10 @@ export default function ActivityHistoryPage() {
         fetchHistoryData('childleaving', 'childleaving', setHistoryLeavingData, setHistoryLeavingLoading, historyLeavingDateRange)
         break
       case 'vocational':
-        fetchHistoryData('childvocational', 'childvocational', setHistoryVocationalData, setHistoryVocationalLoading, historyVocationalDateRange)
+        fetchHistoryData('vocational_course', 'vocational_course', setHistoryVocationalData, setHistoryVocationalLoading, historyVocationalDateRange, 'vocational_training_approvals')
         break
       case 'computer':
-        fetchHistoryData('childcomputer', 'childcomputer', setHistoryComputerData, setHistoryComputerLoading, historyComputerDateRange)
+        fetchHistoryData('computer_course', 'computer_course', setHistoryComputerData, setHistoryComputerLoading, historyComputerDateRange, 'vocational_training_approvals')
         break
     }
   }, [historyChildDateRange, historyFamilyDateRange, historySiblingDateRange, historyUniformDateRange, historyVocationalDateRange, historyComputerDateRange, historyLeavingDateRange, isAuthorized, activeHistorySubTab])
@@ -722,8 +753,8 @@ export default function ActivityHistoryPage() {
                           </thead>
                           <tbody>
                             {historyVocationalData.map((row) => (
-                              <tr key={row.record_id} className="border-t border-slate-200 hover:bg-slate-50">
-                                <td className="px-4 py-3 text-slate-700">{row.record_id}</td>
+                              <tr key={row.record_id ?? row.id} className="border-t border-slate-200 hover:bg-slate-50">
+                                <td className="px-4 py-3 text-slate-700">{row.record_id ?? row.id}</td>
                                 <td className="px-4 py-3 text-slate-700">{row.trainee_name}</td>
                                 <td className="px-4 py-3 text-slate-700">{row.batch_no}</td>
                                 <td className="px-4 py-3 text-slate-700">{row.enrolled_course}</td>
@@ -779,8 +810,8 @@ export default function ActivityHistoryPage() {
                           </thead>
                           <tbody>
                             {historyComputerData.map((row) => (
-                              <tr key={row.record_id} className="border-t border-slate-200 hover:bg-slate-50">
-                                <td className="px-4 py-3 text-slate-700">{row.record_id}</td>
+                              <tr key={row.record_id ?? row.id} className="border-t border-slate-200 hover:bg-slate-50">
+                                <td className="px-4 py-3 text-slate-700">{row.record_id ?? row.id}</td>
                                 <td className="px-4 py-3 text-slate-700">{row.child_name}</td>
                                 <td className="px-4 py-3 text-slate-700">{row.batch_no}</td>
                                 <td className="px-4 py-3 text-slate-700">{row.date_of_admission ? new Date(row.date_of_admission).toLocaleDateString() : ''}</td>
