@@ -9,6 +9,10 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import DFILogo from '../../../public/DFI.png'
 import { supabase } from '../../../lib/supabase'
+import { useRequireRole } from '../../../lib/hooks'
+import { LoadingSpinner } from '../../components/UI'
+import { Navbar, Sidebar, PageContainer } from '../../components/Navbar'
+import { ROLE_CONFIG, getRoleCapabilities } from '../../../lib/types'
 
 type MainTabType = 'verify' | 'view' | 'history'
 type VerifySubTabType = 'child' | 'family' | 'sibling' | 'uniform' | 'leaving' | 'vocational' | 'computer'
@@ -718,6 +722,9 @@ export default function ApproveDataPage() {
         }
     }
 
+    // Ensure role hook is called before any early returns so hook order stays stable
+    const { profile, loading: authLoading, isAuthorized } = useRequireRole(['dfi_field_staff'])
+
     if (!checkedAuth) {
         return (
             <main className="flex min-h-screen items-center justify-center bg-slate-100">
@@ -757,9 +764,36 @@ export default function ApproveDataPage() {
         ? Object.keys(currentRecords[0]).filter((key) => !HIDDEN_COLUMNS.includes(key))
         : []
 
+    if (authLoading) {
+        return (
+            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+            <LoadingSpinner size="lg" />
+            </div>
+        )
+    }
+
+    if (!isAuthorized || !profile) {
+        return (
+            <main className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+                <div className="bg-white rounded-lg shadow-lg p-6 max-w-md text-center">
+                    <h1 className="text-2xl font-bold text-slate-900 mb-2">Access Denied</h1>
+                    <p className="text-slate-600">You don't have permission to access this page.</p>
+                </div>
+            </main>
+        )
+    }
+
+    const roleInfo = ROLE_CONFIG.find(r => r.value === 'dfi_field_staff')!
+
     return (
         <main className="flex-1">
-            <header className="mb-8">
+            <Navbar
+            username={profile.username}
+            role="dfi_field_staff"
+            roleLabel={roleInfo.label}
+            roleColor={roleInfo.color} />
+            <Sidebar role="dfi_field_staff" />
+            {/* <header className="mb-8">
                 <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
                     <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:justify-start sm:text-left">
                         <Image
@@ -787,8 +821,8 @@ export default function ApproveDataPage() {
                 <p className="mt-2 max-w-2xl text-sm text-slate-600">
                     Review and approve submitted child management data from field volunteers.
                 </p>
-            </header>
-
+            </header> */}
+            <PageContainer>
             {/* Main Tab Navigation */}
             <div className="mb-6 border-b border-slate-200">
                 <div className="flex flex-wrap gap-2 sm:gap-0">
@@ -1290,6 +1324,7 @@ export default function ApproveDataPage() {
                     </div>
                 </div>
             )}
+            </PageContainer>
         </main>
     )
 }
