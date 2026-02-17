@@ -57,6 +57,17 @@ export async function POST(request: NextRequest) {
     const isVocationalOrComputer = ['vocational_course', 'computer_course'].includes(entityType)
     const idColumn = isVocationalOrComputer ? 'id' : 'record_id'
 
+    const { data: pendingRecord, error: pendingError } = await supabaseAdmin
+      .from(tableName)
+      .select(idColumn)
+      .eq(idColumn, entityId)
+      .eq('status', 'Pending')
+      .single()
+
+    if (pendingError || !pendingRecord) {
+      return NextResponse.json({ error: 'Pending record not found' }, { status: 404 })
+    }
+
     // Update the entity record
     const { data: updatedRecord, error: updateError } = await supabaseAdmin
       .from(tableName)
@@ -66,6 +77,7 @@ export async function POST(request: NextRequest) {
         approved_at: new Date().toISOString()
       })
       .eq(idColumn, entityId)
+      .eq('status', 'Pending')
       .select()
       .single()
 
@@ -78,7 +90,7 @@ export async function POST(request: NextRequest) {
     const approvalTableName = isVocationalOrComputer ? 'vocational_training_approvals' : 'child_approvals'
 
     // Update the appropriate approval table
-    await supabaseAdmin
+    const { error: approvalUpdateError } = await supabaseAdmin
       .from(approvalTableName)
       .update({
         status: 'Rejected',
@@ -88,6 +100,12 @@ export async function POST(request: NextRequest) {
       })
       .eq('entity_type', entityType)
       .eq('entity_id', entityId)
+      .eq('status', 'Pending')
+
+    if (approvalUpdateError) {
+      console.error('Approval table update error:', approvalUpdateError)
+      return NextResponse.json({ error: 'Failed to reject record' }, { status: 500 })
+    }
 
     // Log the activity
     await supabaseAdmin

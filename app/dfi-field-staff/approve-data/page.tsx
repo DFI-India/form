@@ -57,7 +57,7 @@ export default function ApproveDataPage() {
     const [checkedAuth, setCheckedAuth] = useState(false)
     const [authorized, setAuthorized] = useState(false)
     const [message, setMessage] = useState<MessageState>(null)
-    const [userEacNo, setUserEacNo] = useState<number | null>(null)
+    const [userEacNos, setUserEacNos] = useState<number[]>([])
     const [userId, setUserId] = useState<string | null>(null)
 
     // Verify Data State
@@ -198,22 +198,25 @@ export default function ApproveDataPage() {
             if (!hasSession) {
                 router.replace('/sign-in')
             } else {
-                // Fetch user's eac_no from profile and user id
+                // Fetch assigned EAC numbers for this user and user id
                 const { data: user } = await supabase.auth.getUser()
                 if (user.user?.id) {
                     setUserId(user.user.id)
                     console.log('[Auth] Set userId after login:', user.user.id)
-                    const { data: profile } = await supabase
-                        .from('profiles')
-                        .select('centre_eac_no_int')
-                        .eq('id', user.user.id)
-                        .single()
 
-                    if (profile?.centre_eac_no_int) {
-                        setUserEacNo(profile.centre_eac_no_int)
-                    }
+                    const { data: eacs } = await supabase
+                        .from('dfi_field_staff_assigned_eacs')
+                        .select('assigned_eac')
+                        .eq('id', user.user.id)
+
+                    const assignedEacNos = (eacs || [])
+                        .map((row) => Number((row as { assigned_eac: unknown }).assigned_eac))
+                        .filter((value) => !Number.isNaN(value))
+
+                    setUserEacNos(assignedEacNos)
                 } else {
                     setUserId(null)
+                    setUserEacNos([])
                     console.warn('[Auth] No userId found after login')
                 }
             }
@@ -232,13 +235,25 @@ export default function ApproveDataPage() {
             if (!hasSession) {
                 router.replace('/sign-in')
             } else {
-                // Update userId on auth state change
+                // Update userId and assigned EACs on auth state change
                 const { data: user } = await supabase.auth.getUser()
                 if (user.user?.id) {
                     setUserId(user.user.id)
                     console.log('[AuthStateChange] Set userId:', user.user.id)
+
+                    const { data: eacs } = await supabase
+                        .from('dfi_field_staff_assigned_eacs')
+                        .select('assigned_eac')
+                        .eq('id', user.user.id)
+
+                    const assignedEacNos = (eacs || [])
+                        .map((row) => Number((row as { assigned_eac: unknown }).assigned_eac))
+                        .filter((value) => !Number.isNaN(value))
+
+                    setUserEacNos(assignedEacNos)
                 } else {
                     setUserId(null)
+                    setUserEacNos([])
                     console.warn('[AuthStateChange] No userId found')
                 }
             }
@@ -259,10 +274,10 @@ export default function ApproveDataPage() {
 
     // Fetch data for current view subtab
     useEffect(() => {
-        if (authorized && mainTab === 'view' && userEacNo) {
+        if (authorized && mainTab === 'view' && userEacNos.length > 0) {
             fetchViewData(viewSubTab)
         }
-    }, [authorized, mainTab, viewSubTab, userEacNo, viewSearchQuery, viewSearchType])
+    }, [authorized, mainTab, viewSubTab, userEacNos, viewSearchQuery, viewSearchType])
 
     const fetchVerifyData = async (tabType: VerifySubTabType) => {
         setVerifyLoading((prev) => ({ ...prev, [tabType]: true }))
@@ -315,8 +330,8 @@ export default function ApproveDataPage() {
     const fetchViewData = async (tabType: ViewSubTabType) => {
         setViewLoading((prev) => ({ ...prev, [tabType]: true }))
         try {
-            if (!userEacNo) {
-                throw new Error('User EAC number not found.')
+            if (userEacNos.length === 0) {
+                throw new Error('Assigned EAC numbers not found.')
             }
 
             const tableMap: Record<ViewSubTabType, string> = {
@@ -336,7 +351,7 @@ export default function ApproveDataPage() {
             let query = supabase
                 .from(tableName)
                 .select('*')
-                .eq('eac_no', userEacNo)
+                .in('eac_no', userEacNos)
                 .eq('status', 'Approved')
 
 
@@ -381,7 +396,7 @@ export default function ApproveDataPage() {
         setLoading(true)
         try {
             const user = (await supabase.auth.getUser()).data.user
-            if (!user?.id || !userEacNo) {
+            if (!user?.id || userEacNos.length === 0) {
                 throw new Error('User information not found.')
             }
 
@@ -390,7 +405,7 @@ export default function ApproveDataPage() {
                 .select('*')
                 .eq('approved_by', user.id)
                 .eq('status', 'Approved')
-                .eq('eac_no', userEacNo)
+                .in('eac_no', userEacNos)
 
             // Apply date range filter if dates are provided
             if (dateRange.start) {
@@ -478,13 +493,13 @@ export default function ApproveDataPage() {
 
     // Fetch history data when tab changes or date range changes
     useEffect(() => {
-        if (mainTab === 'history' && authorized && userEacNo) {
+        if (mainTab === 'history' && authorized && userEacNos.length > 0) {
             handleHistorySubTabChange(activeHistorySubTab)
         }
-    }, [mainTab, authorized, userEacNo])
+    }, [mainTab, authorized, userEacNos])
 
     useEffect(() => {
-        if (mainTab !== 'history' || !authorized || !userEacNo) return
+        if (mainTab !== 'history' || !authorized || userEacNos.length === 0) return
 
         // Re-fetch data when date range changes
         switch (activeHistorySubTab) {
@@ -554,9 +569,10 @@ export default function ApproveDataPage() {
             const json = await res.json()
             if (!res.ok) throw new Error(json.error || 'Approval failed')
             addToast({ type: 'success', text: 'Record approved successfully.' })
+            // Only remove the approved record from the list, don't replace the entire state
             setVerifyData((prev) => ({
                 ...prev,
-                [verifySubTab]: prev[verifySubTab].filter((r) => r.approval_id !== recordId),
+                [verifySubTab]: prev[verifySubTab].filter((r) => String(r.approval_id) !== String(recordId)),
             }))
         } catch (error: unknown) {
             const fallback = error instanceof Error ? error.message : 'Failed to approve'
@@ -609,9 +625,10 @@ export default function ApproveDataPage() {
             const json = await res.json()
             if (!res.ok) throw new Error(json.error || 'Rejection failed')
             addToast({ type: 'success', text: 'Record rejected successfully.' })
+            // Only remove the rejected record from the list, don't replace the entire state
             setVerifyData((prev) => ({
                 ...prev,
-                [verifySubTab]: prev[verifySubTab].filter((r) => r.approval_id !== recordId),
+                [verifySubTab]: prev[verifySubTab].filter((r) => String(r.approval_id) !== String(recordId)),
             }))
         } catch (error: unknown) {
             const fallback = error instanceof Error ? error.message : 'Failed to reject'
@@ -670,7 +687,7 @@ export default function ApproveDataPage() {
     if (authLoading) {
         return (
             <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-            <LoadingSpinner size="lg" />
+                <LoadingSpinner size="lg" />
             </div>
         )
     }
@@ -691,10 +708,10 @@ export default function ApproveDataPage() {
     return (
         <main className="flex-1">
             <Navbar
-            username={profile.username}
-            role="dfi_field_staff"
-            roleLabel={roleInfo.label}
-            roleColor={roleInfo.color} />
+                username={profile.username}
+                role="dfi_field_staff"
+                roleLabel={roleInfo.label}
+                roleColor={roleInfo.color} />
             <Sidebar role="dfi_field_staff" />
             {/* <header className="mb-8">
                 <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
@@ -726,507 +743,507 @@ export default function ApproveDataPage() {
                 </p>
             </header> */}
             <PageContainer>
-            {/* Main Tab Navigation */}
-            <div className="mb-6 border-b border-slate-200">
-                <div className="flex flex-wrap gap-2 sm:gap-0">
-                    {mainTabs.map((tab) => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setMainTab(tab.id)}
-                            className={`px-4 py-3 text-sm font-medium transition ${mainTab === tab.id
-                                ? 'border-b-2 border-blue-600 text-blue-600'
-                                : 'border-b-2 border-transparent text-slate-600 hover:text-slate-900'
-                                }`}
-                        >
-                            {tab.label}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            {/* Message Alert */}
-            {message && (
-                <div
-                    className={`mb-6 rounded-lg border px-4 py-3 text-sm font-medium ${message.type === 'success'
-                        ? 'border-green-200 bg-green-50 text-green-700'
-                        : 'border-red-200 bg-red-50 text-red-700'
-                        }`}
-                >
-                    {message.text}
-                </div>
-            )}
-
-            {/* Verify Data Tab */}
-            {mainTab === 'verify' && (
-                <div className="space-y-6">
-                    {/* Verify Subtabs */}
-                    <div className="border-b border-slate-200">
-                        <div className="flex flex-wrap gap-2 sm:gap-0">
-                            {verifySubTabs.map((tab) => (
-                                <button
-                                    key={tab.id}
-                                    onClick={() => setVerifySubTab(tab.id)}
-                                    className={`px-4 py-3 text-sm font-medium transition ${verifySubTab === tab.id
-                                        ? 'border-b-2 border-green-600 text-green-600'
-                                        : 'border-b-2 border-transparent text-slate-600 hover:text-slate-900'
-                                        }`}
-                                >
-                                    {tab.label}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Verify Data Table */}
-                    <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                        <div className="mb-4">
-                            <h2 className="text-lg font-semibold text-slate-900">
-                                Pending {verifySubTabs.find((t) => t.id === verifySubTab)?.label} Records
-                            </h2>
-                            <p className="mt-1 text-sm text-slate-600">
-                                Review and approve or reject submitted records.
-                            </p>
-                        </div>
-
-                        {verifyLoading[verifySubTab] ? (
-                            <div className="flex items-center justify-center py-8">
-                                <p className="text-sm text-slate-500">Loading records...</p>
-                            </div>
-                        ) : verifyData[verifySubTab].length === 0 ? (
-                            <div className="flex items-center justify-center py-8">
-                                <p className="text-sm text-slate-500">No records found.</p>
-                            </div>
-                        ) : (
-                            <div className="overflow-x-auto overflow-y-auto max-h-96 border border-slate-200 rounded-lg">
-                                <table className="w-full text-sm">
-                                    <thead className="sticky top-0 bg-slate-50 border-b border-slate-200">
-                                        <tr>
-                                            <th className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap">Record ID</th>
-                                            {visibleKeys.length > 0 && visibleKeys.map((key) => (
-                                                <th key={key} className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap">
-                                                    {key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}
-                                                </th>
-                                            ))}
-                                            <th className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap sticky right-0 top-0 bg-white z-20 w-[170px]">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {verifyData[verifySubTab].map((record) => (
-                                            <VerifyDataRow
-                                                key={record.approval_id}
-                                                record={record}
-                                                displayKeys={visibleKeys}
-                                                isLoading={actionLoading[record.approval_id] || false}
-                                                onApprove={() => handleApprove(record.approval_id)}
-                                                onReject={(reason) => handleReject(record.approval_id, reason)}
-                                            />
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-
-                        {/* Pagination */}
-                        {verifyData[verifySubTab].length > 0 && (
-                            <div className="mt-4 flex items-center justify-between">
-                                <button
-                                    onClick={() =>
-                                        setVerifyPagination((prev) => ({
-                                            ...prev,
-                                            [verifySubTab]: {
-                                                ...prev[verifySubTab],
-                                                page: Math.max(1, prev[verifySubTab].page - 1),
-                                            },
-                                        }))
-                                    }
-                                    disabled={verifyPagination[verifySubTab].page === 1}
-                                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-                                >
-                                    Previous
-                                </button>
-                                <span className="text-sm text-slate-600">
-                                    Page {verifyPagination[verifySubTab].page}
-                                </span>
-                                <button
-                                    onClick={() =>
-                                        setVerifyPagination((prev) => ({
-                                            ...prev,
-                                            [verifySubTab]: {
-                                                ...prev[verifySubTab],
-                                                page: prev[verifySubTab].page + 1,
-                                            },
-                                        }))
-                                    }
-                                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-                                >
-                                    Next
-                                </button>
-                            </div>
-                        )}
-                    </section>
-                </div>
-            )}
-
-            {/* View Data Tab */}
-            {mainTab === 'view' && (
-                <div className="space-y-6">
-                    {/* View Subtabs */}
-                    <div className="border-b border-slate-200">
-                        <div className="flex flex-wrap gap-2 sm:gap-0">
-                            {verifySubTabs.map((tab) => (
-                                <button
-                                    key={tab.id}
-                                    onClick={() => setViewSubTab(tab.id as ViewSubTabType)}
-                                    className={`px-4 py-3 text-sm font-medium transition ${viewSubTab === tab.id
-                                        ? 'border-b-2 border-purple-600 text-purple-600'
-                                        : 'border-b-2 border-transparent text-slate-600 hover:text-slate-900'
-                                        }`}
-                                >
-                                    {tab.label}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* View Data Section */}
-                    <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                        <div className="mb-6">
-                            <h2 className="text-lg font-semibold text-slate-900">
-                                View {verifySubTabs.find((t) => t.id === viewSubTab)?.label} Records
-                            </h2>
-                            <p className="mt-1 text-sm text-slate-600">
-                                View all approved records for your centre.
-                            </p>
-                        </div>
-
-                        {/* Search Bar */}
-                        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end">
-                            <div className="flex-1">
-                                <label className="mb-2 block text-sm font-medium text-slate-700">
-                                    Search Query
-                                </label>
-                                <input
-                                    type="text"
-                                    placeholder="Enter search term..."
-                                    value={viewSearchQuery[viewSubTab]}
-                                    onChange={(e) =>
-                                        setViewSearchQuery((prev) => ({
-                                            ...prev,
-                                            [viewSubTab]: e.target.value,
-                                        }))
-                                    }
-                                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                                />
-                            </div>
-                            <div>
-                                <label className="mb-2 block text-sm font-medium text-slate-700">
-                                    Search By
-                                </label>
-                                <select
-                                    value={viewSearchType[viewSubTab]}
-                                    onChange={(e) =>
-                                        setViewSearchType((prev) => ({
-                                            ...prev,
-                                            [viewSubTab]: e.target.value as SearchByType,
-                                        }))
-                                    }
-                                    className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                                >
-                                    {viewSubTab === 'child' ? (
-                                        <>
-                                            <option value="name">Name</option>
-                                            <option value="reg_no">Registration No</option>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <option value="reg_no">Registration No</option>
-                                            <option value="name">Name</option>
-                                        </>
-                                    )}
-                                </select>
-                            </div>
+                {/* Main Tab Navigation */}
+                <div className="mb-6 border-b border-slate-200">
+                    <div className="flex flex-wrap gap-2 sm:gap-0">
+                        {mainTabs.map((tab) => (
                             <button
-                                onClick={() => {
-                                    setViewSearchQuery((prev) => ({
-                                        ...prev,
-                                        [viewSubTab]: '',
-                                    }))
-                                }}
-                                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                                key={tab.id}
+                                onClick={() => setMainTab(tab.id)}
+                                className={`px-4 py-3 text-sm font-medium transition ${mainTab === tab.id
+                                    ? 'border-b-2 border-blue-600 text-blue-600'
+                                    : 'border-b-2 border-transparent text-slate-600 hover:text-slate-900'
+                                    }`}
                             >
-                                Clear
+                                {tab.label}
                             </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Message Alert */}
+                {message && (
+                    <div
+                        className={`mb-6 rounded-lg border px-4 py-3 text-sm font-medium ${message.type === 'success'
+                            ? 'border-green-200 bg-green-50 text-green-700'
+                            : 'border-red-200 bg-red-50 text-red-700'
+                            }`}
+                    >
+                        {message.text}
+                    </div>
+                )}
+
+                {/* Verify Data Tab */}
+                {mainTab === 'verify' && (
+                    <div className="space-y-6">
+                        {/* Verify Subtabs */}
+                        <div className="border-b border-slate-200">
+                            <div className="flex flex-wrap gap-2 sm:gap-0">
+                                {verifySubTabs.map((tab) => (
+                                    <button
+                                        key={tab.id}
+                                        onClick={() => setVerifySubTab(tab.id)}
+                                        className={`px-4 py-3 text-sm font-medium transition ${verifySubTab === tab.id
+                                            ? 'border-b-2 border-green-600 text-green-600'
+                                            : 'border-b-2 border-transparent text-slate-600 hover:text-slate-900'
+                                            }`}
+                                    >
+                                        {tab.label}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
 
-                        {/* Data Table */}
-                        {viewLoading[viewSubTab] ? (
-                            <div className="flex items-center justify-center py-8">
-                                <p className="text-sm text-slate-500">Loading records...</p>
+                        {/* Verify Data Table */}
+                        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                            <div className="mb-4">
+                                <h2 className="text-lg font-semibold text-slate-900">
+                                    Pending {verifySubTabs.find((t) => t.id === verifySubTab)?.label} Records
+                                </h2>
+                                <p className="mt-1 text-sm text-slate-600">
+                                    Review and approve or reject submitted records.
+                                </p>
                             </div>
-                        ) : viewData[viewSubTab].length === 0 ? (
-                            <div className="flex items-center justify-center py-8">
-                                <p className="text-sm text-slate-500">No records found.</p>
-                            </div>
-                        ) : (
-                            <div className="overflow-x-auto overflow-y-auto max-h-96 border border-slate-200 rounded-lg">
-                                <table className="w-full text-sm">
-                                    <thead className="sticky top-0 bg-slate-50 border-b border-slate-200">
-                                        <tr>
-                                            {Object.keys(viewData[viewSubTab][0] || {})
-                                                .filter(key => !['status', 'submitted_by', 'approved_by', 'approved_at'].includes(key.toLowerCase()))
-                                                .map((key) => (
-                                                    <th
-                                                        key={key}
-                                                        className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap"
-                                                    >
+
+                            {verifyLoading[verifySubTab] ? (
+                                <div className="flex items-center justify-center py-8">
+                                    <p className="text-sm text-slate-500">Loading records...</p>
+                                </div>
+                            ) : verifyData[verifySubTab].length === 0 ? (
+                                <div className="flex items-center justify-center py-8">
+                                    <p className="text-sm text-slate-500">No records found.</p>
+                                </div>
+                            ) : (
+                                <div className="overflow-x-auto overflow-y-auto max-h-96 border border-slate-200 rounded-lg">
+                                    <table className="w-full text-sm">
+                                        <thead className="sticky top-0 bg-slate-50 border-b border-slate-200">
+                                            <tr>
+                                                <th className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap">Record ID</th>
+                                                {visibleKeys.length > 0 && visibleKeys.map((key) => (
+                                                    <th key={key} className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap">
                                                         {key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}
                                                     </th>
                                                 ))}
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {viewData[viewSubTab].map((record, idx) => (
-                                            <tr key={idx} className="border-b border-slate-200 hover:bg-slate-50">
-                                                {Object.entries(record)
-                                                    .filter(([key]) => !['status', 'submitted_by', 'approved_by', 'approved_at'].includes(key.toLowerCase()))
-                                                    .map(([key, value]) => {
-                                                        const isPhoto = (key.toLowerCase().includes('photo') || key.toLowerCase().includes('image')) && value
-                                                        const displayValue = value === null || value === undefined ? '-' : String(value)
-
-                                                        return (
-                                                            <td key={key} className="px-4 py-3 text-sm text-slate-700 max-w-xs truncate">
-                                                                {isPhoto ? (
-                                                                    <button
-                                                                        onClick={() => setViewPhotoModal({ isOpen: true, url: String(value) })}
-                                                                        className="rounded-lg bg-blue-600 px-3 py-1 text-xs font-semibold text-white transition hover:bg-blue-700"
-                                                                    >
-                                                                        View
-                                                                    </button>
-                                                                ) : (
-                                                                    displayValue
-                                                                )}
-                                                            </td>
-                                                        )
-                                                    })}
+                                                <th className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap sticky right-0 top-0 bg-white z-20 w-[170px]">Actions</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody>
+                                            {verifyData[verifySubTab].map((record) => (
+                                                <VerifyDataRow
+                                                    key={record.approval_id}
+                                                    record={record}
+                                                    displayKeys={visibleKeys}
+                                                    isLoading={actionLoading[record.approval_id] || false}
+                                                    onApprove={() => handleApprove(record.approval_id)}
+                                                    onReject={(reason) => handleReject(record.approval_id, reason)}
+                                                />
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+
+                            {/* Pagination */}
+                            {verifyData[verifySubTab].length > 0 && (
+                                <div className="mt-4 flex items-center justify-between">
+                                    <button
+                                        onClick={() =>
+                                            setVerifyPagination((prev) => ({
+                                                ...prev,
+                                                [verifySubTab]: {
+                                                    ...prev[verifySubTab],
+                                                    page: Math.max(1, prev[verifySubTab].page - 1),
+                                                },
+                                            }))
+                                        }
+                                        disabled={verifyPagination[verifySubTab].page === 1}
+                                        className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        Previous
+                                    </button>
+                                    <span className="text-sm text-slate-600">
+                                        Page {verifyPagination[verifySubTab].page}
+                                    </span>
+                                    <button
+                                        onClick={() =>
+                                            setVerifyPagination((prev) => ({
+                                                ...prev,
+                                                [verifySubTab]: {
+                                                    ...prev[verifySubTab],
+                                                    page: prev[verifySubTab].page + 1,
+                                                },
+                                            }))
+                                        }
+                                        className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                                    >
+                                        Next
+                                    </button>
+                                </div>
+                            )}
+                        </section>
+                    </div>
+                )}
+
+                {/* View Data Tab */}
+                {mainTab === 'view' && (
+                    <div className="space-y-6">
+                        {/* View Subtabs */}
+                        <div className="border-b border-slate-200">
+                            <div className="flex flex-wrap gap-2 sm:gap-0">
+                                {verifySubTabs.map((tab) => (
+                                    <button
+                                        key={tab.id}
+                                        onClick={() => setViewSubTab(tab.id as ViewSubTabType)}
+                                        className={`px-4 py-3 text-sm font-medium transition ${viewSubTab === tab.id
+                                            ? 'border-b-2 border-purple-600 text-purple-600'
+                                            : 'border-b-2 border-transparent text-slate-600 hover:text-slate-900'
+                                            }`}
+                                    >
+                                        {tab.label}
+                                    </button>
+                                ))}
                             </div>
-                        )}
+                        </div>
 
-                        {userEacNo && (
-                            <p className="mt-4 text-xs text-slate-500">
-                                Showing records for EAC No: {userEacNo}
-                            </p>
-                        )}
-                    </section>
-                </div>
-            )}
+                        {/* View Data Section */}
+                        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                            <div className="mb-6">
+                                <h2 className="text-lg font-semibold text-slate-900">
+                                    View {verifySubTabs.find((t) => t.id === viewSubTab)?.label} Records
+                                </h2>
+                                <p className="mt-1 text-sm text-slate-600">
+                                    View all approved records for your centre.
+                                </p>
+                            </div>
 
-            {/* Personal History Tab */}
-            {mainTab === 'history' && (
-                <div className="space-y-6">
-                    {/* History Subtabs */}
-                    <div className="border-b border-slate-200">
-                        <div className="flex flex-wrap gap-2 sm:gap-0">
-                            {[
-                                { id: 'child' as HistorySubTabType, label: 'Child Data' },
-                                { id: 'family' as HistorySubTabType, label: 'Child Family' },
-                                { id: 'sibling' as HistorySubTabType, label: 'Child Sibling' },
-                                { id: 'uniform' as HistorySubTabType, label: 'Child Uniform' },
-                                { id: 'leaving' as HistorySubTabType, label: 'Child Leaving' },
-                                { id: 'vocational' as HistorySubTabType, label: 'Vocational Course' },
-                                { id: 'computer' as HistorySubTabType, label: 'Computer Course' },
-                            ].map((tab) => (
+                            {/* Search Bar */}
+                            <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end">
+                                <div className="flex-1">
+                                    <label className="mb-2 block text-sm font-medium text-slate-700">
+                                        Search Query
+                                    </label>
+                                    <input
+                                        type="text"
+                                        placeholder="Enter search term..."
+                                        value={viewSearchQuery[viewSubTab]}
+                                        onChange={(e) =>
+                                            setViewSearchQuery((prev) => ({
+                                                ...prev,
+                                                [viewSubTab]: e.target.value,
+                                            }))
+                                        }
+                                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="mb-2 block text-sm font-medium text-slate-700">
+                                        Search By
+                                    </label>
+                                    <select
+                                        value={viewSearchType[viewSubTab]}
+                                        onChange={(e) =>
+                                            setViewSearchType((prev) => ({
+                                                ...prev,
+                                                [viewSubTab]: e.target.value as SearchByType,
+                                            }))
+                                        }
+                                        className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                                    >
+                                        {viewSubTab === 'child' ? (
+                                            <>
+                                                <option value="name">Name</option>
+                                                <option value="reg_no">Registration No</option>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <option value="reg_no">Registration No</option>
+                                                <option value="name">Name</option>
+                                            </>
+                                        )}
+                                    </select>
+                                </div>
                                 <button
-                                    key={tab.id}
-                                    onClick={() => handleHistorySubTabChange(tab.id)}
-                                    className={`px-4 py-3 text-sm font-medium transition ${activeHistorySubTab === tab.id
-                                        ? 'border-b-2 border-amber-600 text-amber-600'
-                                        : 'border-b-2 border-transparent text-slate-600 hover:text-slate-900'
-                                        }`}
+                                    onClick={() => {
+                                        setViewSearchQuery((prev) => ({
+                                            ...prev,
+                                            [viewSubTab]: '',
+                                        }))
+                                    }}
+                                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
                                 >
-                                    {tab.label}
+                                    Clear
                                 </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* History Data Section */}
-                    <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                        <div className="mb-6">
-                            <h2 className="text-lg font-semibold text-slate-900">
-                                Approved {activeHistorySubTab === 'child' ? 'Child Data' :
-                                    activeHistorySubTab === 'family' ? 'Family' :
-                                        activeHistorySubTab === 'sibling' ? 'Sibling' :
-                                            activeHistorySubTab === 'uniform' ? 'Uniform' :
-                                                activeHistorySubTab === 'vocational' ? 'Vocational Course' :
-                                                    activeHistorySubTab === 'computer' ? 'Computer Course' :
-                                                        'Leaving'} Records
-                            </h2>
-                            <p className="mt-1 text-sm text-slate-600">
-                                View all records you have approved.
-                            </p>
-                        </div>
-
-                        {/* Date Range Filter */}
-                        <div className="mb-6 flex gap-4 items-end flex-col sm:flex-row">
-                            <div>
-                                <label className="mb-1 block text-sm font-medium text-slate-700">From Date (Approved)</label>
-                                <input
-                                    type="date"
-                                    value={
-                                        activeHistorySubTab === 'child' ? historyChildDateRange.start :
-                                            activeHistorySubTab === 'family' ? historyFamilyDateRange.start :
-                                                activeHistorySubTab === 'sibling' ? historySiblingDateRange.start :
-                                                    activeHistorySubTab === 'uniform' ? historyUniformDateRange.start :
-                                                        activeHistorySubTab === 'vocational' ? historyVocationalDateRange.start :
-                                                            activeHistorySubTab === 'computer' ? historyComputerDateRange.start :
-                                                                historyLeavingDateRange.start
-                                    }
-                                    onChange={(e) => handleHistoryDateRangeChange(activeHistorySubTab, 'start', e.target.value)}
-                                    className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                                />
                             </div>
-                            <div>
-                                <label className="mb-1 block text-sm font-medium text-slate-700">To Date (Approved)</label>
-                                <input
-                                    type="date"
-                                    value={
-                                        activeHistorySubTab === 'child' ? historyChildDateRange.end :
-                                            activeHistorySubTab === 'family' ? historyFamilyDateRange.end :
-                                                activeHistorySubTab === 'sibling' ? historySiblingDateRange.end :
-                                                    activeHistorySubTab === 'uniform' ? historyUniformDateRange.end :
-                                                        activeHistorySubTab === 'vocational' ? historyVocationalDateRange.end :
-                                                            activeHistorySubTab === 'computer' ? historyComputerDateRange.end :
-                                                                historyLeavingDateRange.end
-                                    }
-                                    onChange={(e) => handleHistoryDateRangeChange(activeHistorySubTab, 'end', e.target.value)}
-                                    className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                                />
-                            </div>
-                        </div>
 
-                        {/* History Table */}
-                        {historyChildLoading || historyFamilyLoading || historySiblingLoading || historyUniformLoading || historyLeavingLoading || historyVocationalLoading || historyComputerLoading ? (
-                            <div className="flex items-center justify-center py-8">
-                                <p className="text-sm text-slate-500">Loading records...</p>
-                            </div>
-                        ) : (
-                            (() => {
-                                const currentData = activeHistorySubTab === 'child' ? historyChildData :
-                                    activeHistorySubTab === 'family' ? historyFamilyData :
-                                        activeHistorySubTab === 'sibling' ? historySiblingData :
-                                            activeHistorySubTab === 'uniform' ? historyUniformData :
-                                                activeHistorySubTab === 'vocational' ? historyVocationalData :
-                                                    activeHistorySubTab === 'computer' ? historyComputerData :
-                                                        historyLeavingData
+                            {/* Data Table */}
+                            {viewLoading[viewSubTab] ? (
+                                <div className="flex items-center justify-center py-8">
+                                    <p className="text-sm text-slate-500">Loading records...</p>
+                                </div>
+                            ) : viewData[viewSubTab].length === 0 ? (
+                                <div className="flex items-center justify-center py-8">
+                                    <p className="text-sm text-slate-500">No records found.</p>
+                                </div>
+                            ) : (
+                                <div className="overflow-x-auto overflow-y-auto max-h-96 border border-slate-200 rounded-lg">
+                                    <table className="w-full text-sm">
+                                        <thead className="sticky top-0 bg-slate-50 border-b border-slate-200">
+                                            <tr>
+                                                {Object.keys(viewData[viewSubTab][0] || {})
+                                                    .filter(key => !['status', 'submitted_by', 'approved_by', 'approved_at'].includes(key.toLowerCase()))
+                                                    .map((key) => (
+                                                        <th
+                                                            key={key}
+                                                            className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap"
+                                                        >
+                                                            {key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}
+                                                        </th>
+                                                    ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {viewData[viewSubTab].map((record, idx) => (
+                                                <tr key={idx} className="border-b border-slate-200 hover:bg-slate-50">
+                                                    {Object.entries(record)
+                                                        .filter(([key]) => !['status', 'submitted_by', 'approved_by', 'approved_at'].includes(key.toLowerCase()))
+                                                        .map(([key, value]) => {
+                                                            const isPhoto = (key.toLowerCase().includes('photo') || key.toLowerCase().includes('image')) && value
+                                                            const displayValue = value === null || value === undefined ? '-' : String(value)
 
-                                return currentData.length === 0 ? (
-                                    <div className="flex items-center justify-center py-8">
-                                        <p className="text-sm text-slate-500">No approved records found.</p>
-                                    </div>
-                                ) : (
-                                    <div className="overflow-x-auto overflow-y-auto max-h-96 border border-slate-200 rounded-lg">
-                                        <table className="w-full text-sm">
-                                            <thead className="sticky top-0 bg-slate-50 border-b border-slate-200">
-                                                <tr>
-                                                    {Object.keys(currentData[0] || {})
-                                                        .filter((key) => !HISTORY_HIDDEN_COLUMNS.includes(key.toLowerCase()))
-                                                        .map((key) => (
-                                                            <th
-                                                                key={key}
-                                                                className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap"
-                                                            >
-                                                                {key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}
-                                                            </th>
-                                                        ))}
+                                                            return (
+                                                                <td key={key} className="px-4 py-3 text-sm text-slate-700 max-w-xs truncate">
+                                                                    {isPhoto ? (
+                                                                        <button
+                                                                            onClick={() => setViewPhotoModal({ isOpen: true, url: String(value) })}
+                                                                            className="rounded-lg bg-blue-600 px-3 py-1 text-xs font-semibold text-white transition hover:bg-blue-700"
+                                                                        >
+                                                                            View
+                                                                        </button>
+                                                                    ) : (
+                                                                        displayValue
+                                                                    )}
+                                                                </td>
+                                                            )
+                                                        })}
                                                 </tr>
-                                            </thead>
-                                            <tbody>
-                                                {currentData.map((record, idx) => (
-                                                    <tr key={idx} className="border-b border-slate-200 hover:bg-slate-50">
-                                                        {Object.entries(record)
-                                                            .filter(([key]) => !HISTORY_HIDDEN_COLUMNS.includes(key.toLowerCase()))
-                                                            .map(([key, value]) => {
-                                                                const displayValue = value === null || value === undefined ? '-' : String(value)
-                                                                const isPhoto = (key.toLowerCase().includes('photo') || key.toLowerCase().includes('image')) && value
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
 
-                                                                return (
-                                                                    <td key={key} className="px-4 py-3 text-sm text-slate-700 max-w-xs truncate">
-                                                                        {isPhoto ? (
-                                                                            <a
-                                                                                href={String(value)}
-                                                                                target="_blank"
-                                                                                rel="noopener noreferrer"
-                                                                                className="rounded-lg bg-blue-600 px-3 py-1 text-xs font-semibold text-white transition hover:bg-blue-700"
-                                                                            >
-                                                                                View
-                                                                            </a>
-                                                                        ) : (
-                                                                            displayValue
-                                                                        )}
-                                                                    </td>
-                                                                )
-                                                            })}
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                )
-                            })()
-                        )}
-                    </section>
-                </div>
-            )}
+                            {userEacNos.length > 0 && (
+                                <p className="mt-4 text-xs text-slate-500">
+                                    Showing records for EAC Nos: {userEacNos.join(', ')}
+                                </p>
+                            )}
+                        </section>
+                    </div>
+                )}
 
-            {/* Toasts */}
-            {toasts.length > 0 && (
-                <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3">
-                    {toasts.map((t) => (
-                        <div key={t.id} className={`rounded-lg px-4 py-2 text-sm font-medium shadow-lg ${t.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
-                            <div className="flex items-start gap-3">
-                                <div className="flex-1">{t.text}</div>
-                                <button onClick={() => removeToast(t.id)} className="text-sm font-semibold text-slate-500 hover:text-slate-700">✕</button>
+                {/* Personal History Tab */}
+                {mainTab === 'history' && (
+                    <div className="space-y-6">
+                        {/* History Subtabs */}
+                        <div className="border-b border-slate-200">
+                            <div className="flex flex-wrap gap-2 sm:gap-0">
+                                {[
+                                    { id: 'child' as HistorySubTabType, label: 'Child Data' },
+                                    { id: 'family' as HistorySubTabType, label: 'Child Family' },
+                                    { id: 'sibling' as HistorySubTabType, label: 'Child Sibling' },
+                                    { id: 'uniform' as HistorySubTabType, label: 'Child Uniform' },
+                                    { id: 'leaving' as HistorySubTabType, label: 'Child Leaving' },
+                                    { id: 'vocational' as HistorySubTabType, label: 'Vocational Course' },
+                                    { id: 'computer' as HistorySubTabType, label: 'Computer Course' },
+                                ].map((tab) => (
+                                    <button
+                                        key={tab.id}
+                                        onClick={() => handleHistorySubTabChange(tab.id)}
+                                        className={`px-4 py-3 text-sm font-medium transition ${activeHistorySubTab === tab.id
+                                            ? 'border-b-2 border-amber-600 text-amber-600'
+                                            : 'border-b-2 border-transparent text-slate-600 hover:text-slate-900'
+                                            }`}
+                                    >
+                                        {tab.label}
+                                    </button>
+                                ))}
                             </div>
                         </div>
-                    ))}
-                </div>
-            )}
 
-            {/* View Data Photo Modal */}
-            {viewPhotoModal.isOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-                    <div className="rounded-lg bg-white p-6 shadow-lg max-w-2xl max-h-96 flex flex-col">
-                        <div className="mb-4 flex items-center justify-between">
-                            <h3 className="text-lg font-semibold text-slate-900">Photo Preview</h3>
-                            <button
-                                onClick={() => setViewPhotoModal({ isOpen: false, url: '' })}
-                                className="text-slate-500 hover:text-slate-700"
-                            >
-                                ✕
-                            </button>
-                        </div>
-                        <div className="flex-1 flex items-center justify-center overflow-auto">
-                            <img
-                                src={viewPhotoModal.url}
-                                alt="Preview"
-                                className="max-w-full max-h-full object-contain"
-                            />
-                        </div>
-                        <div className="mt-4 flex justify-end">
-                            <button
-                                onClick={() => setViewPhotoModal({ isOpen: false, url: '' })}
-                                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                            >
-                                Close
-                            </button>
+                        {/* History Data Section */}
+                        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                            <div className="mb-6">
+                                <h2 className="text-lg font-semibold text-slate-900">
+                                    Approved {activeHistorySubTab === 'child' ? 'Child Data' :
+                                        activeHistorySubTab === 'family' ? 'Family' :
+                                            activeHistorySubTab === 'sibling' ? 'Sibling' :
+                                                activeHistorySubTab === 'uniform' ? 'Uniform' :
+                                                    activeHistorySubTab === 'vocational' ? 'Vocational Course' :
+                                                        activeHistorySubTab === 'computer' ? 'Computer Course' :
+                                                            'Leaving'} Records
+                                </h2>
+                                <p className="mt-1 text-sm text-slate-600">
+                                    View all records you have approved.
+                                </p>
+                            </div>
+
+                            {/* Date Range Filter */}
+                            <div className="mb-6 flex gap-4 items-end flex-col sm:flex-row">
+                                <div>
+                                    <label className="mb-1 block text-sm font-medium text-slate-700">From Date (Approved)</label>
+                                    <input
+                                        type="date"
+                                        value={
+                                            activeHistorySubTab === 'child' ? historyChildDateRange.start :
+                                                activeHistorySubTab === 'family' ? historyFamilyDateRange.start :
+                                                    activeHistorySubTab === 'sibling' ? historySiblingDateRange.start :
+                                                        activeHistorySubTab === 'uniform' ? historyUniformDateRange.start :
+                                                            activeHistorySubTab === 'vocational' ? historyVocationalDateRange.start :
+                                                                activeHistorySubTab === 'computer' ? historyComputerDateRange.start :
+                                                                    historyLeavingDateRange.start
+                                        }
+                                        onChange={(e) => handleHistoryDateRangeChange(activeHistorySubTab, 'start', e.target.value)}
+                                        className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="mb-1 block text-sm font-medium text-slate-700">To Date (Approved)</label>
+                                    <input
+                                        type="date"
+                                        value={
+                                            activeHistorySubTab === 'child' ? historyChildDateRange.end :
+                                                activeHistorySubTab === 'family' ? historyFamilyDateRange.end :
+                                                    activeHistorySubTab === 'sibling' ? historySiblingDateRange.end :
+                                                        activeHistorySubTab === 'uniform' ? historyUniformDateRange.end :
+                                                            activeHistorySubTab === 'vocational' ? historyVocationalDateRange.end :
+                                                                activeHistorySubTab === 'computer' ? historyComputerDateRange.end :
+                                                                    historyLeavingDateRange.end
+                                        }
+                                        onChange={(e) => handleHistoryDateRangeChange(activeHistorySubTab, 'end', e.target.value)}
+                                        className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* History Table */}
+                            {historyChildLoading || historyFamilyLoading || historySiblingLoading || historyUniformLoading || historyLeavingLoading || historyVocationalLoading || historyComputerLoading ? (
+                                <div className="flex items-center justify-center py-8">
+                                    <p className="text-sm text-slate-500">Loading records...</p>
+                                </div>
+                            ) : (
+                                (() => {
+                                    const currentData = activeHistorySubTab === 'child' ? historyChildData :
+                                        activeHistorySubTab === 'family' ? historyFamilyData :
+                                            activeHistorySubTab === 'sibling' ? historySiblingData :
+                                                activeHistorySubTab === 'uniform' ? historyUniformData :
+                                                    activeHistorySubTab === 'vocational' ? historyVocationalData :
+                                                        activeHistorySubTab === 'computer' ? historyComputerData :
+                                                            historyLeavingData
+
+                                    return currentData.length === 0 ? (
+                                        <div className="flex items-center justify-center py-8">
+                                            <p className="text-sm text-slate-500">No approved records found.</p>
+                                        </div>
+                                    ) : (
+                                        <div className="overflow-x-auto overflow-y-auto max-h-96 border border-slate-200 rounded-lg">
+                                            <table className="w-full text-sm">
+                                                <thead className="sticky top-0 bg-slate-50 border-b border-slate-200">
+                                                    <tr>
+                                                        {Object.keys(currentData[0] || {})
+                                                            .filter((key) => !HISTORY_HIDDEN_COLUMNS.includes(key.toLowerCase()))
+                                                            .map((key) => (
+                                                                <th
+                                                                    key={key}
+                                                                    className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap"
+                                                                >
+                                                                    {key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}
+                                                                </th>
+                                                            ))}
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {currentData.map((record, idx) => (
+                                                        <tr key={idx} className="border-b border-slate-200 hover:bg-slate-50">
+                                                            {Object.entries(record)
+                                                                .filter(([key]) => !HISTORY_HIDDEN_COLUMNS.includes(key.toLowerCase()))
+                                                                .map(([key, value]) => {
+                                                                    const displayValue = value === null || value === undefined ? '-' : String(value)
+                                                                    const isPhoto = (key.toLowerCase().includes('photo') || key.toLowerCase().includes('image')) && value
+
+                                                                    return (
+                                                                        <td key={key} className="px-4 py-3 text-sm text-slate-700 max-w-xs truncate">
+                                                                            {isPhoto ? (
+                                                                                <a
+                                                                                    href={String(value)}
+                                                                                    target="_blank"
+                                                                                    rel="noopener noreferrer"
+                                                                                    className="rounded-lg bg-blue-600 px-3 py-1 text-xs font-semibold text-white transition hover:bg-blue-700"
+                                                                                >
+                                                                                    View
+                                                                                </a>
+                                                                            ) : (
+                                                                                displayValue
+                                                                            )}
+                                                                        </td>
+                                                                    )
+                                                                })}
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )
+                                })()
+                            )}
+                        </section>
+                    </div>
+                )}
+
+                {/* Toasts */}
+                {toasts.length > 0 && (
+                    <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3">
+                        {toasts.map((t) => (
+                            <div key={t.id} className={`rounded-lg px-4 py-2 text-sm font-medium shadow-lg ${t.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                                <div className="flex items-start gap-3">
+                                    <div className="flex-1">{t.text}</div>
+                                    <button onClick={() => removeToast(t.id)} className="text-sm font-semibold text-slate-500 hover:text-slate-700">✕</button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {/* View Data Photo Modal */}
+                {viewPhotoModal.isOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+                        <div className="rounded-lg bg-white p-6 shadow-lg max-w-2xl max-h-96 flex flex-col">
+                            <div className="mb-4 flex items-center justify-between">
+                                <h3 className="text-lg font-semibold text-slate-900">Photo Preview</h3>
+                                <button
+                                    onClick={() => setViewPhotoModal({ isOpen: false, url: '' })}
+                                    className="text-slate-500 hover:text-slate-700"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                            <div className="flex-1 flex items-center justify-center overflow-auto">
+                                <img
+                                    src={viewPhotoModal.url}
+                                    alt="Preview"
+                                    className="max-w-full max-h-full object-contain"
+                                />
+                            </div>
+                            <div className="mt-4 flex justify-end">
+                                <button
+                                    onClick={() => setViewPhotoModal({ isOpen: false, url: '' })}
+                                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                                >
+                                    Close
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
             </PageContainer>
         </main>
     )
