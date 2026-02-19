@@ -141,7 +141,7 @@ export default function FieldStaffHistoryPage() {
                 .from(tableName)
                 .select('*')
                 .eq('verified_by', user.id)
-                .eq('status', 'Approved')
+                .eq('status', 'Verified')
                 .in('eac_no', userEacNos)
 
             if (dateRange.start) {
@@ -267,7 +267,7 @@ export default function FieldStaffHistoryPage() {
             <PageContainer>
                 <header className="mb-6">
                     <h1 className="text-2xl font-bold text-slate-900">Personal History</h1>
-                    <p className="mt-1 text-sm text-slate-600">View all records you have approved.</p>
+                    <p className="mt-1 text-sm text-slate-600">View all records you have verified.</p>
                 </header>
 
                 {message && (
@@ -302,16 +302,16 @@ export default function FieldStaffHistoryPage() {
                     <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
                         <div className="mb-6">
                             <h2 className="text-lg font-semibold text-slate-900">
-                                Approved {historySubTabs.find((t) => t.id === activeHistorySubTab)?.label} Records
+                                Verified {historySubTabs.find((t) => t.id === activeHistorySubTab)?.label} Records
                             </h2>
                             <p className="mt-1 text-sm text-slate-600">
-                                View all records you have approved.
+                                View all records you have verified.
                             </p>
                         </div>
 
                         <div className="mb-6 flex gap-4 items-end flex-col sm:flex-row">
                             <div>
-                                <label className="mb-1 block text-sm font-medium text-slate-700">From Date (Approved)</label>
+                                <label className="mb-1 block text-sm font-medium text-slate-700">From Date (Verified)</label>
                                 <input
                                     type="date"
                                     value={
@@ -328,7 +328,7 @@ export default function FieldStaffHistoryPage() {
                                 />
                             </div>
                             <div>
-                                <label className="mb-1 block text-sm font-medium text-slate-700">To Date (Approved)</label>
+                                <label className="mb-1 block text-sm font-medium text-slate-700">To Date (Verified)</label>
                                 <input
                                     type="date"
                                     value={
@@ -352,7 +352,7 @@ export default function FieldStaffHistoryPage() {
                             </div>
                         ) : currentData.length === 0 ? (
                             <div className="flex items-center justify-center py-8">
-                                <p className="text-sm text-slate-500">No approved records found.</p>
+                                <p className="text-sm text-slate-500">No verified records found.</p>
                             </div>
                         ) : (
                             <div className="overflow-x-auto overflow-y-auto max-h-96 border border-slate-200 rounded-lg">
