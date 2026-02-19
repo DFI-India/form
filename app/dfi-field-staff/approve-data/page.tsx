@@ -468,111 +468,111 @@ export default function ApproveDataPage() {
                 )}
 
                 <div className="space-y-6">
-                        {/* Verify Subtabs */}
-                        <div className="border-b border-slate-200">
-                            <div className="flex flex-wrap gap-2 sm:gap-0">
-                                {verifySubTabs.map((tab) => (
-                                    <button
-                                        key={tab.id}
-                                        onClick={() => setVerifySubTab(tab.id)}
-                                        className={`px-4 py-3 text-sm font-medium transition ${verifySubTab === tab.id
-                                            ? 'border-b-2 border-green-600 text-green-600'
-                                            : 'border-b-2 border-transparent text-slate-600 hover:text-slate-900'
-                                            }`}
-                                    >
-                                        {tab.label}
-                                    </button>
-                                ))}
-                            </div>
+                    {/* Verify Subtabs */}
+                    <div className="border-b border-slate-200">
+                        <div className="flex flex-wrap gap-2 sm:gap-0">
+                            {verifySubTabs.map((tab) => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setVerifySubTab(tab.id)}
+                                    className={`px-4 py-3 text-sm font-medium transition ${verifySubTab === tab.id
+                                        ? 'border-b-2 border-green-600 text-green-600'
+                                        : 'border-b-2 border-transparent text-slate-600 hover:text-slate-900'
+                                        }`}
+                                >
+                                    {tab.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Verify Data Table */}
+                    <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                        <div className="mb-4">
+                            <h2 className="text-lg font-semibold text-slate-900">
+                                Pending {verifySubTabs.find((t) => t.id === verifySubTab)?.label} Records
+                            </h2>
+                            <p className="mt-1 text-sm text-slate-600">
+                                Review and approve or reject submitted records.
+                            </p>
                         </div>
 
-                        {/* Verify Data Table */}
-                        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                            <div className="mb-4">
-                                <h2 className="text-lg font-semibold text-slate-900">
-                                    Pending {verifySubTabs.find((t) => t.id === verifySubTab)?.label} Records
-                                </h2>
-                                <p className="mt-1 text-sm text-slate-600">
-                                    Review and approve or reject submitted records.
-                                </p>
+                        {verifyLoading[verifySubTab] ? (
+                            <div className="flex items-center justify-center py-8">
+                                <p className="text-sm text-slate-500">Loading records...</p>
                             </div>
-
-                            {verifyLoading[verifySubTab] ? (
-                                <div className="flex items-center justify-center py-8">
-                                    <p className="text-sm text-slate-500">Loading records...</p>
-                                </div>
-                            ) : verifyData[verifySubTab].length === 0 ? (
-                                <div className="flex items-center justify-center py-8">
-                                    <p className="text-sm text-slate-500">No records found.</p>
-                                </div>
-                            ) : (
-                                <div className="overflow-x-auto overflow-y-auto max-h-96 border border-slate-200 rounded-lg">
-                                    <table className="w-full text-sm">
-                                        <thead className="sticky top-0 bg-slate-50 border-b border-slate-200">
-                                            <tr>
-                                                <th className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap">Record ID</th>
-                                                {visibleKeys.length > 0 && visibleKeys.map((key) => (
-                                                    <th key={key} className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap">
-                                                        {key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}
-                                                    </th>
-                                                ))}
-                                                <th className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap sticky right-0 top-0 bg-white z-20 w-[170px]">Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {verifyData[verifySubTab].map((record) => (
-                                                <VerifyDataRow
-                                                    key={record.approval_id}
-                                                    record={record}
-                                                    displayKeys={visibleKeys}
-                                                    isLoading={actionLoading[record.approval_id] || false}
-                                                    onApprove={() => handleApprove(record.approval_id)}
-                                                    onReject={(reason) => handleReject(record.approval_id, reason)}
-                                                />
+                        ) : verifyData[verifySubTab].length === 0 ? (
+                            <div className="flex items-center justify-center py-8">
+                                <p className="text-sm text-slate-500">No records found.</p>
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto overflow-y-auto max-h-96 border border-slate-200 rounded-lg">
+                                <table className="w-full text-sm">
+                                    <thead className="sticky top-0 bg-slate-50 border-b border-slate-200">
+                                        <tr>
+                                            <th className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap">Record ID</th>
+                                            {visibleKeys.length > 0 && visibleKeys.map((key) => (
+                                                <th key={key} className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap">
+                                                    {key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}
+                                                </th>
                                             ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            )}
+                                            <th className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap sticky right-0 top-0 bg-white z-20 w-[170px]">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {verifyData[verifySubTab].map((record) => (
+                                            <VerifyDataRow
+                                                key={record.approval_id}
+                                                record={record}
+                                                displayKeys={visibleKeys}
+                                                isLoading={actionLoading[record.approval_id] || false}
+                                                onApprove={() => handleApprove(record.approval_id)}
+                                                onReject={(reason) => handleReject(record.approval_id, reason)}
+                                            />
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
 
-                            {/* Pagination */}
-                            {verifyData[verifySubTab].length > 0 && (
-                                <div className="mt-4 flex items-center justify-between">
-                                    <button
-                                        onClick={() =>
-                                            setVerifyPagination((prev) => ({
-                                                ...prev,
-                                                [verifySubTab]: {
-                                                    ...prev[verifySubTab],
-                                                    page: Math.max(1, prev[verifySubTab].page - 1),
-                                                },
-                                            }))
-                                        }
-                                        disabled={verifyPagination[verifySubTab].page === 1}
-                                        className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-                                    >
-                                        Previous
-                                    </button>
-                                    <span className="text-sm text-slate-600">
-                                        Page {verifyPagination[verifySubTab].page}
-                                    </span>
-                                    <button
-                                        onClick={() =>
-                                            setVerifyPagination((prev) => ({
-                                                ...prev,
-                                                [verifySubTab]: {
-                                                    ...prev[verifySubTab],
-                                                    page: prev[verifySubTab].page + 1,
-                                                },
-                                            }))
-                                        }
-                                        className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-                                    >
-                                        Next
-                                    </button>
-                                </div>
-                            )}
-                        </section>
+                        {/* Pagination */}
+                        {verifyData[verifySubTab].length > 0 && (
+                            <div className="mt-4 flex items-center justify-between">
+                                <button
+                                    onClick={() =>
+                                        setVerifyPagination((prev) => ({
+                                            ...prev,
+                                            [verifySubTab]: {
+                                                ...prev[verifySubTab],
+                                                page: Math.max(1, prev[verifySubTab].page - 1),
+                                            },
+                                        }))
+                                    }
+                                    disabled={verifyPagination[verifySubTab].page === 1}
+                                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    Previous
+                                </button>
+                                <span className="text-sm text-slate-600">
+                                    Page {verifyPagination[verifySubTab].page}
+                                </span>
+                                <button
+                                    onClick={() =>
+                                        setVerifyPagination((prev) => ({
+                                            ...prev,
+                                            [verifySubTab]: {
+                                                ...prev[verifySubTab],
+                                                page: prev[verifySubTab].page + 1,
+                                            },
+                                        }))
+                                    }
+                                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                                >
+                                    Next
+                                </button>
+                            </div>
+                        )}
+                    </section>
                 </div>
 
                 {/* Toasts */}
