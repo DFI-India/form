@@ -19,7 +19,7 @@ interface DataRecord {
   created_at: string
   submitter?: { username: string; role: string }
   approver?: { username: string; role: string }
-  approved_at?: string
+  verified_at?: string
   first_name?: string
   last_name?: string
   trainee_name?: string
@@ -52,7 +52,7 @@ const DISPLAY_FIELDS: { [key in EntityType]: string[] } = {
 export default function AdminRecordsPage() {
   const router = useRouter()
   const { profile, loading: authLoading, isAuthorized } = useRequireRole(['admin'])
-  
+
   const [activeTab, setActiveTab] = useState<EntityType>('child_data')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [searchQuery, setSearchQuery] = useState('')
@@ -63,7 +63,7 @@ export default function AdminRecordsPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [sessionToken, setSessionToken] = useState<string | null>(null)
-  
+
   // Edit modal state
   const [editingRecord, setEditingRecord] = useState<DataRecord | null>(null)
   const [editFormData, setEditFormData] = useState<{ [key: string]: any }>({})
@@ -129,7 +129,7 @@ export default function AdminRecordsPage() {
     delete editableFields['submitter']
     delete editableFields['approver']
     delete editableFields['created_at']
-    delete editableFields['approved_at']
+    delete editableFields['verified_at']
     setEditFormData(editableFields)
   }
 
@@ -272,11 +272,10 @@ export default function AdminRecordsPage() {
                     setActiveTab(type)
                     setPage(1)
                   }}
-                  className={`flex-1 min-w-[100px] px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
-                    activeTab === type
+                  className={`flex-1 min-w-[100px] px-4 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === type
                       ? 'border-blue-600 text-blue-600 bg-blue-50'
                       : 'border-transparent text-slate-600 hover:bg-slate-50'
-                  }`}
+                    }`}
                 >
                   {ENTITY_LABELS[type]}
                 </button>
@@ -328,11 +327,10 @@ export default function AdminRecordsPage() {
                             </td>
                           ))}
                           <td className="px-4 py-3">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              record.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
-                              record.status === 'Approved' ? 'bg-green-100 text-green-800' :
-                              'bg-red-100 text-red-800'
-                            }`}>
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${record.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+                                record.status === 'Approved' ? 'bg-green-100 text-green-800' :
+                                  'bg-red-100 text-red-800'
+                              }`}>
                               {record.status}
                             </span>
                           </td>
@@ -400,7 +398,7 @@ export default function AdminRecordsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {Object.entries(editFormData).map(([key, value]: [string, unknown]) => {
                   // Skip non-editable fields
-                  if (['record_id', 'id', 'submitted_by', 'approved_by', 'status'].includes(key)) {
+                  if (['record_id', 'id', 'submitted_by', 'verified_by', 'status'].includes(key)) {
                     return null
                   }
                   return (

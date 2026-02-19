@@ -11,7 +11,7 @@ type ViewSubTabType = 'child' | 'family' | 'sibling' | 'uniform' | 'leaving' | '
 type SearchByType = 'name' | 'reg_no'
 type MessageState = { type: 'success' | 'error'; text: string } | null
 
-const VIEW_HIDDEN_COLUMNS = ['status', 'submitted_by', 'approved_by', 'approved_at']
+const VIEW_HIDDEN_COLUMNS = ['status', 'submitted_by', 'verified_by', 'verified_at']
 
 export default function FieldStaffViewDataPage() {
 

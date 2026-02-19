@@ -38,6 +38,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden - Only admin, DFI staff, and DFI field staff can reject' }, { status: 403 })
     }
 
+    const isFieldStaff = profile.role === 'dfi_field_staff'
+
     const body = await request.json()
     const { entityType, entityId, reason } = body
 
@@ -50,8 +52,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Map entity type to table name
-    let tableName = entityType
-    if (entityType === 'child_data') tableName = 'Child_Data'
+    const tableNameMap: Record<string, string> = {
+      'child_data': 'Child_Data',
+      'childfmly': 'childfmly',
+      'childsibling': 'childsibling',
+      'childuniform': 'childuniform',
+      'childleaving': 'childleaving',
+      'vocational_course': 'vocational_course',
+      'computer_course': 'computer_course',
+    }
+    const tableName = tableNameMap[entityType] || entityType
 
     // Determine the ID column to use based on entity type
     const isVocationalOrComputer = ['vocational_course', 'computer_course'].includes(entityType)
@@ -69,27 +79,27 @@ export async function POST(request: NextRequest) {
     }
 
     // Update the entity record
-    const entityUpdateFields = isVocationalOrComputer
+    // dfi_field_staff uses verified_* columns (they are verifying), others use decided_* (they are deciding)
+    const entityUpdateFields = isFieldStaff
       ? {
         status: 'Rejected',
-        approved_by: user.id,
-        approved_at: new Date().toISOString()
+        verified_by: user.id,
+        verified_at: new Date().toISOString()
       }
       : {
         status: 'Rejected',
         decided_by: user.id,
         decided_at: new Date().toISOString()
       }
-    const { data: updatedRecord, error: updateError } = await supabaseAdmin
+    console.log(`[Reject] Updating ${tableName} ${idColumn}=${entityId} with fields:`, entityUpdateFields)
+    const { error: updateError } = await supabaseAdmin
       .from(tableName)
       .update(entityUpdateFields)
       .eq(idColumn, entityId)
       .eq('status', 'Pending')
-      .select()
-      .single()
 
     if (updateError) {
-      console.error('Update error:', updateError)
+      console.error(`[Reject] Update error for ${tableName}:`, updateError)
       return NextResponse.json({ error: 'Failed to reject record' }, { status: 500 })
     }
 
@@ -97,11 +107,12 @@ export async function POST(request: NextRequest) {
     const approvalTableName = isVocationalOrComputer ? 'vocational_training_approvals' : 'child_approvals'
 
     // Update the appropriate approval table
-    const approvalUpdateFields = isVocationalOrComputer
+    // dfi_field_staff uses verified_* columns (they are verifying), others use decided_* (they are deciding)
+    const approvalUpdateFields = isFieldStaff
       ? {
         status: 'Rejected',
-        approved_by: user.id,
-        approved_at: new Date().toISOString(),
+        verified_by: user.id,
+        verified_at: new Date().toISOString(),
         rejection_reason: reason.trim()
       }
       : {
@@ -140,7 +151,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'Record rejected successfully',
-      data: updatedRecord
+      data: { entityId, status: 'Rejected' }
     })
   } catch (error: any) {
     console.error('Reject error:', error)

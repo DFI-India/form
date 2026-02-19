@@ -10,7 +10,7 @@ import { useRequireRole } from '../../../lib/hooks'
 type HistorySubTabType = 'child' | 'family' | 'sibling' | 'uniform' | 'leaving' | 'vocational' | 'computer'
 type MessageState = { type: 'success' | 'error'; text: string } | null
 
-const HISTORY_HIDDEN_COLUMNS = ['status', 'submitted_by', 'approved_by', 'approved_at']
+const HISTORY_HIDDEN_COLUMNS = ['status', 'submitted_by', 'verified_by', 'verified_at']
 
 export default function FieldStaffHistoryPage() {
     const { profile, loading: authLoading, isAuthorized } = useRequireRole(['dfi_field_staff'])
@@ -140,17 +140,17 @@ export default function FieldStaffHistoryPage() {
             let query = supabase
                 .from(tableName)
                 .select('*')
-                .eq('approved_by', user.id)
+                .eq('verified_by', user.id)
                 .eq('status', 'Approved')
                 .in('eac_no', userEacNos)
 
             if (dateRange.start) {
-                query = query.gte('approved_at', dateRange.start)
+                query = query.gte('verified_at', dateRange.start)
             }
             if (dateRange.end) {
                 const endDate = new Date(dateRange.end)
                 endDate.setDate(endDate.getDate() + 1)
-                query = query.lt('approved_at', endDate.toISOString())
+                query = query.lt('verified_at', endDate.toISOString())
             }
 
             const { data, error } = await query

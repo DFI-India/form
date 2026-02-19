@@ -19,7 +19,7 @@ interface ApprovalRecord {
   created_at: string
   submitter?: { username: string; role: string }
   approver?: { username: string; role: string }
-  approved_at?: string
+  verified_at?: string
   // Child data specific
   first_name?: string
   last_name?: string
@@ -56,7 +56,7 @@ const ENTITY_ICONS: Record<EntityType, string> = {
 export default function AdminApprovalsPage() {
   const router = useRouter()
   const { profile, loading: authLoading, isAuthorized } = useRequireRole(['admin'])
-  
+
   const [activeTab, setActiveTab] = useState<EntityType>('child_data')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('Pending')
   const [data, setData] = useState<Record<string, ApprovalRecord[]>>({})
@@ -65,7 +65,7 @@ export default function AdminApprovalsPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [sessionToken, setSessionToken] = useState<string | null>(null)
-  
+
   // Modal states
   const [selectedRecord, setSelectedRecord] = useState<ApprovalRecord | null>(null)
   const [showDetailsModal, setShowDetailsModal] = useState(false)
@@ -266,13 +266,12 @@ export default function AdminApprovalsPage() {
                 <button
                   key={status}
                   onClick={() => setStatusFilter(status)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    statusFilter === status
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${statusFilter === status
                       ? status === 'Pending' ? 'bg-yellow-100 text-yellow-800 border-2 border-yellow-400'
                         : status === 'Approved' ? 'bg-green-100 text-green-800 border-2 border-green-400'
-                        : 'bg-red-100 text-red-800 border-2 border-red-400'
+                          : 'bg-red-100 text-red-800 border-2 border-red-400'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
+                    }`}
                 >
                   {status}
                 </button>
@@ -287,17 +286,15 @@ export default function AdminApprovalsPage() {
                 <button
                   key={type}
                   onClick={() => setActiveTab(type)}
-                  className={`flex-1 min-w-[120px] px-4 py-4 text-sm font-medium transition-colors border-b-2 ${
-                    activeTab === type
+                  className={`flex-1 min-w-[120px] px-4 py-4 text-sm font-medium transition-colors border-b-2 ${activeTab === type
                       ? 'border-blue-600 text-blue-600 bg-blue-50'
                       : 'border-transparent text-slate-600 hover:bg-slate-50'
-                  }`}
+                    }`}
                 >
                   <span className="mr-2">{ENTITY_ICONS[type]}</span>
                   {ENTITY_LABELS[type]}
-                  <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
-                    counts[type] > 0 ? 'bg-red-100 text-red-800' : 'bg-slate-100 text-slate-600'
-                  }`}>
+                  <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${counts[type] > 0 ? 'bg-red-100 text-red-800' : 'bg-slate-100 text-slate-600'
+                    }`}>
                     {counts[type] || 0}
                   </span>
                 </button>
@@ -345,11 +342,10 @@ export default function AdminApprovalsPage() {
                         </td>
                         <td className="px-6 py-4 text-sm text-slate-600">{formatDate(record.created_at)}</td>
                         <td className="px-6 py-4">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            record.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
-                            record.status === 'Approved' ? 'bg-green-100 text-green-800' :
-                            'bg-red-100 text-red-800'
-                          }`}>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${record.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+                              record.status === 'Approved' ? 'bg-green-100 text-green-800' :
+                                'bg-red-100 text-red-800'
+                            }`}>
                             {record.status}
                           </span>
                         </td>
@@ -467,7 +463,7 @@ export default function AdminApprovalsPage() {
                     <h4 className="font-semibold text-slate-900 mb-3">Record Information</h4>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                       {Object.entries(detailsData.data || {}).map(([key, value]) => {
-                        if (['submitter', 'approver', 'created_at', 'approved_at'].includes(key)) return null
+                        if (['submitter', 'approver', 'created_at', 'verified_at'].includes(key)) return null
                         if (value === null || value === undefined) return null
                         return (
                           <div key={key}>
@@ -511,7 +507,7 @@ export default function AdminApprovalsPage() {
                           <div>
                             <p className="text-xs text-slate-500">Decided At</p>
                             <p className="text-sm text-slate-900 font-medium">
-                              {detailsData.data?.approved_at ? formatDate(detailsData.data.approved_at) : '-'}
+                              {detailsData.data?.verified_at ? formatDate(detailsData.data.verified_at) : '-'}
                             </p>
                           </div>
                         </>
@@ -526,12 +522,11 @@ export default function AdminApprovalsPage() {
                       <div className="space-y-2">
                         {detailsData.history.map((log: any) => (
                           <div key={log.id} className="flex items-center gap-3 text-sm">
-                            <span className={`px-2 py-1 rounded text-xs font-medium ${
-                              log.action_type === 'approve' ? 'bg-green-100 text-green-800' :
-                              log.action_type === 'reject' ? 'bg-red-100 text-red-800' :
-                              log.action_type === 'edit' ? 'bg-blue-100 text-blue-800' :
-                              'bg-slate-100 text-slate-800'
-                            }`}>
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${log.action_type === 'approve' ? 'bg-green-100 text-green-800' :
+                                log.action_type === 'reject' ? 'bg-red-100 text-red-800' :
+                                  log.action_type === 'edit' ? 'bg-blue-100 text-blue-800' :
+                                    'bg-slate-100 text-slate-800'
+                              }`}>
                               {log.action_type}
                             </span>
                             <span className="text-slate-600">

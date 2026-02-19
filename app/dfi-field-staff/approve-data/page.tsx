@@ -31,15 +31,15 @@ const HIDDEN_COLUMNS = [
     'created_at',
     'status',
     'submitted_by',
-    'approved_by',
-    'approved_at',
+    'verified_by',
+    'verified_at',
 ]
 
 const HISTORY_HIDDEN_COLUMNS = [
     'status',
     'submitted_by',
-    'approved_by',
-    'approved_at',
+    'verified_by',
+    'verified_at',
 ]
 
 type Toast = { id: string; type: 'success' | 'error'; text: string }
@@ -241,7 +241,7 @@ export default function ApproveDataPage() {
 
 
 
-    const handleApprove = async (recordId: string) => {
+    const handleVerify = async (recordId: string) => {
         setActionLoading((prev) => ({ ...prev, [recordId]: true }))
         try {
             // Map verifySubTab to entityType used by the API
@@ -274,20 +274,18 @@ export default function ApproveDataPage() {
             })
             const json = await res.json()
             if (json && json.success) {
-                addToast({ type: 'success', text: json.message || 'Record approved successfully.' })
-                setVerifyData((prev) => ({
-                    ...prev,
-                    [verifySubTab]: prev[verifySubTab].filter((r) => String(r.approval_id) !== String(recordId)),
-                }))
+                addToast({ type: 'success', text: json.message || 'Record verified successfully.' })
+                // Refetch data to sync with actual backend state
+                await fetchVerifyData(verifySubTab)
             } else if (!res.ok || json.error) {
                 throw new Error(json.error || 'Approval failed')
             } else {
                 // fallback: unknown error
-                throw new Error('Unknown error during approval')
+                throw new Error('Unknown error during verification')
             }
         } catch (error: unknown) {
-            const fallback = error instanceof Error ? error.message : 'Failed to approve'
-            addToast({ type: 'error', text: `Unable to approve: ${fallback}` })
+            const fallback = error instanceof Error ? error.message : 'Failed to verify'
+            addToast({ type: 'error', text: `Unable to verify: ${fallback}` })
         } finally {
             setActionLoading((prev) => ({ ...prev, [recordId]: false }))
         }
@@ -336,11 +334,8 @@ export default function ApproveDataPage() {
             const json = await res.json()
             if (!res.ok) throw new Error(json.error || 'Rejection failed')
             addToast({ type: 'success', text: 'Record rejected successfully.' })
-            // Only remove the rejected record from the list, don't replace the entire state
-            setVerifyData((prev) => ({
-                ...prev,
-                [verifySubTab]: prev[verifySubTab].filter((r) => String(r.approval_id) !== String(recordId)),
-            }))
+            // Refetch data to sync with actual backend state
+            await fetchVerifyData(verifySubTab)
         } catch (error: unknown) {
             const fallback = error instanceof Error ? error.message : 'Failed to reject'
             addToast({ type: 'error', text: `Unable to reject: ${fallback}` })
@@ -452,7 +447,7 @@ export default function ApproveDataPage() {
             <PageContainer>
                 <header className="mb-6">
                     <h1 className="text-2xl font-bold text-slate-900">Data Verification & Approval</h1>
-                    <p className="mt-1 text-sm text-slate-600">Review and approve submitted child management data from field volunteers.</p>
+                    <p className="mt-1 text-sm text-slate-600">Review and verify submitted child management data from field volunteers.</p>
                 </header>
 
                 {/* Message Alert */}
@@ -493,7 +488,7 @@ export default function ApproveDataPage() {
                                 Pending {verifySubTabs.find((t) => t.id === verifySubTab)?.label} Records
                             </h2>
                             <p className="mt-1 text-sm text-slate-600">
-                                Review and approve or reject submitted records.
+                                Review and verify or reject submitted records.
                             </p>
                         </div>
 
@@ -526,7 +521,7 @@ export default function ApproveDataPage() {
                                                 record={record}
                                                 displayKeys={visibleKeys}
                                                 isLoading={actionLoading[record.approval_id] || false}
-                                                onApprove={() => handleApprove(record.approval_id)}
+                                                onApprove={() => handleVerify(record.approval_id)}
                                                 onReject={(reason) => handleReject(record.approval_id, reason)}
                                             />
                                         ))}
@@ -660,7 +655,7 @@ function VerifyDataRow({ record, isLoading, onApprove, onReject, displayKeys }: 
                             disabled={isLoading}
                             className="rounded-lg bg-green-600 px-3 py-1 text-xs font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-green-300 whitespace-nowrap"
                         >
-                            {isLoading ? 'Processing...' : 'Approve'}
+                            {isLoading ? 'Processing...' : 'Verify'}
                         </button>
                         <button
                             onClick={() => setShowRejectInput(!showRejectInput)}

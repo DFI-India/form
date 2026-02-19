@@ -38,6 +38,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden - Only admin, DFI staff, and DFI field staff can approve' }, { status: 403 })
     }
 
+    const isFieldStaff = profile.role === 'dfi_field_staff'
+    const targetStatus = isFieldStaff ? 'Verified' : 'Approved'
+    const actionType = isFieldStaff ? 'verify' : 'approve'
+
     const body = await request.json()
     const { entityType, entityId } = body
 
@@ -46,8 +50,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Map entity type to table name
-    let tableName = entityType
-    if (entityType === 'child_data') tableName = 'Child_Data'
+    const tableNameMap: Record<string, string> = {
+      'child_data': 'Child_Data',
+      'childfmly': 'childfmly',
+      'childsibling': 'childsibling',
+      'childuniform': 'childuniform',
+      'childleaving': 'childleaving',
+      'vocational_course': 'vocational_course',
+      'computer_course': 'computer_course',
+    }
+    const tableName = tableNameMap[entityType] || entityType
 
     // Determine the ID column to use based on entity type
     const isVocationalOrComputer = ['vocational_course', 'computer_course'].includes(entityType)
@@ -65,27 +77,27 @@ export async function POST(request: NextRequest) {
     }
 
     // Update the entity record
-    const entityUpdateFields = isVocationalOrComputer
+    // dfi_field_staff uses verified_* columns (they are verifying), others use decided_* (they are deciding)
+    const entityUpdateFields = isFieldStaff
       ? {
-        status: 'Approved',
-        approved_by: user.id,
-        approved_at: new Date().toISOString()
+        status: targetStatus,
+        verified_by: user.id,
+        verified_at: new Date().toISOString()
       }
       : {
-        status: 'Approved',
+        status: targetStatus,
         decided_by: user.id,
         decided_at: new Date().toISOString()
       }
+    console.log(`[Approve] Updating ${tableName} ${idColumn}=${entityId} with fields:`, entityUpdateFields)
     const { data: updatedRecord, error: updateError } = await supabaseAdmin
       .from(tableName)
       .update(entityUpdateFields)
       .eq(idColumn, entityId)
       .eq('status', 'Pending')
-      .select()
-      .single()
 
     if (updateError) {
-      console.error('Update error:', updateError)
+      console.error(`[Approve] Update error for ${tableName}:`, updateError)
       return NextResponse.json({ error: 'Failed to approve record' }, { status: 500 })
     }
 
@@ -93,14 +105,15 @@ export async function POST(request: NextRequest) {
     const approvalTableName = isVocationalOrComputer ? 'vocational_training_approvals' : 'child_approvals'
 
     // Update the appropriate approval table
-    const approvalUpdateFields = isVocationalOrComputer
+    // dfi_field_staff uses verified_* columns (they are verifying), others use decided_* (they are deciding)
+    const approvalUpdateFields = isFieldStaff
       ? {
-        status: 'Approved',
-        approved_by: user.id,
-        approved_at: new Date().toISOString()
+        status: targetStatus,
+        verified_by: user.id,
+        verified_at: new Date().toISOString()
       }
       : {
-        status: 'Approved',
+        status: targetStatus,
         decided_by: user.id,
         decided_at: new Date().toISOString()
       }
@@ -121,19 +134,19 @@ export async function POST(request: NextRequest) {
       .from('activity_logs')
       .insert({
         user_id: user.id,
-        action_type: 'approve',
+        action_type: actionType,
         entity_type: entityType,
         entity_id: String(entityId),
         metadata: {
-          approved_by_username: profile.username,
-          approved_by_role: profile.role
+          verified_by_username: profile.username,
+          verified_by_role: profile.role
         }
       })
 
     return NextResponse.json({
       success: true,
-      message: 'Record approved successfully',
-      data: updatedRecord
+      message: isFieldStaff ? 'Record verified successfully' : 'Record approved successfully',
+      data: { entityId, status: targetStatus }
     })
   } catch (error: any) {
     console.error('Approve error:', error)
