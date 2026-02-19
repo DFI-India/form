@@ -14,11 +14,7 @@ import { LoadingSpinner } from '../../components/UI'
 import { Navbar, Sidebar, PageContainer } from '../../components/Navbar'
 import { ROLE_CONFIG, getRoleCapabilities } from '../../../lib/types'
 
-type MainTabType = 'verify' | 'view' | 'history'
 type VerifySubTabType = 'child' | 'family' | 'sibling' | 'uniform' | 'leaving' | 'vocational' | 'computer'
-type ViewSubTabType = 'child' | 'family' | 'sibling' | 'uniform' | 'leaving' | 'vocational' | 'computer'
-type HistorySubTabType = 'child' | 'family' | 'sibling' | 'uniform' | 'leaving' | 'vocational' | 'computer'
-type SearchByType = 'name' | 'reg_no'
 
 type ApprovalRecord = Record<string, unknown> & {
     approval_id: string   // <-- REAL child_approvals.id
@@ -50,9 +46,7 @@ type Toast = { id: string; type: 'success' | 'error'; text: string }
 
 export default function ApproveDataPage() {
     const router = useRouter()
-    const [mainTab, setMainTab] = useState<MainTabType>('verify')
     const [verifySubTab, setVerifySubTab] = useState<VerifySubTabType>('child')
-    const [viewSubTab, setViewSubTab] = useState<ViewSubTabType>('child')
 
     const [checkedAuth, setCheckedAuth] = useState(false)
     const [authorized, setAuthorized] = useState(false)
@@ -91,82 +85,7 @@ export default function ApproveDataPage() {
         computer: { page: 1, pageSize: 10 },
     })
 
-    // View Data State
-    const [viewData, setViewData] = useState<Record<ViewSubTabType, Record<string, unknown>[]>>({
-        child: [],
-        family: [],
-        sibling: [],
-        uniform: [],
-        leaving: [],
-        vocational: [],
-        computer: [],
-    })
 
-    const [viewLoading, setViewLoading] = useState<Record<ViewSubTabType, boolean>>({
-        child: false,
-        family: false,
-        sibling: false,
-        uniform: false,
-        leaving: false,
-        vocational: false,
-        computer: false,
-    })
-
-    const [viewSearchQuery, setViewSearchQuery] = useState<Record<ViewSubTabType, string>>({
-        child: '',
-        family: '',
-        sibling: '',
-        uniform: '',
-        leaving: '',
-        vocational: '',
-        computer: '',
-    })
-
-    const [viewSearchType, setViewSearchType] = useState<Record<ViewSubTabType, SearchByType>>({
-        child: 'name',
-        family: 'reg_no',
-        sibling: 'reg_no',
-        uniform: 'reg_no',
-        leaving: 'reg_no',
-        vocational: 'reg_no',
-        computer: 'reg_no',
-    })
-
-    // View Data Photo Modal
-    const [viewPhotoModal, setViewPhotoModal] = useState<{ isOpen: boolean; url: string }>({
-        isOpen: false,
-        url: '',
-    })
-
-    // Personal History State
-    const [activeHistorySubTab, setActiveHistorySubTab] = useState<HistorySubTabType>('child')
-
-    // History data for each type
-    const [historyChildData, setHistoryChildData] = useState<Record<string, unknown>[]>([])
-    const [historyFamilyData, setHistoryFamilyData] = useState<Record<string, unknown>[]>([])
-    const [historySiblingData, setHistorySiblingData] = useState<Record<string, unknown>[]>([])
-    const [historyUniformData, setHistoryUniformData] = useState<Record<string, unknown>[]>([])
-    const [historyLeavingData, setHistoryLeavingData] = useState<Record<string, unknown>[]>([])
-    const [historyVocationalData, setHistoryVocationalData] = useState<Record<string, unknown>[]>([])
-    const [historyComputerData, setHistoryComputerData] = useState<Record<string, unknown>[]>([])
-
-    // Date range filters for each type
-    const [historyChildDateRange, setHistoryChildDateRange] = useState({ start: '', end: '' })
-    const [historyFamilyDateRange, setHistoryFamilyDateRange] = useState({ start: '', end: '' })
-    const [historySiblingDateRange, setHistorySiblingDateRange] = useState({ start: '', end: '' })
-    const [historyUniformDateRange, setHistoryUniformDateRange] = useState({ start: '', end: '' })
-    const [historyLeavingDateRange, setHistoryLeavingDateRange] = useState({ start: '', end: '' })
-    const [historyVocationalDateRange, setHistoryVocationalDateRange] = useState({ start: '', end: '' })
-    const [historyComputerDateRange, setHistoryComputerDateRange] = useState({ start: '', end: '' })
-
-    // Loading states for history subtabs
-    const [historyChildLoading, setHistoryChildLoading] = useState(false)
-    const [historyFamilyLoading, setHistoryFamilyLoading] = useState(false)
-    const [historySiblingLoading, setHistorySiblingLoading] = useState(false)
-    const [historyUniformLoading, setHistoryUniformLoading] = useState(false)
-    const [historyLeavingLoading, setHistoryLeavingLoading] = useState(false)
-    const [historyVocationalLoading, setHistoryVocationalLoading] = useState(false)
-    const [historyComputerLoading, setHistoryComputerLoading] = useState(false)
 
     const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({})
 
@@ -267,17 +186,10 @@ export default function ApproveDataPage() {
 
     // Fetch data for current verify subtab
     useEffect(() => {
-        if (authorized && mainTab === 'verify') {
+        if (authorized) {
             fetchVerifyData(verifySubTab)
         }
-    }, [authorized, mainTab, verifySubTab, verifyPagination])
-
-    // Fetch data for current view subtab
-    useEffect(() => {
-        if (authorized && mainTab === 'view' && userEacNos.length > 0) {
-            fetchViewData(viewSubTab)
-        }
-    }, [authorized, mainTab, viewSubTab, userEacNos, viewSearchQuery, viewSearchType])
+    }, [authorized, verifySubTab, verifyPagination])
 
     const fetchVerifyData = async (tabType: VerifySubTabType) => {
         setVerifyLoading((prev) => ({ ...prev, [tabType]: true }))
@@ -327,213 +239,7 @@ export default function ApproveDataPage() {
         }
     }
 
-    const fetchViewData = async (tabType: ViewSubTabType) => {
-        setViewLoading((prev) => ({ ...prev, [tabType]: true }))
-        try {
-            if (userEacNos.length === 0) {
-                throw new Error('Assigned EAC numbers not found.')
-            }
 
-            const tableMap: Record<ViewSubTabType, string> = {
-                child: 'Child_Data',
-                family: 'childfmly',
-                sibling: 'childsibling',
-                uniform: 'childuniform',
-                leaving: 'childleaving',
-                vocational: 'vocational_course',
-                computer: 'computer_course',
-            }
-
-            const tableName = tableMap[tabType]
-            const searchQuery = viewSearchQuery[tabType]
-            const searchType = viewSearchType[tabType]
-
-            let query = supabase
-                .from(tableName)
-                .select('*')
-                .in('eac_no', userEacNos)
-                .eq('status', 'Approved')
-
-
-            // Apply search filter if provided
-            if (searchQuery.trim()) {
-                if (searchType === 'name') {
-                    if (tabType === 'child') {
-                        query = query.or(`first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%`)
-                    } else {
-                        query = query.ilike('f_name', `%${searchQuery}%`)
-                    }
-                } if (searchType === 'reg_no') {
-                    const regNo = Number(searchQuery)
-                    if (!Number.isNaN(regNo)) {
-                        query = query.eq('reg_no', regNo)
-                    }
-                }
-            }
-
-            const { data, error } = await query
-
-            if (error) throw error
-
-            setViewData((prev) => ({
-                ...prev,
-                [tabType]: data || [],
-            }))
-        } catch (error: unknown) {
-            const fallback = error instanceof Error ? error.message : 'Failed to fetch data'
-            setMessage({ type: 'error', text: `Unable to load ${tabType} data: ${fallback}` })
-        } finally {
-            setViewLoading((prev) => ({ ...prev, [tabType]: false }))
-        }
-    }
-
-    const fetchHistoryData = async (
-        tableName: string,
-        setData: (data: Record<string, unknown>[]) => void,
-        setLoading: (loading: boolean) => void,
-        dateRange: { start: string; end: string }
-    ) => {
-        setLoading(true)
-        try {
-            const user = (await supabase.auth.getUser()).data.user
-            if (!user?.id || userEacNos.length === 0) {
-                throw new Error('User information not found.')
-            }
-
-            let query = supabase
-                .from(tableName)
-                .select('*')
-                .eq('approved_by', user.id)
-                .eq('status', 'Approved')
-                .in('eac_no', userEacNos)
-
-            // Apply date range filter if dates are provided
-            if (dateRange.start) {
-                query = query.gte('approved_at', dateRange.start)
-            }
-            if (dateRange.end) {
-                // Add 1 day to include the entire end date
-                const endDate = new Date(dateRange.end)
-                endDate.setDate(endDate.getDate() + 1)
-                query = query.lt('approved_at', endDate.toISOString())
-            }
-
-            const { data, error } = await query
-
-            if (error) throw error
-
-            setData(data || [])
-        } catch (error: unknown) {
-            const fallback = error instanceof Error ? error.message : 'Failed to fetch data'
-            setMessage({ type: 'error', text: `Unable to load history data: ${fallback}` })
-            setData([])
-        } finally {
-            setLoading(false)
-        }
-    }
-
-    const handleHistorySubTabChange = (subTab: HistorySubTabType) => {
-        setActiveHistorySubTab(subTab)
-
-        // Fetch data for the selected subtab
-        switch (subTab) {
-            case 'child':
-                fetchHistoryData('Child_Data', setHistoryChildData, setHistoryChildLoading, historyChildDateRange)
-                break
-            case 'family':
-                fetchHistoryData('childfmly', setHistoryFamilyData, setHistoryFamilyLoading, historyFamilyDateRange)
-                break
-            case 'sibling':
-                fetchHistoryData('childsibling', setHistorySiblingData, setHistorySiblingLoading, historySiblingDateRange)
-                break
-            case 'uniform':
-                fetchHistoryData('childuniform', setHistoryUniformData, setHistoryUniformLoading, historyUniformDateRange)
-                break
-            case 'leaving':
-                fetchHistoryData('childleaving', setHistoryLeavingData, setHistoryLeavingLoading, historyLeavingDateRange)
-                break
-            case 'vocational':
-                fetchHistoryData('vocational_course', setHistoryVocationalData, setHistoryVocationalLoading, historyVocationalDateRange)
-                break
-            case 'computer':
-                fetchHistoryData('computer_course', setHistoryComputerData, setHistoryComputerLoading, historyComputerDateRange)
-                break
-        }
-    }
-
-    const handleHistoryDateRangeChange = (
-        subTab: HistorySubTabType,
-        type: 'start' | 'end',
-        value: string
-    ) => {
-        switch (subTab) {
-            case 'child':
-                setHistoryChildDateRange(prev => ({ ...prev, [type]: value }))
-                break
-            case 'family':
-                setHistoryFamilyDateRange(prev => ({ ...prev, [type]: value }))
-                break
-            case 'sibling':
-                setHistorySiblingDateRange(prev => ({ ...prev, [type]: value }))
-                break
-            case 'uniform':
-                setHistoryUniformDateRange(prev => ({ ...prev, [type]: value }))
-                break
-            case 'leaving':
-                setHistoryLeavingDateRange(prev => ({ ...prev, [type]: value }))
-                break
-            case 'vocational':
-                setHistoryVocationalDateRange(prev => ({ ...prev, [type]: value }))
-                break
-            case 'computer':
-                setHistoryComputerDateRange(prev => ({ ...prev, [type]: value }))
-                break
-        }
-    }
-
-    // Fetch history data when tab changes or date range changes
-    useEffect(() => {
-        if (mainTab === 'history' && authorized && userEacNos.length > 0) {
-            handleHistorySubTabChange(activeHistorySubTab)
-        }
-    }, [mainTab, authorized, userEacNos])
-
-    useEffect(() => {
-        if (mainTab !== 'history' || !authorized || userEacNos.length === 0) return
-
-        // Re-fetch data when date range changes
-        switch (activeHistorySubTab) {
-            case 'child':
-                fetchHistoryData('Child_Data', setHistoryChildData, setHistoryChildLoading, historyChildDateRange)
-                break
-            case 'family':
-                fetchHistoryData('childfmly', setHistoryFamilyData, setHistoryFamilyLoading, historyFamilyDateRange)
-                break
-            case 'sibling':
-                fetchHistoryData('childsibling', setHistorySiblingData, setHistorySiblingLoading, historySiblingDateRange)
-                break
-            case 'uniform':
-                fetchHistoryData('childuniform', setHistoryUniformData, setHistoryUniformLoading, historyUniformDateRange)
-                break
-            case 'leaving':
-                fetchHistoryData('childleaving', setHistoryLeavingData, setHistoryLeavingLoading, historyLeavingDateRange)
-                break
-            case 'vocational':
-                fetchHistoryData('vocational_course', setHistoryVocationalData, setHistoryVocationalLoading, historyVocationalDateRange)
-                break
-            case 'computer':
-                fetchHistoryData('computer_course', setHistoryComputerData, setHistoryComputerLoading, historyComputerDateRange)
-                break
-        }
-    }, [
-        historyChildDateRange,
-        historyFamilyDateRange,
-        historySiblingDateRange,
-        historyUniformDateRange,
-        historyLeavingDateRange,
-        historyVocationalDateRange,
-        historyComputerDateRange,
-    ])
 
     const handleApprove = async (recordId: string) => {
         setActionLoading((prev) => ({ ...prev, [recordId]: true }))
@@ -567,13 +273,18 @@ export default function ApproveDataPage() {
                 credentials: 'include',
             })
             const json = await res.json()
-            if (!res.ok) throw new Error(json.error || 'Approval failed')
-            addToast({ type: 'success', text: 'Record approved successfully.' })
-            // Only remove the approved record from the list, don't replace the entire state
-            setVerifyData((prev) => ({
-                ...prev,
-                [verifySubTab]: prev[verifySubTab].filter((r) => String(r.approval_id) !== String(recordId)),
-            }))
+            if (json && json.success) {
+                addToast({ type: 'success', text: json.message || 'Record approved successfully.' })
+                setVerifyData((prev) => ({
+                    ...prev,
+                    [verifySubTab]: prev[verifySubTab].filter((r) => String(r.approval_id) !== String(recordId)),
+                }))
+            } else if (!res.ok || json.error) {
+                throw new Error(json.error || 'Approval failed')
+            } else {
+                // fallback: unknown error
+                throw new Error('Unknown error during approval')
+            }
         } catch (error: unknown) {
             const fallback = error instanceof Error ? error.message : 'Failed to approve'
             addToast({ type: 'error', text: `Unable to approve: ${fallback}` })
@@ -662,11 +373,7 @@ export default function ApproveDataPage() {
         router.replace('/sign-in')
     }
 
-    const mainTabs: { id: MainTabType; label: string }[] = [
-        { id: 'verify', label: 'Verify Data' },
-        { id: 'view', label: 'View Data' },
-        { id: 'history', label: 'Personal History' },
-    ]
+
 
     const verifySubTabs: { id: VerifySubTabType; label: string }[] = [
         { id: 'child', label: 'Child Data' },
@@ -743,23 +450,10 @@ export default function ApproveDataPage() {
                 </p>
             </header> */}
             <PageContainer>
-                {/* Main Tab Navigation */}
-                <div className="mb-6 border-b border-slate-200">
-                    <div className="flex flex-wrap gap-2 sm:gap-0">
-                        {mainTabs.map((tab) => (
-                            <button
-                                key={tab.id}
-                                onClick={() => setMainTab(tab.id)}
-                                className={`px-4 py-3 text-sm font-medium transition ${mainTab === tab.id
-                                    ? 'border-b-2 border-blue-600 text-blue-600'
-                                    : 'border-b-2 border-transparent text-slate-600 hover:text-slate-900'
-                                    }`}
-                            >
-                                {tab.label}
-                            </button>
-                        ))}
-                    </div>
-                </div>
+                <header className="mb-6">
+                    <h1 className="text-2xl font-bold text-slate-900">Data Verification & Approval</h1>
+                    <p className="mt-1 text-sm text-slate-600">Review and approve submitted child management data from field volunteers.</p>
+                </header>
 
                 {/* Message Alert */}
                 {message && (
@@ -773,9 +467,7 @@ export default function ApproveDataPage() {
                     </div>
                 )}
 
-                {/* Verify Data Tab */}
-                {mainTab === 'verify' && (
-                    <div className="space-y-6">
+                <div className="space-y-6">
                         {/* Verify Subtabs */}
                         <div className="border-b border-slate-200">
                             <div className="flex flex-wrap gap-2 sm:gap-0">
@@ -881,323 +573,7 @@ export default function ApproveDataPage() {
                                 </div>
                             )}
                         </section>
-                    </div>
-                )}
-
-                {/* View Data Tab */}
-                {mainTab === 'view' && (
-                    <div className="space-y-6">
-                        {/* View Subtabs */}
-                        <div className="border-b border-slate-200">
-                            <div className="flex flex-wrap gap-2 sm:gap-0">
-                                {verifySubTabs.map((tab) => (
-                                    <button
-                                        key={tab.id}
-                                        onClick={() => setViewSubTab(tab.id as ViewSubTabType)}
-                                        className={`px-4 py-3 text-sm font-medium transition ${viewSubTab === tab.id
-                                            ? 'border-b-2 border-purple-600 text-purple-600'
-                                            : 'border-b-2 border-transparent text-slate-600 hover:text-slate-900'
-                                            }`}
-                                    >
-                                        {tab.label}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* View Data Section */}
-                        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                            <div className="mb-6">
-                                <h2 className="text-lg font-semibold text-slate-900">
-                                    View {verifySubTabs.find((t) => t.id === viewSubTab)?.label} Records
-                                </h2>
-                                <p className="mt-1 text-sm text-slate-600">
-                                    View all approved records for your centre.
-                                </p>
-                            </div>
-
-                            {/* Search Bar */}
-                            <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end">
-                                <div className="flex-1">
-                                    <label className="mb-2 block text-sm font-medium text-slate-700">
-                                        Search Query
-                                    </label>
-                                    <input
-                                        type="text"
-                                        placeholder="Enter search term..."
-                                        value={viewSearchQuery[viewSubTab]}
-                                        onChange={(e) =>
-                                            setViewSearchQuery((prev) => ({
-                                                ...prev,
-                                                [viewSubTab]: e.target.value,
-                                            }))
-                                        }
-                                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="mb-2 block text-sm font-medium text-slate-700">
-                                        Search By
-                                    </label>
-                                    <select
-                                        value={viewSearchType[viewSubTab]}
-                                        onChange={(e) =>
-                                            setViewSearchType((prev) => ({
-                                                ...prev,
-                                                [viewSubTab]: e.target.value as SearchByType,
-                                            }))
-                                        }
-                                        className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                                    >
-                                        {viewSubTab === 'child' ? (
-                                            <>
-                                                <option value="name">Name</option>
-                                                <option value="reg_no">Registration No</option>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <option value="reg_no">Registration No</option>
-                                                <option value="name">Name</option>
-                                            </>
-                                        )}
-                                    </select>
-                                </div>
-                                <button
-                                    onClick={() => {
-                                        setViewSearchQuery((prev) => ({
-                                            ...prev,
-                                            [viewSubTab]: '',
-                                        }))
-                                    }}
-                                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-                                >
-                                    Clear
-                                </button>
-                            </div>
-
-                            {/* Data Table */}
-                            {viewLoading[viewSubTab] ? (
-                                <div className="flex items-center justify-center py-8">
-                                    <p className="text-sm text-slate-500">Loading records...</p>
-                                </div>
-                            ) : viewData[viewSubTab].length === 0 ? (
-                                <div className="flex items-center justify-center py-8">
-                                    <p className="text-sm text-slate-500">No records found.</p>
-                                </div>
-                            ) : (
-                                <div className="overflow-x-auto overflow-y-auto max-h-96 border border-slate-200 rounded-lg">
-                                    <table className="w-full text-sm">
-                                        <thead className="sticky top-0 bg-slate-50 border-b border-slate-200">
-                                            <tr>
-                                                {Object.keys(viewData[viewSubTab][0] || {})
-                                                    .filter(key => !['status', 'submitted_by', 'approved_by', 'approved_at'].includes(key.toLowerCase()))
-                                                    .map((key) => (
-                                                        <th
-                                                            key={key}
-                                                            className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap"
-                                                        >
-                                                            {key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}
-                                                        </th>
-                                                    ))}
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {viewData[viewSubTab].map((record, idx) => (
-                                                <tr key={idx} className="border-b border-slate-200 hover:bg-slate-50">
-                                                    {Object.entries(record)
-                                                        .filter(([key]) => !['status', 'submitted_by', 'approved_by', 'approved_at'].includes(key.toLowerCase()))
-                                                        .map(([key, value]) => {
-                                                            const isPhoto = (key.toLowerCase().includes('photo') || key.toLowerCase().includes('image')) && value
-                                                            const displayValue = value === null || value === undefined ? '-' : String(value)
-
-                                                            return (
-                                                                <td key={key} className="px-4 py-3 text-sm text-slate-700 max-w-xs truncate">
-                                                                    {isPhoto ? (
-                                                                        <button
-                                                                            onClick={() => setViewPhotoModal({ isOpen: true, url: String(value) })}
-                                                                            className="rounded-lg bg-blue-600 px-3 py-1 text-xs font-semibold text-white transition hover:bg-blue-700"
-                                                                        >
-                                                                            View
-                                                                        </button>
-                                                                    ) : (
-                                                                        displayValue
-                                                                    )}
-                                                                </td>
-                                                            )
-                                                        })}
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            )}
-
-                            {userEacNos.length > 0 && (
-                                <p className="mt-4 text-xs text-slate-500">
-                                    Showing records for EAC Nos: {userEacNos.join(', ')}
-                                </p>
-                            )}
-                        </section>
-                    </div>
-                )}
-
-                {/* Personal History Tab */}
-                {mainTab === 'history' && (
-                    <div className="space-y-6">
-                        {/* History Subtabs */}
-                        <div className="border-b border-slate-200">
-                            <div className="flex flex-wrap gap-2 sm:gap-0">
-                                {[
-                                    { id: 'child' as HistorySubTabType, label: 'Child Data' },
-                                    { id: 'family' as HistorySubTabType, label: 'Child Family' },
-                                    { id: 'sibling' as HistorySubTabType, label: 'Child Sibling' },
-                                    { id: 'uniform' as HistorySubTabType, label: 'Child Uniform' },
-                                    { id: 'leaving' as HistorySubTabType, label: 'Child Leaving' },
-                                    { id: 'vocational' as HistorySubTabType, label: 'Vocational Course' },
-                                    { id: 'computer' as HistorySubTabType, label: 'Computer Course' },
-                                ].map((tab) => (
-                                    <button
-                                        key={tab.id}
-                                        onClick={() => handleHistorySubTabChange(tab.id)}
-                                        className={`px-4 py-3 text-sm font-medium transition ${activeHistorySubTab === tab.id
-                                            ? 'border-b-2 border-amber-600 text-amber-600'
-                                            : 'border-b-2 border-transparent text-slate-600 hover:text-slate-900'
-                                            }`}
-                                    >
-                                        {tab.label}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* History Data Section */}
-                        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                            <div className="mb-6">
-                                <h2 className="text-lg font-semibold text-slate-900">
-                                    Approved {activeHistorySubTab === 'child' ? 'Child Data' :
-                                        activeHistorySubTab === 'family' ? 'Family' :
-                                            activeHistorySubTab === 'sibling' ? 'Sibling' :
-                                                activeHistorySubTab === 'uniform' ? 'Uniform' :
-                                                    activeHistorySubTab === 'vocational' ? 'Vocational Course' :
-                                                        activeHistorySubTab === 'computer' ? 'Computer Course' :
-                                                            'Leaving'} Records
-                                </h2>
-                                <p className="mt-1 text-sm text-slate-600">
-                                    View all records you have approved.
-                                </p>
-                            </div>
-
-                            {/* Date Range Filter */}
-                            <div className="mb-6 flex gap-4 items-end flex-col sm:flex-row">
-                                <div>
-                                    <label className="mb-1 block text-sm font-medium text-slate-700">From Date (Approved)</label>
-                                    <input
-                                        type="date"
-                                        value={
-                                            activeHistorySubTab === 'child' ? historyChildDateRange.start :
-                                                activeHistorySubTab === 'family' ? historyFamilyDateRange.start :
-                                                    activeHistorySubTab === 'sibling' ? historySiblingDateRange.start :
-                                                        activeHistorySubTab === 'uniform' ? historyUniformDateRange.start :
-                                                            activeHistorySubTab === 'vocational' ? historyVocationalDateRange.start :
-                                                                activeHistorySubTab === 'computer' ? historyComputerDateRange.start :
-                                                                    historyLeavingDateRange.start
-                                        }
-                                        onChange={(e) => handleHistoryDateRangeChange(activeHistorySubTab, 'start', e.target.value)}
-                                        className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="mb-1 block text-sm font-medium text-slate-700">To Date (Approved)</label>
-                                    <input
-                                        type="date"
-                                        value={
-                                            activeHistorySubTab === 'child' ? historyChildDateRange.end :
-                                                activeHistorySubTab === 'family' ? historyFamilyDateRange.end :
-                                                    activeHistorySubTab === 'sibling' ? historySiblingDateRange.end :
-                                                        activeHistorySubTab === 'uniform' ? historyUniformDateRange.end :
-                                                            activeHistorySubTab === 'vocational' ? historyVocationalDateRange.end :
-                                                                activeHistorySubTab === 'computer' ? historyComputerDateRange.end :
-                                                                    historyLeavingDateRange.end
-                                        }
-                                        onChange={(e) => handleHistoryDateRangeChange(activeHistorySubTab, 'end', e.target.value)}
-                                        className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* History Table */}
-                            {historyChildLoading || historyFamilyLoading || historySiblingLoading || historyUniformLoading || historyLeavingLoading || historyVocationalLoading || historyComputerLoading ? (
-                                <div className="flex items-center justify-center py-8">
-                                    <p className="text-sm text-slate-500">Loading records...</p>
-                                </div>
-                            ) : (
-                                (() => {
-                                    const currentData = activeHistorySubTab === 'child' ? historyChildData :
-                                        activeHistorySubTab === 'family' ? historyFamilyData :
-                                            activeHistorySubTab === 'sibling' ? historySiblingData :
-                                                activeHistorySubTab === 'uniform' ? historyUniformData :
-                                                    activeHistorySubTab === 'vocational' ? historyVocationalData :
-                                                        activeHistorySubTab === 'computer' ? historyComputerData :
-                                                            historyLeavingData
-
-                                    return currentData.length === 0 ? (
-                                        <div className="flex items-center justify-center py-8">
-                                            <p className="text-sm text-slate-500">No approved records found.</p>
-                                        </div>
-                                    ) : (
-                                        <div className="overflow-x-auto overflow-y-auto max-h-96 border border-slate-200 rounded-lg">
-                                            <table className="w-full text-sm">
-                                                <thead className="sticky top-0 bg-slate-50 border-b border-slate-200">
-                                                    <tr>
-                                                        {Object.keys(currentData[0] || {})
-                                                            .filter((key) => !HISTORY_HIDDEN_COLUMNS.includes(key.toLowerCase()))
-                                                            .map((key) => (
-                                                                <th
-                                                                    key={key}
-                                                                    className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap"
-                                                                >
-                                                                    {key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}
-                                                                </th>
-                                                            ))}
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {currentData.map((record, idx) => (
-                                                        <tr key={idx} className="border-b border-slate-200 hover:bg-slate-50">
-                                                            {Object.entries(record)
-                                                                .filter(([key]) => !HISTORY_HIDDEN_COLUMNS.includes(key.toLowerCase()))
-                                                                .map(([key, value]) => {
-                                                                    const displayValue = value === null || value === undefined ? '-' : String(value)
-                                                                    const isPhoto = (key.toLowerCase().includes('photo') || key.toLowerCase().includes('image')) && value
-
-                                                                    return (
-                                                                        <td key={key} className="px-4 py-3 text-sm text-slate-700 max-w-xs truncate">
-                                                                            {isPhoto ? (
-                                                                                <a
-                                                                                    href={String(value)}
-                                                                                    target="_blank"
-                                                                                    rel="noopener noreferrer"
-                                                                                    className="rounded-lg bg-blue-600 px-3 py-1 text-xs font-semibold text-white transition hover:bg-blue-700"
-                                                                                >
-                                                                                    View
-                                                                                </a>
-                                                                            ) : (
-                                                                                displayValue
-                                                                            )}
-                                                                        </td>
-                                                                    )
-                                                                })}
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    )
-                                })()
-                            )}
-                        </section>
-                    </div>
-                )}
+                </div>
 
                 {/* Toasts */}
                 {toasts.length > 0 && (
@@ -1213,37 +589,6 @@ export default function ApproveDataPage() {
                     </div>
                 )}
 
-                {/* View Data Photo Modal */}
-                {viewPhotoModal.isOpen && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-                        <div className="rounded-lg bg-white p-6 shadow-lg max-w-2xl max-h-96 flex flex-col">
-                            <div className="mb-4 flex items-center justify-between">
-                                <h3 className="text-lg font-semibold text-slate-900">Photo Preview</h3>
-                                <button
-                                    onClick={() => setViewPhotoModal({ isOpen: false, url: '' })}
-                                    className="text-slate-500 hover:text-slate-700"
-                                >
-                                    ✕
-                                </button>
-                            </div>
-                            <div className="flex-1 flex items-center justify-center overflow-auto">
-                                <img
-                                    src={viewPhotoModal.url}
-                                    alt="Preview"
-                                    className="max-w-full max-h-full object-contain"
-                                />
-                            </div>
-                            <div className="mt-4 flex justify-end">
-                                <button
-                                    onClick={() => setViewPhotoModal({ isOpen: false, url: '' })}
-                                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                                >
-                                    Close
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
             </PageContainer>
         </main>
     )

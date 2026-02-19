@@ -69,13 +69,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Update the entity record
-    const { data: updatedRecord, error: updateError } = await supabaseAdmin
-      .from(tableName)
-      .update({
+    const entityUpdateFields = isVocationalOrComputer
+      ? {
         status: 'Rejected',
         approved_by: user.id,
         approved_at: new Date().toISOString()
-      })
+      }
+      : {
+        status: 'Rejected',
+        decided_by: user.id,
+        decided_at: new Date().toISOString()
+      }
+    const { data: updatedRecord, error: updateError } = await supabaseAdmin
+      .from(tableName)
+      .update(entityUpdateFields)
       .eq(idColumn, entityId)
       .eq('status', 'Pending')
       .select()
@@ -90,14 +97,22 @@ export async function POST(request: NextRequest) {
     const approvalTableName = isVocationalOrComputer ? 'vocational_training_approvals' : 'child_approvals'
 
     // Update the appropriate approval table
-    const { error: approvalUpdateError } = await supabaseAdmin
-      .from(approvalTableName)
-      .update({
+    const approvalUpdateFields = isVocationalOrComputer
+      ? {
+        status: 'Rejected',
+        approved_by: user.id,
+        approved_at: new Date().toISOString(),
+        rejection_reason: reason.trim()
+      }
+      : {
         status: 'Rejected',
         decided_by: user.id,
         decided_at: new Date().toISOString(),
         rejection_reason: reason.trim()
-      })
+      }
+    const { error: approvalUpdateError } = await supabaseAdmin
+      .from(approvalTableName)
+      .update(approvalUpdateFields)
       .eq('entity_type', entityType)
       .eq('entity_id', entityId)
       .eq('status', 'Pending')
