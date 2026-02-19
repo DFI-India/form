@@ -76,7 +76,6 @@ export function Sidebar({ role }: SidebarProps) {
     ],
     dfi_field_staff: [
       { label: 'Dashboard', href: '/dfi-field-staff', icon: LayoutDashboard },
-      { label: 'Review Queue', href: '/dfi-field-staff/review-queue', icon: Search },
       { label: 'Approve Data', href: '/dfi-field-staff/approve-data', icon: CheckCircle },
       { label: 'View Data', href: '/dfi-field-staff/view-data', icon: TrendingUp },
       { label: 'Activity History', href: '/dfi-field-staff/history', icon: ScrollText },
