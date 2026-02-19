@@ -215,8 +215,9 @@ export default function ApproveDataPage() {
                 .eq('approval_status', 'Pending')
                 .range(from, to)
 
-
             if (error) throw error
+
+            console.log(`[fetchVerifyData] ${tabType} raw data from ${viewName}:`, data?.slice(0, 1))
 
             // Map id to approval_id and preserve record_id for API
             // For vocational/computer courses, use id as the entity ID; for others use record_id
@@ -226,7 +227,13 @@ export default function ApproveDataPage() {
                 record_id: ['vocational', 'computer'].includes(tabType) ? record.id : record.record_id // use id for vocational/computer
             }))
 
-            console.log('Fetched vocational/computer data:', enrichedData);
+            console.log(`[fetchVerifyData] ${tabType} enriched data sample:`, enrichedData[0] ? {
+                id: enrichedData[0].id,
+                approval_id: enrichedData[0].approval_id,
+                record_id: enrichedData[0].record_id,
+                approval_status: enrichedData[0].approval_status
+            } : 'No data');
+
             setVerifyData((prev) => ({
                 ...prev,
                 [tabType]: enrichedData,
@@ -246,7 +253,7 @@ export default function ApproveDataPage() {
         try {
             // Map verifySubTab to entityType used by the API
             const entityTypeMap: Record<VerifySubTabType, string> = {
-                child: 'child_data',
+                child: 'Child_Data',
                 family: 'childfmly',
                 sibling: 'childsibling',
                 uniform: 'childuniform',
@@ -257,7 +264,10 @@ export default function ApproveDataPage() {
             const entityType = entityTypeMap[verifySubTab]
             // Find the record in verifyData to get the correct record_id
             const record = verifyData[verifySubTab].find(r => r.approval_id === recordId)
+            console.log('[handleVerify] Found record:', record)
+            console.log('[handleVerify] Record keys:', Object.keys(record || {}))
             const entityId = record?.record_id
+            console.log('[handleVerify] entityType:', entityType, 'entityId:', entityId, 'approval_id:', recordId)
             if (!entityId) throw new Error('No record_id found for this record.');
             // Get access token
             const { data: { session } } = await supabase.auth.getSession();

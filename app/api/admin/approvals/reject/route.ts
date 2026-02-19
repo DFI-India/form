@@ -51,62 +51,62 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Rejection reason is required' }, { status: 400 })
     }
 
-    // Map entity type to table name
-    const tableNameMap: Record<string, string> = {
-      'child_data': 'Child_Data',
-      'childfmly': 'childfmly',
-      'childsibling': 'childsibling',
-      'childuniform': 'childuniform',
-      'childleaving': 'childleaving',
-      'vocational_course': 'vocational_course',
-      'computer_course': 'computer_course',
-    }
-    const tableName = tableNameMap[entityType] || entityType
+    const normalizedEntityType = String(entityType).trim().toLowerCase()
+    const canonicalEntityType = normalizedEntityType === 'child_data' ? 'Child_Data' : normalizedEntityType
 
-    // Determine the ID column to use based on entity type
-    const isVocationalOrComputer = ['vocational_course', 'computer_course'].includes(entityType)
-    const idColumn = isVocationalOrComputer ? 'id' : 'record_id'
+    // Determine which approval table to use based on entity type
+    const childApprovalTypes = ['child_data', 'childfmly', 'childsibling', 'childuniform', 'childleaving']
+    const vocationalApprovalTypes = ['vocational_course', 'computer_course']
+
+    let approvalTableName: string
+    let normalizedEntityId: string | number
+
+    if (childApprovalTypes.includes(normalizedEntityType)) {
+      approvalTableName = 'child_approvals'
+      // child_approvals.entity_id is bigint
+      normalizedEntityId = parseInt(String(entityId), 10)
+      if (isNaN(normalizedEntityId)) {
+        console.error(`[Reject] Invalid entity_id for ${normalizedEntityType}: ${entityId}`)
+        return NextResponse.json({ error: `Invalid entity_id format: ${entityId}` }, { status: 400 })
+      }
+    } else if (vocationalApprovalTypes.includes(normalizedEntityType)) {
+      approvalTableName = 'vocational_training_approvals'
+      // vocational_training_approvals.entity_id is uuid - keep as string
+      normalizedEntityId = String(entityId).trim()
+    } else {
+      return NextResponse.json({ error: 'Invalid entity type' }, { status: 400 })
+    }
+
+    console.log(`[Reject] Request: entityType=${entityType}, normalizedType=${normalizedEntityType}, canonicalType=${canonicalEntityType}, entityId=${entityId}, normalizedId=${normalizedEntityId} (type: ${typeof normalizedEntityId})`)
+
+    // Check if record exists and is pending
+    console.log(`[Reject] Checking approval record: ${approvalTableName} entity_type='${canonicalEntityType}', entity_id=${normalizedEntityId}`)
+    const query = supabaseAdmin
+      .from(approvalTableName)
+      .select('*')
+      .eq('entity_type', canonicalEntityType)
+      .eq('status', 'Pending')
+
+    // For debugging, get all pending records of this type
+    const { data: allPending, error: allError } = await query
+    console.log(`[Reject] All pending ${canonicalEntityType} records in ${approvalTableName}:`, allPending?.map((r: any) => ({ entity_id: r.entity_id, entity_id_type: typeof r.entity_id, status: r.status })) || [])
 
     const { data: pendingRecord, error: pendingError } = await supabaseAdmin
-      .from(tableName)
-      .select(idColumn)
-      .eq(idColumn, entityId)
+      .from(approvalTableName)
+      .select('id')
+      .eq('entity_type', canonicalEntityType)
+      .eq('entity_id', normalizedEntityId)
       .eq('status', 'Pending')
       .single()
 
     if (pendingError || !pendingRecord) {
-      return NextResponse.json({ error: 'Pending record not found' }, { status: 404 })
+      console.error(`[Reject] Pending record not found for ${canonicalEntityType}/${normalizedEntityId}. Error:`, pendingError)
+      return NextResponse.json({ error: `Pending record not found for ${canonicalEntityType}/${normalizedEntityId}` }, { status: 404 })
     }
 
-    // Update the entity record
-    // dfi_field_staff uses verified_* columns (they are verifying), others use decided_* (they are deciding)
-    const entityUpdateFields = isFieldStaff
-      ? {
-        status: 'Rejected',
-        verified_by: user.id,
-        verified_at: new Date().toISOString()
-      }
-      : {
-        status: 'Rejected',
-        decided_by: user.id,
-        decided_at: new Date().toISOString()
-      }
-    console.log(`[Reject] Updating ${tableName} ${idColumn}=${entityId} with fields:`, entityUpdateFields)
-    const { error: updateError } = await supabaseAdmin
-      .from(tableName)
-      .update(entityUpdateFields)
-      .eq(idColumn, entityId)
-      .eq('status', 'Pending')
+    console.log(`[Reject] Found approval record:`, pendingRecord)
 
-    if (updateError) {
-      console.error(`[Reject] Update error for ${tableName}:`, updateError)
-      return NextResponse.json({ error: 'Failed to reject record' }, { status: 500 })
-    }
-
-    // Determine which approval table to update based on entity type
-    const approvalTableName = isVocationalOrComputer ? 'vocational_training_approvals' : 'child_approvals'
-
-    // Update the appropriate approval table
+    // Update ONLY the approval table
     // dfi_field_staff uses verified_* columns (they are verifying), others use decided_* (they are deciding)
     const approvalUpdateFields = isFieldStaff
       ? {
@@ -121,15 +121,17 @@ export async function POST(request: NextRequest) {
         decided_at: new Date().toISOString(),
         rejection_reason: reason.trim()
       }
+
+    console.log(`[Reject] Updating ${approvalTableName} for ${canonicalEntityType}/${normalizedEntityId} with status=Rejected`)
     const { error: approvalUpdateError } = await supabaseAdmin
       .from(approvalTableName)
       .update(approvalUpdateFields)
-      .eq('entity_type', entityType)
-      .eq('entity_id', entityId)
+      .eq('entity_type', canonicalEntityType)
+      .eq('entity_id', normalizedEntityId)
       .eq('status', 'Pending')
 
     if (approvalUpdateError) {
-      console.error('Approval table update error:', approvalUpdateError)
+      console.error(`[Reject] Approval table update error for ${approvalTableName}:`, approvalUpdateError)
       return NextResponse.json({ error: 'Failed to reject record' }, { status: 500 })
     }
 
@@ -139,7 +141,7 @@ export async function POST(request: NextRequest) {
       .insert({
         user_id: user.id,
         action_type: 'reject',
-        entity_type: entityType,
+        entity_type: canonicalEntityType,
         entity_id: String(entityId),
         metadata: {
           rejected_by_username: profile.username,
@@ -148,10 +150,11 @@ export async function POST(request: NextRequest) {
         }
       })
 
+    console.log(`[Reject] Successfully rejected ${canonicalEntityType}/${normalizedEntityId}`)
     return NextResponse.json({
       success: true,
       message: 'Record rejected successfully',
-      data: { entityId, status: 'Rejected' }
+      data: { entityType: canonicalEntityType, entityId, status: 'Rejected' }
     })
   } catch (error: any) {
     console.error('Reject error:', error)
