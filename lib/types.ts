@@ -104,7 +104,7 @@ export const ROLE_CONFIG: RoleConfig[] = [
 
 export const ROLE_CAPABILITIES: RoleCapabilities = {
   field_volunteer: ['View assigned tasks', 'Submit reports', 'Update field data', 'View personal activity history'],
-  dfi_field_staff: ['Verify/View submitted data', 'Update assigned records', 'View personal activity history'],
+  dfi_field_staff: ['Verify/View submitted data', 'View personal activity history'],
   dfi_staff: ['Verify/Edit/View submitted data', 'Update assigned records', 'View personal activity history'],
   admin: ['Approve/reject submissions', 'Edit records', 'Manage user roles', 'Generate analytics', 'Full volunteer data access'],
   tech_support: ['System monitoring', 'Bug fixes', 'Database management', 'Implement updates', 'Access system configuration'],
