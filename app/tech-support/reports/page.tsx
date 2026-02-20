@@ -33,7 +33,7 @@ const ALL_COLUMNS: ColumnDef[] = [
   { key: 'height', label: 'Height', category: 'basic' },
   { key: 'weight', label: 'Weight', category: 'basic' },
   { key: 'health', label: 'Health Status', category: 'basic' },
-  
+
   // School Info
   { key: 'school_name', label: 'School Name', category: 'basic' },
   { key: 'school_category', label: 'School Category', category: 'basic' },
@@ -43,18 +43,18 @@ const ALL_COLUMNS: ColumnDef[] = [
   { key: 'life_ambition', label: 'Life Ambition', category: 'basic' },
   { key: 'fav_subject', label: 'Favorite Subject', category: 'basic' },
   { key: 'child_other_info', label: 'Other Information', category: 'basic' },
-  
+
   // Location
   { key: 'centre_id', label: 'Centre ID', category: 'basic' },
   { key: 'district', label: 'District', category: 'basic' },
   { key: 'taluk', label: 'Taluk', category: 'basic' },
   { key: 'panchayat', label: 'Panchayat', category: 'basic' },
   { key: 'village', label: 'Village', category: 'basic' },
-  
+
   // Metadata
   { key: 'submitted_by', label: 'Submitted By', category: 'metadata' },
-  { key: 'approved_by', label: 'Approved By', category: 'metadata' },
-  { key: 'approved_at', label: 'Approved At', category: 'metadata' },
+  { key: 'verified_by', label: 'Verified By', category: 'metadata' },
+  { key: 'verified_at', label: 'Verified At', category: 'metadata' },
   { key: 'created_at', label: 'Created At', category: 'metadata' },
   { key: 'photo_link', label: 'Photo Link', category: 'metadata' },
 ]
@@ -193,7 +193,7 @@ export default function EnhancedReportsPage() {
     }
 
     // Get headers based on selected columns
-    const headers = selectedColumns.filter(col => 
+    const headers = selectedColumns.filter(col =>
       previewData.length > 0 && previewData[0].hasOwnProperty(col)
     )
 
@@ -212,13 +212,13 @@ export default function EnhancedReportsPage() {
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    
+
     const timestamp = new Date().toISOString().split('T')[0]
     let filename = `export_${timestamp}`
     if (selectedEac) filename += `_${selectedEac}`
     if (selectedStatus) filename += `_${selectedStatus}`
     filename += '.csv'
-    
+
     a.download = filename
     a.click()
     window.URL.revokeObjectURL(url)
@@ -253,14 +253,14 @@ export default function EnhancedReportsPage() {
 
   return (
     <main className="min-h-screen bg-slate-50">
-      <Navbar 
-        username={profile.username} 
+      <Navbar
+        username={profile.username}
         role={profile.role!}
         roleLabel={profile.role === 'tech_support' ? 'Tech Support' : 'Admin'}
         roleColor={profile.role === 'tech_support' ? 'bg-orange-100 text-orange-800' : 'bg-indigo-100 text-indigo-800'}
       />
       <Sidebar role={profile.role!} />
-      
+
       <PageContainer>
         <div className="p-8">
           <div className="mx-auto max-w-7xl space-y-8">

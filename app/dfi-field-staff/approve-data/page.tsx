@@ -14,11 +14,7 @@ import { LoadingSpinner } from '../../components/UI'
 import { Navbar, Sidebar, PageContainer } from '../../components/Navbar'
 import { ROLE_CONFIG, getRoleCapabilities } from '../../../lib/types'
 
-type MainTabType = 'verify' | 'view' | 'history'
 type VerifySubTabType = 'child' | 'family' | 'sibling' | 'uniform' | 'leaving' | 'vocational' | 'computer'
-type ViewSubTabType = 'child' | 'family' | 'sibling' | 'uniform' | 'leaving' | 'vocational' | 'computer'
-type HistorySubTabType = 'child' | 'family' | 'sibling' | 'uniform' | 'leaving' | 'vocational' | 'computer'
-type SearchByType = 'name' | 'reg_no'
 
 type ApprovalRecord = Record<string, unknown> & {
     approval_id: string   // <-- REAL child_approvals.id
@@ -35,22 +31,28 @@ const HIDDEN_COLUMNS = [
     'created_at',
     'status',
     'submitted_by',
-    'approved_by',
-    'approved_at',
+    'verified_by',
+    'verified_at',
+]
+
+const HISTORY_HIDDEN_COLUMNS = [
+    'status',
+    'submitted_by',
+    'verified_by',
+    'verified_at',
 ]
 
 type Toast = { id: string; type: 'success' | 'error'; text: string }
 
 export default function ApproveDataPage() {
     const router = useRouter()
-    const [mainTab, setMainTab] = useState<MainTabType>('verify')
     const [verifySubTab, setVerifySubTab] = useState<VerifySubTabType>('child')
-    const [viewSubTab, setViewSubTab] = useState<ViewSubTabType>('child')
 
     const [checkedAuth, setCheckedAuth] = useState(false)
     const [authorized, setAuthorized] = useState(false)
     const [message, setMessage] = useState<MessageState>(null)
-    const [userEacNo, setUserEacNo] = useState<number | null>(null)
+    const [userEacNos, setUserEacNos] = useState<number[]>([])
+    const [userId, setUserId] = useState<string | null>(null)
 
     // Verify Data State
     const [verifyData, setVerifyData] = useState<Record<VerifySubTabType, ApprovalRecord[]>>({
@@ -83,82 +85,7 @@ export default function ApproveDataPage() {
         computer: { page: 1, pageSize: 10 },
     })
 
-    // View Data State
-    const [viewData, setViewData] = useState<Record<ViewSubTabType, Record<string, unknown>[]>>({
-        child: [],
-        family: [],
-        sibling: [],
-        uniform: [],
-        leaving: [],
-        vocational: [],
-        computer: [],
-    })
 
-    const [viewLoading, setViewLoading] = useState<Record<ViewSubTabType, boolean>>({
-        child: false,
-        family: false,
-        sibling: false,
-        uniform: false,
-        leaving: false,
-        vocational: false,
-        computer: false,
-    })
-
-    const [viewSearchQuery, setViewSearchQuery] = useState<Record<ViewSubTabType, string>>({
-        child: '',
-        family: '',
-        sibling: '',
-        uniform: '',
-        leaving: '',
-        vocational: '',
-        computer: '',
-    })
-
-    const [viewSearchType, setViewSearchType] = useState<Record<ViewSubTabType, SearchByType>>({
-        child: 'name',
-        family: 'reg_no',
-        sibling: 'reg_no',
-        uniform: 'reg_no',
-        leaving: 'reg_no',
-        vocational: 'reg_no',
-        computer: 'reg_no',
-    })
-
-    // View Data Photo Modal
-    const [viewPhotoModal, setViewPhotoModal] = useState<{ isOpen: boolean; url: string }>({
-        isOpen: false,
-        url: '',
-    })
-
-    // Personal History State
-    const [activeHistorySubTab, setActiveHistorySubTab] = useState<HistorySubTabType>('child')
-
-    // History data for each type
-    const [historyChildData, setHistoryChildData] = useState<Record<string, unknown>[]>([])
-    const [historyFamilyData, setHistoryFamilyData] = useState<Record<string, unknown>[]>([])
-    const [historySiblingData, setHistorySiblingData] = useState<Record<string, unknown>[]>([])
-    const [historyUniformData, setHistoryUniformData] = useState<Record<string, unknown>[]>([])
-    const [historyLeavingData, setHistoryLeavingData] = useState<Record<string, unknown>[]>([])
-    const [historyVocationalData, setHistoryVocationalData] = useState<Record<string, unknown>[]>([])
-    const [historyComputerData, setHistoryComputerData] = useState<Record<string, unknown>[]>([])
-
-    // Date range filters for each type
-    const [historyChildDateRange, setHistoryChildDateRange] = useState({ start: '', end: '' })
-    const [historyFamilyDateRange, setHistoryFamilyDateRange] = useState({ start: '', end: '' })
-    const [historySiblingDateRange, setHistorySiblingDateRange] = useState({ start: '', end: '' })
-    const [historyUniformDateRange, setHistoryUniformDateRange] = useState({ start: '', end: '' })
-    const [historyLeavingDateRange, setHistoryLeavingDateRange] = useState({ start: '', end: '' })
-    const [historyVocationalDateRange, setHistoryVocationalDateRange] = useState({ start: '', end: '' })
-    const [historyComputerDateRange, setHistoryComputerDateRange] = useState({ start: '', end: '' })
-
-    // Loading states for history subtabs
-    const [historyChildLoading, setHistoryChildLoading] = useState(false)
-    const [historyFamilyLoading, setHistoryFamilyLoading] = useState(false)
-    const [historySiblingLoading, setHistorySiblingLoading] = useState(false)
-    const [historyUniformLoading, setHistoryUniformLoading] = useState(false)
-    const [historyLeavingLoading, setHistoryLeavingLoading] = useState(false)
-    const [historyVocationalLoading, setHistoryVocationalLoading] = useState(false)
-    const [historyComputerLoading, setHistoryComputerLoading] = useState(false)
 
     const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({})
 
@@ -178,6 +105,7 @@ export default function ApproveDataPage() {
     useEffect(() => {
         let isMounted = true
 
+
         const verifySession = async () => {
             const { data } = await supabase.auth.getSession()
             if (!isMounted) return
@@ -189,33 +117,64 @@ export default function ApproveDataPage() {
             if (!hasSession) {
                 router.replace('/sign-in')
             } else {
-                // Fetch user's eac_no from profile
+                // Fetch assigned EAC numbers for this user and user id
                 const { data: user } = await supabase.auth.getUser()
                 if (user.user?.id) {
-                    const { data: profile } = await supabase
-                        .from('profiles')
-                        .select('centre_eac_no_int')
-                        .eq('id', user.user.id)
-                        .single()
+                    setUserId(user.user.id)
+                    console.log('[Auth] Set userId after login:', user.user.id)
 
-                    if (profile?.centre_eac_no_int) {
-                        setUserEacNo(profile.centre_eac_no_int)
-                    }
+                    const { data: eacs } = await supabase
+                        .from('dfi_field_staff_assigned_eacs')
+                        .select('assigned_eac')
+                        .eq('id', user.user.id)
+
+                    const assignedEacNos = (eacs || [])
+                        .map((row) => Number((row as { assigned_eac: unknown }).assigned_eac))
+                        .filter((value) => !Number.isNaN(value))
+
+                    setUserEacNos(assignedEacNos)
+                } else {
+                    setUserId(null)
+                    setUserEacNos([])
+                    console.warn('[Auth] No userId found after login')
                 }
             }
         }
 
         verifySession()
 
+
         const {
             data: { subscription },
-        } = supabase.auth.onAuthStateChange((_event, session) => {
+        } = supabase.auth.onAuthStateChange(async (_event, session) => {
             if (!isMounted) return
 
             const hasSession = Boolean(session)
             setAuthorized(hasSession)
             if (!hasSession) {
                 router.replace('/sign-in')
+            } else {
+                // Update userId and assigned EACs on auth state change
+                const { data: user } = await supabase.auth.getUser()
+                if (user.user?.id) {
+                    setUserId(user.user.id)
+                    console.log('[AuthStateChange] Set userId:', user.user.id)
+
+                    const { data: eacs } = await supabase
+                        .from('dfi_field_staff_assigned_eacs')
+                        .select('assigned_eac')
+                        .eq('id', user.user.id)
+
+                    const assignedEacNos = (eacs || [])
+                        .map((row) => Number((row as { assigned_eac: unknown }).assigned_eac))
+                        .filter((value) => !Number.isNaN(value))
+
+                    setUserEacNos(assignedEacNos)
+                } else {
+                    setUserId(null)
+                    setUserEacNos([])
+                    console.warn('[AuthStateChange] No userId found')
+                }
             }
         })
 
@@ -227,17 +186,10 @@ export default function ApproveDataPage() {
 
     // Fetch data for current verify subtab
     useEffect(() => {
-        if (authorized && mainTab === 'verify') {
+        if (authorized) {
             fetchVerifyData(verifySubTab)
         }
-    }, [authorized, mainTab, verifySubTab, verifyPagination])
-
-    // Fetch data for current view subtab
-    useEffect(() => {
-        if (authorized && mainTab === 'view' && userEacNo) {
-            fetchViewData(viewSubTab)
-        }
-    }, [authorized, mainTab, viewSubTab, userEacNo, viewSearchQuery, viewSearchType])
+    }, [authorized, verifySubTab, verifyPagination])
 
     const fetchVerifyData = async (tabType: VerifySubTabType) => {
         setVerifyLoading((prev) => ({ ...prev, [tabType]: true }))
@@ -263,16 +215,25 @@ export default function ApproveDataPage() {
                 .eq('approval_status', 'Pending')
                 .range(from, to)
 
-
             if (error) throw error
 
-            // Map id to approval_id for consistency with the rest of the code
+            console.log(`[fetchVerifyData] ${tabType} raw data from ${viewName}:`, data?.slice(0, 1))
+
+            // Map id to approval_id and preserve record_id for API
+            // For vocational/computer courses, use id as the entity ID; for others use record_id
             const enrichedData = (data || []).map((record: any) => ({
                 ...record,
-                approval_id: record.id
+                approval_id: record.id, // approval table id
+                record_id: ['vocational', 'computer'].includes(tabType) ? record.id : record.record_id // use id for vocational/computer
             }))
 
-            console.log('Fetched vocational/computer data:', enrichedData);
+            console.log(`[fetchVerifyData] ${tabType} enriched data sample:`, enrichedData[0] ? {
+                id: enrichedData[0].id,
+                approval_id: enrichedData[0].approval_id,
+                record_id: enrichedData[0].record_id,
+                approval_status: enrichedData[0].approval_status
+            } : 'No data');
+
             setVerifyData((prev) => ({
                 ...prev,
                 [tabType]: enrichedData,
@@ -285,14 +246,13 @@ export default function ApproveDataPage() {
         }
     }
 
-    const fetchViewData = async (tabType: ViewSubTabType) => {
-        setViewLoading((prev) => ({ ...prev, [tabType]: true }))
-        try {
-            if (!userEacNo) {
-                throw new Error('User EAC number not found.')
-            }
 
-            const tableMap: Record<ViewSubTabType, string> = {
+
+    const handleVerify = async (recordId: string) => {
+        setActionLoading((prev) => ({ ...prev, [recordId]: true }))
+        try {
+            // Map verifySubTab to entityType used by the API
+            const entityTypeMap: Record<VerifySubTabType, string> = {
                 child: 'Child_Data',
                 family: 'childfmly',
                 sibling: 'childsibling',
@@ -301,298 +261,49 @@ export default function ApproveDataPage() {
                 vocational: 'vocational_course',
                 computer: 'computer_course',
             }
-
-            const tableName = tableMap[tabType]
-            const searchQuery = viewSearchQuery[tabType]
-            const searchType = viewSearchType[tabType]
-
-            let query = supabase
-                .from(tableName)
-                .select('*')
-                .eq('eac_no', userEacNo)
-                .eq('status', 'Approved')
-
-
-            // Apply search filter if provided
-            if (searchQuery.trim()) {
-                if (searchType === 'name') {
-                    if (tabType === 'child') {
-                        query = query.or(`first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%`)
-                    } else {
-                        query = query.ilike('f_name', `%${searchQuery}%`)
-                    }
-                } if (searchType === 'reg_no') {
-                    const regNo = Number(searchQuery)
-                    if (!Number.isNaN(regNo)) {
-                        query = query.eq('reg_no', regNo)
-                    }
-                }
+            const entityType = entityTypeMap[verifySubTab]
+            // Find the record in verifyData to get the correct record_id
+            const record = verifyData[verifySubTab].find(r => r.approval_id === recordId)
+            console.log('[handleVerify] Found record:', record)
+            console.log('[handleVerify] Record keys:', Object.keys(record || {}))
+            const entityId = record?.record_id
+            console.log('[handleVerify] entityType:', entityType, 'entityId:', entityId, 'approval_id:', recordId)
+            if (!entityId) throw new Error('No record_id found for this record.');
+            // Get access token
+            const { data: { session } } = await supabase.auth.getSession();
+            const accessToken = session?.access_token;
+            if (!accessToken) throw new Error('No access token found. Please sign in again.');
+            const res = await fetch('/api/admin/approvals/approve', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`
+                },
+                body: JSON.stringify({ entityType, entityId }),
+                credentials: 'include',
+            })
+            const json = await res.json()
+            if (json && json.success) {
+                addToast({ type: 'success', text: json.message || 'Record verified successfully.' })
+                // Refetch data to sync with actual backend state
+                await fetchVerifyData(verifySubTab)
+            } else if (!res.ok || json.error) {
+                throw new Error(json.error || 'Approval failed')
+            } else {
+                // fallback: unknown error
+                throw new Error('Unknown error during verification')
             }
-
-            const { data, error } = await query
-
-            if (error) throw error
-
-            setViewData((prev) => ({
-                ...prev,
-                [tabType]: data || [],
-            }))
         } catch (error: unknown) {
-            const fallback = error instanceof Error ? error.message : 'Failed to fetch data'
-            setMessage({ type: 'error', text: `Unable to load ${tabType} data: ${fallback}` })
-        } finally {
-            setViewLoading((prev) => ({ ...prev, [tabType]: false }))
-        }
-    }
-
-    const fetchHistoryData = async (
-        tableName: string,
-        setData: (data: Record<string, unknown>[]) => void,
-        setLoading: (loading: boolean) => void,
-        dateRange: { start: string; end: string }
-    ) => {
-        setLoading(true)
-        try {
-            const user = (await supabase.auth.getUser()).data.user
-            if (!user?.id || !userEacNo) {
-                throw new Error('User information not found.')
-            }
-
-            let query = supabase
-                .from(tableName)
-                .select('*')
-                .eq('approved_by', user.id)
-                .eq('status', 'Approved')
-                .eq('eac_no', userEacNo)
-
-            // Apply date range filter if dates are provided
-            if (dateRange.start) {
-                query = query.gte('approved_at', dateRange.start)
-            }
-            if (dateRange.end) {
-                // Add 1 day to include the entire end date
-                const endDate = new Date(dateRange.end)
-                endDate.setDate(endDate.getDate() + 1)
-                query = query.lt('approved_at', endDate.toISOString())
-            }
-
-            const { data, error } = await query
-
-            if (error) throw error
-
-            setData(data || [])
-        } catch (error: unknown) {
-            const fallback = error instanceof Error ? error.message : 'Failed to fetch data'
-            setMessage({ type: 'error', text: `Unable to load history data: ${fallback}` })
-            setData([])
-        } finally {
-            setLoading(false)
-        }
-    }
-
-    const handleHistorySubTabChange = (subTab: HistorySubTabType) => {
-        setActiveHistorySubTab(subTab)
-
-        // Fetch data for the selected subtab
-        switch (subTab) {
-            case 'child':
-                fetchHistoryData('Child_Data', setHistoryChildData, setHistoryChildLoading, historyChildDateRange)
-                break
-            case 'family':
-                fetchHistoryData('childfmly', setHistoryFamilyData, setHistoryFamilyLoading, historyFamilyDateRange)
-                break
-            case 'sibling':
-                fetchHistoryData('childsibling', setHistorySiblingData, setHistorySiblingLoading, historySiblingDateRange)
-                break
-            case 'uniform':
-                fetchHistoryData('childuniform', setHistoryUniformData, setHistoryUniformLoading, historyUniformDateRange)
-                break
-            case 'leaving':
-                fetchHistoryData('childleaving', setHistoryLeavingData, setHistoryLeavingLoading, historyLeavingDateRange)
-                break
-            case 'vocational':
-                fetchHistoryData('vocational_course', setHistoryVocationalData, setHistoryVocationalLoading, historyVocationalDateRange)
-                break
-            case 'computer':
-                fetchHistoryData('computer_course', setHistoryComputerData, setHistoryComputerLoading, historyComputerDateRange)
-                break
-        }
-    }
-
-    const handleHistoryDateRangeChange = (
-        subTab: HistorySubTabType,
-        type: 'start' | 'end',
-        value: string
-    ) => {
-        switch (subTab) {
-            case 'child':
-                setHistoryChildDateRange(prev => ({ ...prev, [type]: value }))
-                break
-            case 'family':
-                setHistoryFamilyDateRange(prev => ({ ...prev, [type]: value }))
-                break
-            case 'sibling':
-                setHistorySiblingDateRange(prev => ({ ...prev, [type]: value }))
-                break
-            case 'uniform':
-                setHistoryUniformDateRange(prev => ({ ...prev, [type]: value }))
-                break
-            case 'leaving':
-                setHistoryLeavingDateRange(prev => ({ ...prev, [type]: value }))
-                break
-            case 'vocational':
-                setHistoryVocationalDateRange(prev => ({ ...prev, [type]: value }))
-                break
-            case 'computer':
-                setHistoryComputerDateRange(prev => ({ ...prev, [type]: value }))
-                break
-        }
-    }
-
-    // Fetch history data when tab changes or date range changes
-    useEffect(() => {
-        if (mainTab === 'history' && authorized && userEacNo) {
-            handleHistorySubTabChange(activeHistorySubTab)
-        }
-    }, [mainTab, authorized, userEacNo])
-
-    useEffect(() => {
-        if (mainTab !== 'history' || !authorized || !userEacNo) return
-
-        // Re-fetch data when date range changes
-        switch (activeHistorySubTab) {
-            case 'child':
-                fetchHistoryData('Child_Data', setHistoryChildData, setHistoryChildLoading, historyChildDateRange)
-                break
-            case 'family':
-                fetchHistoryData('childfmly', setHistoryFamilyData, setHistoryFamilyLoading, historyFamilyDateRange)
-                break
-            case 'sibling':
-                fetchHistoryData('childsibling', setHistorySiblingData, setHistorySiblingLoading, historySiblingDateRange)
-                break
-            case 'uniform':
-                fetchHistoryData('childuniform', setHistoryUniformData, setHistoryUniformLoading, historyUniformDateRange)
-                break
-            case 'leaving':
-                fetchHistoryData('childleaving', setHistoryLeavingData, setHistoryLeavingLoading, historyLeavingDateRange)
-                break
-            case 'vocational':
-                fetchHistoryData('vocational_course', setHistoryVocationalData, setHistoryVocationalLoading, historyVocationalDateRange)
-                break
-            case 'computer':
-                fetchHistoryData('computer_course', setHistoryComputerData, setHistoryComputerLoading, historyComputerDateRange)
-                break
-        }
-    }, [historyChildDateRange, historyFamilyDateRange, historySiblingDateRange, historyUniformDateRange, historyLeavingDateRange])
-
-    const handleApprove = async (recordId: string) => {
-        setActionLoading((prev) => ({ ...prev, [recordId]: true }))
-        try {
-            const { error } = await supabase
-                .from('child_approvals')
-                .update({
-                    status: 'Approved',
-                    decided_by: (await supabase.auth.getUser()).data.user?.id,
-                    decided_at: new Date().toISOString(),
-                })
-                .eq('id', recordId)
-
-            if (error) throw error
-
-            // Show toast and remove from current visible list immediately
-            addToast({ type: 'success', text: 'Record approved successfully.' })
-            setVerifyData((prev) => ({
-                ...prev,
-                [verifySubTab]: prev[verifySubTab].filter((r) => r.approval_id !== recordId),
-            }))
-        } catch (error: unknown) {
-            const fallback = error instanceof Error ? error.message : 'Failed to approve'
-            addToast({ type: 'error', text: `Unable to approve: ${fallback}` })
+            const fallback = error instanceof Error ? error.message : 'Failed to verify'
+            addToast({ type: 'error', text: `Unable to verify: ${fallback}` })
         } finally {
             setActionLoading((prev) => ({ ...prev, [recordId]: false }))
         }
     }
 
-    const handleVocationalApprove = async (recordId: string) => {
-        setActionLoading((prev) => ({ ...prev, [recordId]: true }))
-        try {
-            console.log('Approving vocational with recordId:', recordId)
-            
-            // First, find the actual vocational_training_approvals record using the entity_id (vocational_course id)
-            const { data: approvalRecord, error: findError } = await supabase
-                .from('vocational_training_approvals')
-                .select('id')
-                .eq('entity_id', recordId)
-                .eq('entity_type', 'vocational_course')
-                .single()
-            
-            if (findError) throw new Error(`Could not find approval record: ${findError.message}`)
-            
-            console.log('Found approval record id:', approvalRecord?.id)
-            
-            const { error, data } = await supabase
-                .from('vocational_training_approvals')
-                .update({
-                    status: 'Approved',
-                    approved_by: (await supabase.auth.getUser()).data.user?.id,
-                    approved_at: new Date().toISOString(),
-                })
-                .eq('id', approvalRecord.id)
 
-            console.log('Update result - error:', error, 'data:', data)
-            if (error) throw error
 
-            // Show toast and remove from current visible list immediately
-            addToast({ type: 'success', text: 'Record approved successfully.' })
-            setVerifyData((prev) => ({
-                ...prev,
-                [verifySubTab]: prev[verifySubTab].filter((r) => r.approval_id !== recordId),
-            }))
-        } catch (error: unknown) {
-            const fallback = error instanceof Error ? error.message : 'Failed to approve'
-            addToast({ type: 'error', text: `Unable to approve: ${fallback}` })
-        } finally {
-            setActionLoading((prev) => ({ ...prev, [recordId]: false }))
-        }
-    }
 
-    const handleComputerApprove = async (recordId: string) => {
-        setActionLoading((prev) => ({ ...prev, [recordId]: true }))
-        try {
-            // First, find the actual vocational_training_approvals record using the entity_id (computer_course id)
-            const { data: approvalRecord, error: findError } = await supabase
-                .from('vocational_training_approvals')
-                .select('id')
-                .eq('entity_id', recordId)
-                .eq('entity_type', 'computer_course')
-                .single()
-            
-            if (findError) throw new Error(`Could not find approval record: ${findError.message}`)
-            
-            const { error } = await supabase
-                .from('vocational_training_approvals')
-                .update({
-                    status: 'Approved',
-                    approved_by: (await supabase.auth.getUser()).data.user?.id,
-                    approved_at: new Date().toISOString(),
-                })
-                .eq('id', approvalRecord.id)
-
-            if (error) throw error
-
-            // Show toast and remove from current visible list immediately
-            addToast({ type: 'success', text: 'Record approved successfully.' })
-            setVerifyData((prev) => ({
-                ...prev,
-                [verifySubTab]: prev[verifySubTab].filter((r) => r.approval_id !== recordId),
-            }))
-        } catch (error: unknown) {
-            const fallback = error instanceof Error ? error.message : 'Failed to approve'
-            addToast({ type: 'error', text: `Unable to approve: ${fallback}` })
-        } finally {
-            setActionLoading((prev) => ({ ...prev, [recordId]: false }))
-        }
-    }
 
     const handleReject = async (recordId: string, reason: string) => {
         if (!reason.trim()) {
@@ -602,26 +313,39 @@ export default function ApproveDataPage() {
 
         setActionLoading((prev) => ({ ...prev, [recordId]: true }))
         try {
-            const user = (await supabase.auth.getUser()).data.user
-
-            const { error } = await supabase
-                .from('child_approvals')
-                .update({
-                    status: 'Rejected',
-                    rejection_reason: reason,
-                    decided_by: user?.id,
-                    decided_at: new Date().toISOString(),
-                })
-                .eq('id', recordId)
-
-            if (error) throw error
-
-            // Show toast and remove from current visible list immediately
+            // Map verifySubTab to entityType used by the API
+            const entityTypeMap: Record<VerifySubTabType, string> = {
+                child: 'child_data',
+                family: 'childfmly',
+                sibling: 'childsibling',
+                uniform: 'childuniform',
+                leaving: 'childleaving',
+                vocational: 'vocational_course',
+                computer: 'computer_course',
+            }
+            const entityType = entityTypeMap[verifySubTab]
+            // Find the record in verifyData to get the correct record_id
+            const record = verifyData[verifySubTab].find(r => r.approval_id === recordId)
+            const entityId = record?.record_id
+            if (!entityId) throw new Error('No record_id found for this record.');
+            // Get access token
+            const { data: { session } } = await supabase.auth.getSession();
+            const accessToken = session?.access_token;
+            if (!accessToken) throw new Error('No access token found. Please sign in again.');
+            const res = await fetch('/api/admin/approvals/reject', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`
+                },
+                body: JSON.stringify({ entityType, entityId, reason }),
+                credentials: 'include',
+            })
+            const json = await res.json()
+            if (!res.ok) throw new Error(json.error || 'Rejection failed')
             addToast({ type: 'success', text: 'Record rejected successfully.' })
-            setVerifyData((prev) => ({
-                ...prev,
-                [verifySubTab]: prev[verifySubTab].filter((r) => r.approval_id !== recordId),
-            }))
+            // Refetch data to sync with actual backend state
+            await fetchVerifyData(verifySubTab)
         } catch (error: unknown) {
             const fallback = error instanceof Error ? error.message : 'Failed to reject'
             addToast({ type: 'error', text: `Unable to reject: ${fallback}` })
@@ -630,97 +354,9 @@ export default function ApproveDataPage() {
         }
     }
 
-    const handleVocationalReject = async (recordId: string, reason: string) => {
-        if (!reason.trim()) {
-            setMessage({ type: 'error', text: 'Please provide a rejection reason.' })
-            return
-        }
 
-        setActionLoading((prev) => ({ ...prev, [recordId]: true }))
-        try {
-            const user = (await supabase.auth.getUser()).data.user
 
-            // First, find the actual vocational_training_approvals record using the entity_id (vocational_course id)
-            const { data: approvalRecord, error: findError } = await supabase
-                .from('vocational_training_approvals')
-                .select('id')
-                .eq('entity_id', recordId)
-                .eq('entity_type', 'vocational_course')
-                .single()
-            
-            if (findError) throw new Error(`Could not find approval record: ${findError.message}`)
 
-            const { error } = await supabase
-                .from('vocational_training_approvals')
-                .update({
-                    status: 'Rejected',
-                    rejection_reason: reason,
-                    approved_by: user?.id,
-                    approved_at: new Date().toISOString(),
-                })
-                .eq('id', approvalRecord.id)
-
-            if (error) throw error
-
-            // Show toast and remove from current visible list immediately
-            addToast({ type: 'success', text: 'Record rejected successfully.' })
-            setVerifyData((prev) => ({
-                ...prev,
-                [verifySubTab]: prev[verifySubTab].filter((r) => r.approval_id !== recordId),
-            }))
-        } catch (error: unknown) {
-            const fallback = error instanceof Error ? error.message : 'Failed to reject'
-            addToast({ type: 'error', text: `Unable to reject: ${fallback}` })
-        } finally {
-            setActionLoading((prev) => ({ ...prev, [recordId]: false }))
-        }
-    }
-
-    const handleComputerReject = async (recordId: string, reason: string) => {
-        if (!reason.trim()) {
-            setMessage({ type: 'error', text: 'Please provide a rejection reason.' })
-            return
-        }
-
-        setActionLoading((prev) => ({ ...prev, [recordId]: true }))
-        try {
-            const user = (await supabase.auth.getUser()).data.user
-
-            // First, find the actual vocational_training_approvals record using the entity_id (computer_course id)
-            const { data: approvalRecord, error: findError } = await supabase
-                .from('vocational_training_approvals')
-                .select('id')
-                .eq('entity_id', recordId)
-                .eq('entity_type', 'computer_course')
-                .single()
-            
-            if (findError) throw new Error(`Could not find approval record: ${findError.message}`)
-
-            const { error } = await supabase
-                .from('vocational_training_approvals')
-                .update({
-                    status: 'Rejected',
-                    rejection_reason: reason,
-                    approved_by: user?.id,
-                    approved_at: new Date().toISOString(),
-                })
-                .eq('id', approvalRecord.id)
-
-            if (error) throw error
-
-            // Show toast and remove from current visible list immediately
-            addToast({ type: 'success', text: 'Record rejected successfully.' })
-            setVerifyData((prev) => ({
-                ...prev,
-                [verifySubTab]: prev[verifySubTab].filter((r) => r.approval_id !== recordId),
-            }))
-        } catch (error: unknown) {
-            const fallback = error instanceof Error ? error.message : 'Failed to reject'
-            addToast({ type: 'error', text: `Unable to reject: ${fallback}` })
-        } finally {
-            setActionLoading((prev) => ({ ...prev, [recordId]: false }))
-        }
-    }
 
     // Ensure role hook is called before any early returns so hook order stays stable
     const { profile, loading: authLoading, isAuthorized } = useRequireRole(['dfi_field_staff'])
@@ -742,11 +378,7 @@ export default function ApproveDataPage() {
         router.replace('/sign-in')
     }
 
-    const mainTabs: { id: MainTabType; label: string }[] = [
-        { id: 'verify', label: 'Verify Data' },
-        { id: 'view', label: 'View Data' },
-        { id: 'history', label: 'Personal History' },
-    ]
+
 
     const verifySubTabs: { id: VerifySubTabType; label: string }[] = [
         { id: 'child', label: 'Child Data' },
@@ -767,7 +399,7 @@ export default function ApproveDataPage() {
     if (authLoading) {
         return (
             <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-            <LoadingSpinner size="lg" />
+                <LoadingSpinner size="lg" />
             </div>
         )
     }
@@ -788,10 +420,10 @@ export default function ApproveDataPage() {
     return (
         <main className="flex-1">
             <Navbar
-            username={profile.username}
-            role="dfi_field_staff"
-            roleLabel={roleInfo.label}
-            roleColor={roleInfo.color} />
+                username={profile.username}
+                role="dfi_field_staff"
+                roleLabel={roleInfo.label}
+                roleColor={roleInfo.color} />
             <Sidebar role="dfi_field_staff" />
             {/* <header className="mb-8">
                 <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
@@ -823,38 +455,23 @@ export default function ApproveDataPage() {
                 </p>
             </header> */}
             <PageContainer>
-            {/* Main Tab Navigation */}
-            <div className="mb-6 border-b border-slate-200">
-                <div className="flex flex-wrap gap-2 sm:gap-0">
-                    {mainTabs.map((tab) => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setMainTab(tab.id)}
-                            className={`px-4 py-3 text-sm font-medium transition ${mainTab === tab.id
-                                ? 'border-b-2 border-blue-600 text-blue-600'
-                                : 'border-b-2 border-transparent text-slate-600 hover:text-slate-900'
-                                }`}
-                        >
-                            {tab.label}
-                        </button>
-                    ))}
-                </div>
-            </div>
+                <header className="mb-6">
+                    <h1 className="text-2xl font-bold text-slate-900">Data Verification & Approval</h1>
+                    <p className="mt-1 text-sm text-slate-600">Review and verify submitted child management data from field volunteers.</p>
+                </header>
 
-            {/* Message Alert */}
-            {message && (
-                <div
-                    className={`mb-6 rounded-lg border px-4 py-3 text-sm font-medium ${message.type === 'success'
-                        ? 'border-green-200 bg-green-50 text-green-700'
-                        : 'border-red-200 bg-red-50 text-red-700'
-                        }`}
-                >
-                    {message.text}
-                </div>
-            )}
+                {/* Message Alert */}
+                {message && (
+                    <div
+                        className={`mb-6 rounded-lg border px-4 py-3 text-sm font-medium ${message.type === 'success'
+                            ? 'border-green-200 bg-green-50 text-green-700'
+                            : 'border-red-200 bg-red-50 text-red-700'
+                            }`}
+                    >
+                        {message.text}
+                    </div>
+                )}
 
-            {/* Verify Data Tab */}
-            {mainTab === 'verify' && (
                 <div className="space-y-6">
                     {/* Verify Subtabs */}
                     <div className="border-b border-slate-200">
@@ -881,7 +498,7 @@ export default function ApproveDataPage() {
                                 Pending {verifySubTabs.find((t) => t.id === verifySubTab)?.label} Records
                             </h2>
                             <p className="mt-1 text-sm text-slate-600">
-                                Review and approve or reject submitted records.
+                                Review and verify or reject submitted records.
                             </p>
                         </div>
 
@@ -914,20 +531,8 @@ export default function ApproveDataPage() {
                                                 record={record}
                                                 displayKeys={visibleKeys}
                                                 isLoading={actionLoading[record.approval_id] || false}
-                                                onApprove={() => 
-                                                    verifySubTab === 'vocational' 
-                                                        ? handleVocationalApprove(record.approval_id)
-                                                        : verifySubTab === 'computer'
-                                                        ? handleComputerApprove(record.approval_id)
-                                                        : handleApprove(record.approval_id)
-                                                }
-                                                onReject={(reason) => 
-                                                    verifySubTab === 'vocational' 
-                                                        ? handleVocationalReject(record.approval_id, reason)
-                                                        : verifySubTab === 'computer'
-                                                        ? handleComputerReject(record.approval_id, reason)
-                                                        : handleReject(record.approval_id, reason)
-                                                }
+                                                onApprove={() => handleVerify(record.approval_id)}
+                                                onReject={(reason) => handleReject(record.approval_id, reason)}
                                             />
                                         ))}
                                     </tbody>
@@ -974,356 +579,21 @@ export default function ApproveDataPage() {
                         )}
                     </section>
                 </div>
-            )}
 
-            {/* View Data Tab */}
-            {mainTab === 'view' && (
-                <div className="space-y-6">
-                    {/* View Subtabs */}
-                    <div className="border-b border-slate-200">
-                        <div className="flex flex-wrap gap-2 sm:gap-0">
-                            {verifySubTabs.map((tab) => (
-                                <button
-                                    key={tab.id}
-                                    onClick={() => setViewSubTab(tab.id as ViewSubTabType)}
-                                    className={`px-4 py-3 text-sm font-medium transition ${viewSubTab === tab.id
-                                        ? 'border-b-2 border-purple-600 text-purple-600'
-                                        : 'border-b-2 border-transparent text-slate-600 hover:text-slate-900'
-                                        }`}
-                                >
-                                    {tab.label}
-                                </button>
-                            ))}
-                        </div>
+                {/* Toasts */}
+                {toasts.length > 0 && (
+                    <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3">
+                        {toasts.map((t) => (
+                            <div key={t.id} className={`rounded-lg px-4 py-2 text-sm font-medium shadow-lg ${t.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                                <div className="flex items-start gap-3">
+                                    <div className="flex-1">{t.text}</div>
+                                    <button onClick={() => removeToast(t.id)} className="text-sm font-semibold text-slate-500 hover:text-slate-700">✕</button>
+                                </div>
+                            </div>
+                        ))}
                     </div>
+                )}
 
-                    {/* View Data Section */}
-                    <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                        <div className="mb-6">
-                            <h2 className="text-lg font-semibold text-slate-900">
-                                View {verifySubTabs.find((t) => t.id === viewSubTab)?.label} Records
-                            </h2>
-                            <p className="mt-1 text-sm text-slate-600">
-                                View all approved records for your centre.
-                            </p>
-                        </div>
-
-                        {/* Search Bar */}
-                        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end">
-                            <div className="flex-1">
-                                <label className="mb-2 block text-sm font-medium text-slate-700">
-                                    Search Query
-                                </label>
-                                <input
-                                    type="text"
-                                    placeholder="Enter search term..."
-                                    value={viewSearchQuery[viewSubTab]}
-                                    onChange={(e) =>
-                                        setViewSearchQuery((prev) => ({
-                                            ...prev,
-                                            [viewSubTab]: e.target.value,
-                                        }))
-                                    }
-                                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                                />
-                            </div>
-                            <div>
-                                <label className="mb-2 block text-sm font-medium text-slate-700">
-                                    Search By
-                                </label>
-                                <select
-                                    value={viewSearchType[viewSubTab]}
-                                    onChange={(e) =>
-                                        setViewSearchType((prev) => ({
-                                            ...prev,
-                                            [viewSubTab]: e.target.value as SearchByType,
-                                        }))
-                                    }
-                                    className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                                >
-                                    {viewSubTab === 'child' ? (
-                                        <>
-                                            <option value="name">Name</option>
-                                            <option value="reg_no">Registration No</option>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <option value="reg_no">Registration No</option>
-                                            <option value="name">Name</option>
-                                        </>
-                                    )}
-                                </select>
-                            </div>
-                            <button
-                                onClick={() => {
-                                    setViewSearchQuery((prev) => ({
-                                        ...prev,
-                                        [viewSubTab]: '',
-                                    }))
-                                }}
-                                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-                            >
-                                Clear
-                            </button>
-                        </div>
-
-                        {/* Data Table */}
-                        {viewLoading[viewSubTab] ? (
-                            <div className="flex items-center justify-center py-8">
-                                <p className="text-sm text-slate-500">Loading records...</p>
-                            </div>
-                        ) : viewData[viewSubTab].length === 0 ? (
-                            <div className="flex items-center justify-center py-8">
-                                <p className="text-sm text-slate-500">No records found.</p>
-                            </div>
-                        ) : (
-                            <div className="overflow-x-auto overflow-y-auto max-h-96 border border-slate-200 rounded-lg">
-                                <table className="w-full text-sm">
-                                    <thead className="sticky top-0 bg-slate-50 border-b border-slate-200">
-                                        <tr>
-                                            {Object.keys(viewData[viewSubTab][0] || {})
-                                                .filter(key => !['status', 'submitted_by', 'approved_by', 'approved_at'].includes(key.toLowerCase()))
-                                                .map((key) => (
-                                                    <th
-                                                        key={key}
-                                                        className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap"
-                                                    >
-                                                        {key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}
-                                                    </th>
-                                                ))}
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {viewData[viewSubTab].map((record, idx) => (
-                                            <tr key={idx} className="border-b border-slate-200 hover:bg-slate-50">
-                                                {Object.entries(record)
-                                                    .filter(([key]) => !['status', 'submitted_by', 'approved_by', 'approved_at'].includes(key.toLowerCase()))
-                                                    .map(([key, value]) => {
-                                                        const isPhoto = (key.toLowerCase().includes('photo') || key.toLowerCase().includes('image')) && value
-                                                        const displayValue = value === null || value === undefined ? '-' : String(value)
-
-                                                        return (
-                                                            <td key={key} className="px-4 py-3 text-sm text-slate-700 max-w-xs truncate">
-                                                                {isPhoto ? (
-                                                                    <button
-                                                                        onClick={() => setViewPhotoModal({ isOpen: true, url: String(value) })}
-                                                                        className="rounded-lg bg-blue-600 px-3 py-1 text-xs font-semibold text-white transition hover:bg-blue-700"
-                                                                    >
-                                                                        View
-                                                                    </button>
-                                                                ) : (
-                                                                    displayValue
-                                                                )}
-                                                            </td>
-                                                        )
-                                                    })}
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-
-                        {userEacNo && (
-                            <p className="mt-4 text-xs text-slate-500">
-                                Showing records for EAC No: {userEacNo}
-                            </p>
-                        )}
-                    </section>
-                </div>
-            )}
-
-            {/* Personal History Tab */}
-            {mainTab === 'history' && (
-                <div className="space-y-6">
-                    {/* History Subtabs */}
-                    <div className="border-b border-slate-200">
-                        <div className="flex flex-wrap gap-2 sm:gap-0">
-                            {[
-                                { id: 'child' as HistorySubTabType, label: 'Child Data' },
-                                { id: 'family' as HistorySubTabType, label: 'Child Family' },
-                                { id: 'sibling' as HistorySubTabType, label: 'Child Sibling' },
-                                { id: 'uniform' as HistorySubTabType, label: 'Child Uniform' },
-                                { id: 'leaving' as HistorySubTabType, label: 'Child Leaving' },
-                                { id: 'vocational' as HistorySubTabType, label: 'Vocational Course' },
-                                { id: 'computer' as HistorySubTabType, label: 'Computer Course' },
-                            ].map((tab) => (
-                                <button
-                                    key={tab.id}
-                                    onClick={() => handleHistorySubTabChange(tab.id)}
-                                    className={`px-4 py-3 text-sm font-medium transition ${activeHistorySubTab === tab.id
-                                        ? 'border-b-2 border-amber-600 text-amber-600'
-                                        : 'border-b-2 border-transparent text-slate-600 hover:text-slate-900'
-                                        }`}
-                                >
-                                    {tab.label}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* History Data Section */}
-                    <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                        <div className="mb-6">
-                            <h2 className="text-lg font-semibold text-slate-900">
-                                Approved {activeHistorySubTab === 'child' ? 'Child Data' :
-                                    activeHistorySubTab === 'family' ? 'Family' :
-                                        activeHistorySubTab === 'sibling' ? 'Sibling' :
-                                            activeHistorySubTab === 'uniform' ? 'Uniform' :
-                                                'Leaving'} Records
-                            </h2>
-                            <p className="mt-1 text-sm text-slate-600">
-                                View all records you have approved.
-                            </p>
-                        </div>
-
-                        {/* Date Range Filter */}
-                        <div className="mb-6 flex gap-4 items-end flex-col sm:flex-row">
-                            <div>
-                                <label className="mb-1 block text-sm font-medium text-slate-700">From Date (Approved)</label>
-                                <input
-                                    type="date"
-                                    value={
-                                        activeHistorySubTab === 'child' ? historyChildDateRange.start :
-                                            activeHistorySubTab === 'family' ? historyFamilyDateRange.start :
-                                                activeHistorySubTab === 'sibling' ? historySiblingDateRange.start :
-                                                    activeHistorySubTab === 'uniform' ? historyUniformDateRange.start :
-                                                        historyLeavingDateRange.start
-                                    }
-                                    onChange={(e) => handleHistoryDateRangeChange(activeHistorySubTab, 'start', e.target.value)}
-                                    className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                                />
-                            </div>
-                            <div>
-                                <label className="mb-1 block text-sm font-medium text-slate-700">To Date (Approved)</label>
-                                <input
-                                    type="date"
-                                    value={
-                                        activeHistorySubTab === 'child' ? historyChildDateRange.end :
-                                            activeHistorySubTab === 'family' ? historyFamilyDateRange.end :
-                                                activeHistorySubTab === 'sibling' ? historySiblingDateRange.end :
-                                                    activeHistorySubTab === 'uniform' ? historyUniformDateRange.end :
-                                                        historyLeavingDateRange.end
-                                    }
-                                    onChange={(e) => handleHistoryDateRangeChange(activeHistorySubTab, 'end', e.target.value)}
-                                    className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                                />
-                            </div>
-                        </div>
-
-                        {/* History Table */}
-                        {historyChildLoading || historyFamilyLoading || historySiblingLoading || historyUniformLoading || historyLeavingLoading ? (
-                            <div className="flex items-center justify-center py-8">
-                                <p className="text-sm text-slate-500">Loading records...</p>
-                            </div>
-                        ) : (
-                            (() => {
-                                const currentData = activeHistorySubTab === 'child' ? historyChildData :
-                                    activeHistorySubTab === 'family' ? historyFamilyData :
-                                        activeHistorySubTab === 'sibling' ? historySiblingData :
-                                            activeHistorySubTab === 'uniform' ? historyUniformData :
-                                                historyLeavingData
-
-                                return currentData.length === 0 ? (
-                                    <div className="flex items-center justify-center py-8">
-                                        <p className="text-sm text-slate-500">No approved records found.</p>
-                                    </div>
-                                ) : (
-                                    <div className="overflow-x-auto overflow-y-auto max-h-96 border border-slate-200 rounded-lg">
-                                        <table className="w-full text-sm">
-                                            <thead className="sticky top-0 bg-slate-50 border-b border-slate-200">
-                                                <tr>
-                                                    {Object.keys(currentData[0] || {}).map((key) => (
-                                                        <th
-                                                            key={key}
-                                                            className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap"
-                                                        >
-                                                            {key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}
-                                                        </th>
-                                                    ))}
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {currentData.map((record, idx) => (
-                                                    <tr key={idx} className="border-b border-slate-200 hover:bg-slate-50">
-                                                        {Object.entries(record).map(([key, value]) => {
-                                                            const displayValue = value === null || value === undefined ? '-' : String(value)
-                                                            const isPhoto = (key.toLowerCase().includes('photo') || key.toLowerCase().includes('image')) && value
-
-                                                            return (
-                                                                <td key={key} className="px-4 py-3 text-sm text-slate-700 max-w-xs truncate">
-                                                                    {isPhoto ? (
-                                                                        <a
-                                                                            href={String(value)}
-                                                                            target="_blank"
-                                                                            rel="noopener noreferrer"
-                                                                            className="rounded-lg bg-blue-600 px-3 py-1 text-xs font-semibold text-white transition hover:bg-blue-700"
-                                                                        >
-                                                                            View
-                                                                        </a>
-                                                                    ) : (
-                                                                        displayValue
-                                                                    )}
-                                                                </td>
-                                                            )
-                                                        })}
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                )
-                            })()
-                        )}
-                    </section>
-                </div>
-            )}
-
-            {/* Toasts */}
-            {toasts.length > 0 && (
-                <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3">
-                    {toasts.map((t) => (
-                        <div key={t.id} className={`rounded-lg px-4 py-2 text-sm font-medium shadow-lg ${t.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
-                            <div className="flex items-start gap-3">
-                                <div className="flex-1">{t.text}</div>
-                                <button onClick={() => removeToast(t.id)} className="text-sm font-semibold text-slate-500 hover:text-slate-700">✕</button>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
-
-            {/* View Data Photo Modal */}
-            {viewPhotoModal.isOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-                    <div className="rounded-lg bg-white p-6 shadow-lg max-w-2xl max-h-96 flex flex-col">
-                        <div className="mb-4 flex items-center justify-between">
-                            <h3 className="text-lg font-semibold text-slate-900">Photo Preview</h3>
-                            <button
-                                onClick={() => setViewPhotoModal({ isOpen: false, url: '' })}
-                                className="text-slate-500 hover:text-slate-700"
-                            >
-                                ✕
-                            </button>
-                        </div>
-                        <div className="flex-1 flex items-center justify-center overflow-auto">
-                            <img
-                                src={viewPhotoModal.url}
-                                alt="Preview"
-                                className="max-w-full max-h-full object-contain"
-                            />
-                        </div>
-                        <div className="mt-4 flex justify-end">
-                            <button
-                                onClick={() => setViewPhotoModal({ isOpen: false, url: '' })}
-                                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                            >
-                                Close
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
             </PageContainer>
         </main>
     )
@@ -1395,7 +665,7 @@ function VerifyDataRow({ record, isLoading, onApprove, onReject, displayKeys }: 
                             disabled={isLoading}
                             className="rounded-lg bg-green-600 px-3 py-1 text-xs font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-green-300 whitespace-nowrap"
                         >
-                            {isLoading ? 'Processing...' : 'Approve'}
+                            {isLoading ? 'Processing...' : 'Verify'}
                         </button>
                         <button
                             onClick={() => setShowRejectInput(!showRejectInput)}

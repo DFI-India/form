@@ -31,8 +31,8 @@ const HIDDEN_COLUMNS = [
     'created_at',
     'status',
     'submitted_by',
-    'approved_by',
-    'approved_at',
+    'verified_by',
+    'verified_at',
     'id', // Hide ID in view tables
 ]
 
@@ -344,19 +344,19 @@ export default function ApproveDataPage() {
             let query = supabase
                 .from(tableName)
                 .select('*')
-                .eq('approved_by', user.id)
+                .eq('verified_by', user.id)
                 .eq('status', 'Approved')
                 .eq('eac_no', userEacNo)
 
             // Apply date range filter if dates are provided
             if (dateRange.start) {
-                query = query.gte('approved_at', dateRange.start)
+                query = query.gte('verified_at', dateRange.start)
             }
             if (dateRange.end) {
                 // Add 1 day to include the entire end date
                 const endDate = new Date(dateRange.end)
                 endDate.setDate(endDate.getDate() + 1)
-                query = query.lt('approved_at', endDate.toISOString())
+                query = query.lt('verified_at', endDate.toISOString())
             }
 
             const { data, error } = await query
