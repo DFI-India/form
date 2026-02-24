@@ -39,11 +39,12 @@ export async function POST(request: NextRequest) {
     }
 
     const isFieldStaff = profile.role === 'dfi_field_staff'
+    const sourceStatus = isFieldStaff ? 'Pending' : 'Verified'
 
     const body = await request.json()
     const { entityType, entityId, reason } = body
 
-    if (!entityType || !entityId) {
+    if (!entityType || entityId === null || entityId === undefined || String(entityId).trim().length === 0) {
       return NextResponse.json({ error: 'entityType and entityId are required' }, { status: 400 })
     }
 
@@ -79,36 +80,37 @@ export async function POST(request: NextRequest) {
 
     console.log(`[Reject] Request: entityType=${entityType}, normalizedType=${normalizedEntityType}, canonicalType=${canonicalEntityType}, entityId=${entityId}, normalizedId=${normalizedEntityId} (type: ${typeof normalizedEntityId})`)
 
-    // Check if record exists and is pending
-    console.log(`[Reject] Checking approval record: ${approvalTableName} entity_type='${canonicalEntityType}', entity_id=${normalizedEntityId}`)
+    // Check if record exists and is in the expected source status
+    console.log(`[Reject] Checking approval record: ${approvalTableName} entity_type='${canonicalEntityType}', entity_id=${normalizedEntityId}, status='${sourceStatus}'`)
     const query = supabaseAdmin
       .from(approvalTableName)
       .select('*')
       .eq('entity_type', canonicalEntityType)
-      .eq('status', 'Pending')
+      .eq('status', sourceStatus)
 
-    // For debugging, get all pending records of this type
-    const { data: allPending, error: allError } = await query
-    console.log(`[Reject] All pending ${canonicalEntityType} records in ${approvalTableName}:`, allPending?.map((r: any) => ({ entity_id: r.entity_id, entity_id_type: typeof r.entity_id, status: r.status })) || [])
+    // For debugging, get all matching records of this type/status
+    const { data: allSourceStatusRecords } = await query
+    console.log(`[Reject] All ${sourceStatus} ${canonicalEntityType} records in ${approvalTableName}:`, allSourceStatusRecords?.map((r: any) => ({ entity_id: r.entity_id, entity_id_type: typeof r.entity_id, status: r.status })) || [])
 
-    const { data: pendingRecord, error: pendingError } = await supabaseAdmin
+    const { data: sourceRecord, error: sourceError } = await supabaseAdmin
       .from(approvalTableName)
       .select('id')
       .eq('entity_type', canonicalEntityType)
       .eq('entity_id', normalizedEntityId)
-      .eq('status', 'Pending')
+      .eq('status', sourceStatus)
       .single()
 
-    if (pendingError || !pendingRecord) {
-      console.error(`[Reject] Pending record not found for ${canonicalEntityType}/${normalizedEntityId}. Error:`, pendingError)
-      return NextResponse.json({ error: `Pending record not found for ${canonicalEntityType}/${normalizedEntityId}` }, { status: 404 })
+    if (sourceError || !sourceRecord) {
+      console.error(`[Reject] ${sourceStatus} record not found for ${canonicalEntityType}/${normalizedEntityId}. Error:`, sourceError)
+      return NextResponse.json({ error: `${sourceStatus} record not found for ${canonicalEntityType}/${normalizedEntityId}` }, { status: 404 })
     }
 
-    console.log(`[Reject] Found approval record:`, pendingRecord)
+    console.log(`[Reject] Found approval record:`, sourceRecord)
 
     // Update ONLY the approval table
-    // dfi_field_staff uses verified_* columns (they are verifying), others use decided_* (they are deciding)
-    const approvalUpdateFields = isFieldStaff
+    // vocational_training_approvals does not have decided_* columns, so use verified_* there too
+    const useVerifiedColumns = isFieldStaff || approvalTableName === 'vocational_training_approvals'
+    const approvalUpdateFields = useVerifiedColumns
       ? {
         status: 'Rejected',
         verified_by: user.id,
@@ -128,7 +130,7 @@ export async function POST(request: NextRequest) {
       .update(approvalUpdateFields)
       .eq('entity_type', canonicalEntityType)
       .eq('entity_id', normalizedEntityId)
-      .eq('status', 'Pending')
+      .eq('status', sourceStatus)
 
     if (approvalUpdateError) {
       console.error(`[Reject] Approval table update error for ${approvalTableName}:`, approvalUpdateError)

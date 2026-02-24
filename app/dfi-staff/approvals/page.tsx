@@ -11,7 +11,8 @@ import { ROLE_CONFIG } from '../../../lib/types'
 type EntityType = 'child_data' | 'childfmly' | 'childsibling' | 'childuniform' | 'childleaving' | 'vocational_course' | 'computer_course'
 
 interface ApprovalRecord {
-  record_id: number
+  id?: string | number
+  record_id?: string | number
   eac_no: string | number
   reg_no?: string | number
   status: string
@@ -48,7 +49,7 @@ const ENTITY_ICONS: Record<EntityType, string> = {
 export default function DFIStaffApprovalsPage() {
   const router = useRouter()
   const { profile, loading: authLoading, isAuthorized } = useRequireRole(['dfi_staff'])
-  
+
   const [activeTab, setActiveTab] = useState<EntityType>('child_data')
   const [data, setData] = useState<Record<string, ApprovalRecord[]>>({})
   const [counts, setCounts] = useState<Record<string, number>>({})
@@ -56,8 +57,8 @@ export default function DFIStaffApprovalsPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [sessionToken, setSessionToken] = useState<string | null>(null)
-  const [selectedRecords, setSelectedRecords] = useState<Set<number>>(new Set())
-  
+  const [selectedRecords, setSelectedRecords] = useState<Set<string>>(new Set())
+
   // Modal state
   const [showRejectModal, setShowRejectModal] = useState(false)
   const [rejectingRecord, setRejectingRecord] = useState<ApprovalRecord | null>(null)
@@ -82,7 +83,7 @@ export default function DFIStaffApprovalsPage() {
     setLoading(true)
     setError('')
     try {
-      const res = await fetch(`/api/admin/approvals/list?status=Pending&entityType=all`, {
+      const res = await fetch(`/api/admin/approvals/list?status=Verified&entityType=all`, {
         headers: { Authorization: `Bearer ${token}` }
       })
       const json = await res.json()
@@ -96,8 +97,31 @@ export default function DFIStaffApprovalsPage() {
     }
   }
 
+  const getEntityId = (record: ApprovalRecord): string | null => {
+    const value = record.id ?? record.record_id
+    if (value === null || value === undefined) return null
+    const normalized = String(value).trim()
+    return normalized.length > 0 ? normalized : null
+  }
+
+  const getEntityTypeForRecord = (record: ApprovalRecord): EntityType => {
+    const sourceTable = String(record.table_name || record.table || '').trim().toLowerCase()
+    if (sourceTable === 'vocational_course' || sourceTable === 'computer_course') {
+      return sourceTable as EntityType
+    }
+    return activeTab
+  }
+
   const handleApprove = async (record: ApprovalRecord) => {
     if (!sessionToken) return
+    const entityId = getEntityId(record)
+    if (!entityId) {
+      setError('Could not determine record ID for approval')
+      return
+    }
+
+    const entityType = getEntityTypeForRecord(record)
+
     setActionLoading(true)
     setError('')
     try {
@@ -108,8 +132,8 @@ export default function DFIStaffApprovalsPage() {
           Authorization: `Bearer ${sessionToken}`
         },
         body: JSON.stringify({
-          entityType: activeTab,
-          entityId: record.record_id
+          entityType,
+          entityId
         })
       })
       const json = await res.json()
@@ -126,6 +150,7 @@ export default function DFIStaffApprovalsPage() {
 
   const handleBulkApprove = async () => {
     if (!sessionToken || selectedRecords.size === 0) return
+
     setActionLoading(true)
     setError('')
     try {
@@ -156,6 +181,14 @@ export default function DFIStaffApprovalsPage() {
 
   const handleReject = async () => {
     if (!sessionToken || !rejectingRecord) return
+    const entityId = getEntityId(rejectingRecord)
+    if (!entityId) {
+      setError('Could not determine record ID for rejection')
+      return
+    }
+
+    const entityType = getEntityTypeForRecord(rejectingRecord)
+
     if (!rejectReason.trim()) {
       setError('Please provide a rejection reason')
       return
@@ -170,8 +203,8 @@ export default function DFIStaffApprovalsPage() {
           Authorization: `Bearer ${sessionToken}`
         },
         body: JSON.stringify({
-          entityType: activeTab,
-          entityId: rejectingRecord.record_id,
+          entityType,
+          entityId,
           reason: rejectReason
         })
       })
@@ -190,7 +223,7 @@ export default function DFIStaffApprovalsPage() {
     }
   }
 
-  const toggleSelectRecord = (id: number) => {
+  const toggleSelectRecord = (id: string) => {
     setSelectedRecords(prev => {
       const newSet = new Set(prev)
       if (newSet.has(id)) {
@@ -207,7 +240,7 @@ export default function DFIStaffApprovalsPage() {
     if (selectedRecords.size === currentRecords.length) {
       setSelectedRecords(new Set())
     } else {
-      setSelectedRecords(new Set(currentRecords.map(r => r.record_id)))
+      setSelectedRecords(new Set(currentRecords.map(r => getEntityId(r)).filter((id): id is string => Boolean(id))))
     }
   }
 
@@ -218,7 +251,7 @@ export default function DFIStaffApprovalsPage() {
     if (record.trainee_name) return record.trainee_name
     if (record.child_name) return record.child_name
     if (record.f_name) return `Father: ${record.f_name}`
-    return `Record #${record.record_id}`
+    return `Record #${getEntityId(record) || 'Unknown'}`
   }
 
   const formatDate = (dateStr: string) => {
@@ -250,7 +283,7 @@ export default function DFIStaffApprovalsPage() {
 
   const roleInfo = ROLE_CONFIG.find(r => r.value === 'dfi_staff')!
   const currentTabData = data[activeTab] || []
-  const totalPending = Object.values(counts).reduce((a, b) => a + b, 0)
+  const totalVerified = Object.values(counts).reduce((a, b) => a + b, 0)
 
   return (
     <main className="min-h-screen bg-slate-50">
@@ -269,9 +302,9 @@ export default function DFIStaffApprovalsPage() {
             <div>
               <h2 className="text-3xl font-bold text-slate-900">Final Approvals</h2>
               <p className="text-slate-600 mt-2">
-                Approve or reject pending submissions
+                Approve or reject verified submissions
                 <span className="ml-2 px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-medium">
-                  {totalPending} pending
+                  {totalVerified} verified
                 </span>
               </p>
             </div>
@@ -329,17 +362,15 @@ export default function DFIStaffApprovalsPage() {
                     setActiveTab(type)
                     setSelectedRecords(new Set())
                   }}
-                  className={`flex-1 min-w-[120px] px-4 py-4 text-sm font-medium transition-colors border-b-2 ${
-                    activeTab === type
-                      ? 'border-green-600 text-green-600 bg-green-50'
-                      : 'border-transparent text-slate-600 hover:bg-slate-50'
-                  }`}
+                  className={`flex-1 min-w-[120px] px-4 py-4 text-sm font-medium transition-colors border-b-2 ${activeTab === type
+                    ? 'border-green-600 text-green-600 bg-green-50'
+                    : 'border-transparent text-slate-600 hover:bg-slate-50'
+                    }`}
                 >
                   <span className="mr-2">{ENTITY_ICONS[type]}</span>
                   {ENTITY_LABELS[type]}
-                  <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
-                    counts[type] > 0 ? 'bg-yellow-100 text-yellow-800' : 'bg-slate-100 text-slate-600'
-                  }`}>
+                  <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${counts[type] > 0 ? 'bg-yellow-100 text-yellow-800' : 'bg-slate-100 text-slate-600'
+                    }`}>
                     {counts[type] || 0}
                   </span>
                 </button>
@@ -357,7 +388,7 @@ export default function DFIStaffApprovalsPage() {
             ) : currentTabData.length === 0 ? (
               <div className="p-12 text-center">
                 <p className="text-4xl mb-4">✅</p>
-                <p className="text-slate-600 font-medium">No pending {ENTITY_LABELS[activeTab]} records</p>
+                <p className="text-slate-600 font-medium">No verified {ENTITY_LABELS[activeTab]} records</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -383,18 +414,20 @@ export default function DFIStaffApprovalsPage() {
                   </thead>
                   <tbody className="divide-y divide-slate-200">
                     {currentTabData.map((record) => (
-                      <tr key={record.record_id} className={`hover:bg-slate-50 ${
-                        selectedRecords.has(record.record_id) ? 'bg-blue-50' : ''
-                      }`}>
+                      <tr key={getEntityId(record) || `${activeTab}-${record.created_at}`} className={`hover:bg-slate-50 ${selectedRecords.has(getEntityId(record) || '') ? 'bg-blue-50' : ''
+                        }`}>
                         <td className="px-4 py-3">
                           <input
                             type="checkbox"
-                            checked={selectedRecords.has(record.record_id)}
-                            onChange={() => toggleSelectRecord(record.record_id)}
+                            checked={selectedRecords.has(getEntityId(record) || '')}
+                            onChange={() => {
+                              const entityId = getEntityId(record)
+                              if (entityId) toggleSelectRecord(entityId)
+                            }}
                             className="w-4 h-4 rounded border-slate-300"
                           />
                         </td>
-                        <td className="px-4 py-3 text-sm text-slate-900 font-mono">#{record.record_id}</td>
+                        <td className="px-4 py-3 text-sm text-slate-900 font-mono">#{getEntityId(record) || '-'}</td>
                         <td className="px-4 py-3 text-sm text-slate-900 font-medium">{getRecordName(record)}</td>
                         <td className="px-4 py-3 text-sm text-slate-600">{record.eac_no || '-'}</td>
                         <td className="px-4 py-3 text-sm text-slate-600">{record.reg_no || '-'}</td>
@@ -437,7 +470,7 @@ export default function DFIStaffApprovalsPage() {
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
             <h3 className="text-xl font-bold text-slate-900 mb-4">Reject Record</h3>
             <p className="text-slate-600 mb-4">
-              Rejecting: <strong>{getRecordName(rejectingRecord)}</strong> (#{rejectingRecord.record_id})
+              Rejecting: <strong>{getRecordName(rejectingRecord)}</strong> (#{getEntityId(rejectingRecord) || '-'})
             </p>
             <textarea
               value={rejectReason}

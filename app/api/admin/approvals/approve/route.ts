@@ -39,6 +39,7 @@ export async function POST(request: NextRequest) {
     }
 
     const isFieldStaff = profile.role === 'dfi_field_staff'
+    const sourceStatus = isFieldStaff ? 'Pending' : 'Verified'
     const targetStatus = isFieldStaff ? 'Verified' : 'Approved'
 
     const body = await request.json()
@@ -76,46 +77,58 @@ export async function POST(request: NextRequest) {
 
     console.log(`[Approve] Request: entityType=${entityType}, normalizedType=${normalizedEntityType}, canonicalType=${canonicalEntityType}, entityId=${entityId}, normalizedId=${normalizedEntityId} (type: ${typeof normalizedEntityId})`)
 
-    // Check if record exists and is pending
-    console.log(`[Approve] Checking approval record: ${approvalTableName} entity_type='${canonicalEntityType}', entity_id=${normalizedEntityId}`)
+    // Check if record exists and is in the expected source status
+    console.log(`[Approve] Checking approval record: ${approvalTableName} entity_type='${canonicalEntityType}', entity_id=${normalizedEntityId}, status='${sourceStatus}'`)
     const query = supabaseAdmin
       .from(approvalTableName)
       .select('*')
       .eq('entity_type', canonicalEntityType)
-      .eq('status', 'Pending')
+      .eq('status', sourceStatus)
 
-    // For debugging, get all pending records of this type
-    const { data: allPending, error: allError } = await query
-    console.log(`[Approve] All pending ${canonicalEntityType} records in ${approvalTableName}:`, allPending?.map((r: any) => ({ entity_id: r.entity_id, entity_id_type: typeof r.entity_id, status: r.status })) || [])
+    // For debugging, get all matching records of this type/status
+    const { data: allSourceStatusRecords } = await query
+    console.log(`[Approve] All ${sourceStatus} ${canonicalEntityType} records in ${approvalTableName}:`, allSourceStatusRecords?.map((r: any) => ({ entity_id: r.entity_id, entity_id_type: typeof r.entity_id, status: r.status })) || [])
 
-    const { data: pendingRecord, error: pendingError } = await supabaseAdmin
+    const { data: sourceRecord, error: sourceError } = await supabaseAdmin
       .from(approvalTableName)
       .select('id')
       .eq('entity_type', canonicalEntityType)
       .eq('entity_id', normalizedEntityId)
-      .eq('status', 'Pending')
+      .eq('status', sourceStatus)
       .single()
 
-    if (pendingError || !pendingRecord) {
-      console.error(`[Approve] Pending record not found for ${canonicalEntityType}/${normalizedEntityId}. Error:`, pendingError)
-      return NextResponse.json({ error: `Pending record not found for ${canonicalEntityType}/${normalizedEntityId}` }, { status: 404 })
+    if (sourceError || !sourceRecord) {
+      console.error(`[Approve] ${sourceStatus} record not found for ${canonicalEntityType}/${normalizedEntityId}. Error:`, sourceError)
+      return NextResponse.json({ error: `${sourceStatus} record not found for ${canonicalEntityType}/${normalizedEntityId}` }, { status: 404 })
     }
 
-    console.log(`[Approve] Found approval record:`, pendingRecord)
+    console.log(`[Approve] Found approval record:`, sourceRecord)
 
     // Update ONLY the approval table
-    // dfi_field_staff uses verified_* columns (they are verifying), others use decided_* (they are deciding)
-    const approvalUpdateFields = isFieldStaff
+    const approvalUpdateFields = approvalTableName === 'vocational_training_approvals'
       ? {
         status: targetStatus,
-        verified_by: user.id,
-        verified_at: new Date().toISOString()
+        ...(targetStatus === 'Approved'
+          ? {
+            approved_by: user.id,
+            approved_at: new Date().toISOString()
+          }
+          : {
+            verified_by: user.id,
+            verified_at: new Date().toISOString()
+          })
       }
-      : {
-        status: targetStatus,
-        decided_by: user.id,
-        decided_at: new Date().toISOString()
-      }
+      : (isFieldStaff
+        ? {
+          status: targetStatus,
+          verified_by: user.id,
+          verified_at: new Date().toISOString()
+        }
+        : {
+          status: targetStatus,
+          decided_by: user.id,
+          decided_at: new Date().toISOString()
+        })
 
     console.log(`[Approve] Updating ${approvalTableName} for ${canonicalEntityType}/${normalizedEntityId} with status=${targetStatus}`)
     const { error: approvalUpdateError } = await supabaseAdmin
@@ -123,7 +136,7 @@ export async function POST(request: NextRequest) {
       .update(approvalUpdateFields)
       .eq('entity_type', canonicalEntityType)
       .eq('entity_id', normalizedEntityId)
-      .eq('status', 'Pending')
+      .eq('status', sourceStatus)
 
     if (approvalUpdateError) {
       console.error(`[Approve] Approval table update error for ${approvalTableName}:`, approvalUpdateError)
