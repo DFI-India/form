@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
 
     const token = authHeader.split(' ')[1]
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
-    
+
     if (authError || !user) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
@@ -43,6 +43,7 @@ export async function GET(request: NextRequest) {
     const entityType = searchParams.get('entityType') || 'child_data'
     const status = searchParams.get('status') || 'all'
     const search = searchParams.get('search') || ''
+    const searchBy = searchParams.get('searchBy') || 'name'
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '20')
     const offset = (page - 1) * limit
@@ -57,24 +58,68 @@ export async function GET(request: NextRequest) {
       .select('*', { count: 'exact' })
 
     // Apply status filter
-    if (status !== 'all') {
+    if (status === 'reviewable') {
+      query = query.in('status', ['Verified', 'Approved'])
+    } else if (status !== 'all') {
       query = query.eq('status', status)
+    }
+
+    // Apply centre filter only for DFI field staff
+    if (profile.role === 'dfi_field_staff' && profile.centre_eac_no) {
+      query = query.eq('eac_no', profile.centre_eac_no)
     }
 
     // Apply search filter
     if (search) {
-      if (entityType === 'child_data') {
-        query = query.or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%,reg_no.eq.${search},aadhar_no.eq.${search}`)
-      } else if (entityType === 'vocational_course' || entityType === 'computer_course') {
-        query = query.or(`trainee_name.ilike.%${search}%,child_name.ilike.%${search}%,reg_no.eq.${search},aadhar_no.ilike.%${search}%`)
+      if (searchBy === 'reg_no') {
+        const regNo = Number(search)
+        if (!Number.isNaN(regNo)) {
+          query = query.eq('reg_no', regNo)
+        }
       } else {
-        query = query.or(`reg_no.eq.${search}`)
-      }
-    }
+        if (entityType === 'child_data') {
+          query = query.or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%`)
+        } else if (entityType === 'vocational_course') {
+          query = query.or(`trainee_name.ilike.%${search}%`)
+        } else if (entityType === 'computer_course') {
+          query = query.or(`child_name.ilike.%${search}%`)
+        } else {
+          let childNameQuery = supabaseAdmin
+            .from('Child_Data')
+            .select('reg_no')
+            .or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%`)
 
-    // Apply centre filter for non-admin roles
-    if (profile.role !== 'admin' && profile.centre_eac_no) {
-      query = query.eq('eac_no', profile.centre_eac_no)
+          if (profile.role === 'dfi_field_staff' && profile.centre_eac_no) {
+            childNameQuery = childNameQuery.eq('eac_no', profile.centre_eac_no)
+          }
+
+          const { data: childMatches, error: childMatchesError } = await childNameQuery
+
+          if (childMatchesError) {
+            console.error('Child name search error:', childMatchesError)
+            return NextResponse.json({ error: 'Failed to search records by name' }, { status: 500 })
+          }
+
+          const matchingRegNos = (childMatches || [])
+            .map((row: any) => row.reg_no)
+            .filter((regNo: any) => regNo !== null && regNo !== undefined)
+
+          if (matchingRegNos.length === 0) {
+            return NextResponse.json({
+              success: true,
+              data: [],
+              total: 0,
+              pagination: {
+                page,
+                limit,
+                totalPages: 0
+              }
+            })
+          }
+
+          query = query.in('reg_no', matchingRegNos)
+        }
+      }
     }
 
     // Apply pagination and ordering

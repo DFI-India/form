@@ -82,11 +82,8 @@ export function Sidebar({ role }: SidebarProps) {
     ],
     dfi_staff: [
       { label: 'Dashboard', href: '/dfi-staff', icon: LayoutDashboard },
-      { label: 'Review Queue', href: '/dfi-staff/review-queue', icon: Search },
       { label: 'Approvals', href: '/dfi-staff/approvals', icon: CheckCircle },
-      { label: 'Analytics', href: '/dfi-staff/analytics', icon: TrendingUp },
-      { label: 'All Records', href: '/admin/records', icon: ClipboardList },
-      { label: 'Edit/Approve Data', href: '/dfi-staff/edit-approve-data', icon: Edit },
+      { label: 'All Records', href: '/dfi-staff/all-records', icon: ClipboardList },
       { label: 'Activity History', href: '/dfi-staff/history', icon: ScrollText },
     ],
     admin: [
