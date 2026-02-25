@@ -7,6 +7,37 @@ import { LoadingSpinner, Alert } from '../../components/UI'
 import { Navbar, Sidebar, PageContainer } from '../../components/Navbar'
 import { CheckCircle } from 'lucide-react'
 
+type ReportTab = 'child_data' | 'vocational_course'
+type ReportColumn = 'village' | 'eac_no' | 'centre_id' | 'district' | 'taluk' | 'gender' | 'caste' | 'mother_tongue' | 'class_std' | 'religion'
+
+interface ReportRow {
+  group: string
+  total_children: number
+}
+
+const REPORT_COLUMNS_BY_TAB: Record<ReportTab, { key: ReportColumn; label: string }[]> = {
+  child_data: [
+    { key: 'village', label: 'Village' },
+    { key: 'eac_no', label: 'EAC' },
+    { key: 'centre_id', label: 'Centre' },
+    { key: 'district', label: 'District' },
+    { key: 'taluk', label: 'Taluk' },
+    { key: 'gender', label: 'Gender' },
+    { key: 'caste', label: 'Caste' },
+    { key: 'mother_tongue', label: 'Mother Tongue' },
+    { key: 'class_std', label: 'Class Std' }
+  ],
+  vocational_course: [
+    { key: 'eac_no', label: 'EAC' },
+    { key: 'district', label: 'District' },
+    { key: 'taluk', label: 'Taluk' },
+    { key: 'village', label: 'Village' },
+    { key: 'religion', label: 'Religion' },
+    { key: 'caste', label: 'Caste' },
+    { key: 'mother_tongue', label: 'Mother Tongue' }
+  ]
+}
+
 interface AnalyticsData {
   summary: {
     totalPending: number
@@ -31,6 +62,27 @@ export default function AdminAnalyticsPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [sessionToken, setSessionToken] = useState<string | null>(null)
+  const [reportTab, setReportTab] = useState<ReportTab>('child_data')
+  const [reportGroupBy, setReportGroupBy] = useState<Record<ReportTab, ReportColumn | ''>>({
+    child_data: '',
+    vocational_course: ''
+  })
+  const [reportFilters, setReportFilters] = useState<Record<ReportTab, Partial<Record<ReportColumn, string>>>>({
+    child_data: {},
+    vocational_course: {}
+  })
+  const [reportOptions, setReportOptions] = useState<Record<ReportTab, Record<ReportColumn, string[]>>>({
+    child_data: {
+      village: [], eac_no: [], centre_id: [], district: [], taluk: [], gender: [], caste: [], mother_tongue: [], class_std: [], religion: []
+    },
+    vocational_course: {
+      village: [], eac_no: [], centre_id: [], district: [], taluk: [], gender: [], caste: [], mother_tongue: [], class_std: [], religion: []
+    }
+  })
+  const [reportRows, setReportRows] = useState<ReportRow[]>([])
+  const [reportLoading, setReportLoading] = useState(false)
+  const [reportOptionsLoading, setReportOptionsLoading] = useState(false)
+  const [reportError, setReportError] = useState('')
 
   useEffect(() => {
     const init = async () => {
@@ -52,10 +104,10 @@ export default function AdminAnalyticsPage() {
     setLoading(true)
     setError('')
     try {
-      const res = await fetch('/api/admin/analytics/summary', { 
-        headers: { Authorization: `Bearer ${token}` } 
+      const res = await fetch('/api/admin/analytics/summary', {
+        headers: { Authorization: `Bearer ${token}` }
       })
-      
+
       if (!res.ok) {
         const json = await res.json()
         setError(json.error || 'Failed to load analytics')
@@ -71,6 +123,96 @@ export default function AdminAnalyticsPage() {
       setLoading(false)
     }
   }
+
+  async function loadReportOptions(token: string, tab: ReportTab) {
+    setReportOptionsLoading(true)
+    setReportError('')
+    try {
+      const nextOptions: Record<ReportColumn, string[]> = {
+        village: [], eac_no: [], centre_id: [], district: [], taluk: [], gender: [], caste: [], mother_tongue: [], class_std: [], religion: []
+      }
+
+      await Promise.all(
+        REPORT_COLUMNS_BY_TAB[tab].map(async ({ key }) => {
+          const res = await fetch('/api/reports/generate', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ source: tab, groupBy: key, filters: {} })
+          })
+
+          if (!res.ok) {
+            const json = await res.json()
+            throw new Error(json.error || `Failed to load options for ${key}`)
+          }
+
+          const json = (await res.json()) as ReportRow[]
+          nextOptions[key] = json.map((row) => row.group).filter((value) => value !== 'Not Specified')
+        })
+      )
+
+      setReportOptions((prev) => ({
+        ...prev,
+        [tab]: nextOptions
+      }))
+    } catch (err: any) {
+      setReportError(err.message || 'Failed to load report options')
+    } finally {
+      setReportOptionsLoading(false)
+    }
+  }
+
+  const handleGenerateReport = async () => {
+    if (!sessionToken) return
+    const groupBy = reportGroupBy[reportTab]
+    if (!groupBy) {
+      setReportError('Please select Group By')
+      return
+    }
+
+    setReportLoading(true)
+    setReportError('')
+    try {
+      const filters = reportFilters[reportTab] || {}
+      const cleanedFilters = Object.fromEntries(
+        Object.entries(filters).filter(([_, value]) => Boolean(String(value || '').trim()))
+      )
+
+      const res = await fetch('/api/reports/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${sessionToken}`
+        },
+        body: JSON.stringify({
+          source: reportTab,
+          groupBy,
+          filters: cleanedFilters
+        })
+      })
+
+      const json = await res.json()
+      if (!res.ok) {
+        throw new Error(json.error || 'Failed to generate report')
+      }
+
+      setReportRows(json)
+    } catch (err: any) {
+      setReportError(err.message || 'Failed to generate report')
+      setReportRows([])
+    } finally {
+      setReportLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (sessionToken) {
+      setReportRows([])
+      loadReportOptions(sessionToken, reportTab)
+    }
+  }, [sessionToken, reportTab])
 
   if (authLoading) {
     return (
@@ -93,14 +235,14 @@ export default function AdminAnalyticsPage() {
 
   return (
     <main className="min-h-screen bg-slate-50">
-      <Navbar 
-        username={profile.username} 
-        role="admin" 
+      <Navbar
+        username={profile.username}
+        role="admin"
         roleLabel="Admin"
         roleColor="bg-indigo-100 text-indigo-800"
       />
       <Sidebar role="admin" />
-      
+
       <PageContainer>
         <div className="p-8">
           <div className="mx-auto max-w-7xl space-y-8">
@@ -109,6 +251,115 @@ export default function AdminAnalyticsPage() {
               <div>
                 <h1 className="text-4xl font-bold text-slate-900">Analytics & Reports</h1>
                 <p className="mt-2 text-slate-600">System-wide statistics and trends</p>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
+              <h2 className="text-xl font-bold text-slate-900 mb-6">Dynamic Reports</h2>
+
+              <div className="mb-6 border-b border-slate-200 flex gap-2">
+                <button
+                  onClick={() => setReportTab('child_data')}
+                  className={`px-4 py-2 rounded-t-lg text-sm font-medium ${reportTab === 'child_data'
+                    ? 'bg-blue-50 text-blue-700 border border-b-0 border-blue-200'
+                    : 'text-slate-600 hover:bg-slate-50'
+                    }`}
+                >
+                  Child Data
+                </button>
+                <button
+                  onClick={() => setReportTab('vocational_course')}
+                  className={`px-4 py-2 rounded-t-lg text-sm font-medium ${reportTab === 'vocational_course'
+                    ? 'bg-blue-50 text-blue-700 border border-b-0 border-blue-200'
+                    : 'text-slate-600 hover:bg-slate-50'
+                    }`}
+                >
+                  Vocational Course
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Group By *</label>
+                  <select
+                    value={reportGroupBy[reportTab]}
+                    onChange={(e) => setReportGroupBy((prev) => ({ ...prev, [reportTab]: e.target.value as ReportColumn }))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                  >
+                    <option value="">Select column</option>
+                    {REPORT_COLUMNS_BY_TAB[reportTab].map((column) => (
+                      <option key={column.key} value={column.key}>{column.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {REPORT_COLUMNS_BY_TAB[reportTab].map((column) => (
+                  <div key={`${reportTab}-${column.key}`}>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">{column.label}</label>
+                    <select
+                      value={reportFilters[reportTab]?.[column.key] || ''}
+                      onChange={(e) => setReportFilters((prev) => ({
+                        ...prev,
+                        [reportTab]: {
+                          ...prev[reportTab],
+                          [column.key]: e.target.value
+                        }
+                      }))}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                      disabled={reportOptionsLoading}
+                    >
+                      <option value="">All</option>
+                      {(reportOptions[reportTab]?.[column.key] || []).map((opt) => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mb-6">
+                <button
+                  onClick={handleGenerateReport}
+                  disabled={reportLoading || reportOptionsLoading}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {reportLoading ? 'Generating...' : 'Generate Report'}
+                </button>
+              </div>
+
+              {reportError && (
+                <div className="mb-4">
+                  <Alert type="error" message={reportError} onDismiss={() => setReportError('')} />
+                </div>
+              )}
+
+              <div className="border border-slate-200 rounded-lg overflow-hidden">
+                {reportLoading ? (
+                  <div className="p-8 text-center">
+                    <LoadingSpinner size="lg" />
+                  </div>
+                ) : reportRows.length === 0 ? (
+                  <div className="p-8 text-center text-slate-600">No data found</div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-slate-50 border-b border-slate-200">
+                        <tr>
+                          <th className="px-4 py-3 text-left font-semibold text-slate-700">Group</th>
+                          <th className="px-4 py-3 text-left font-semibold text-slate-700">Total Students</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {reportRows.map((row, index) => (
+                          <tr key={`${row.group}-${index}`} className="border-b border-slate-100">
+                            <td className="px-4 py-3 text-slate-800">{row.group === 'Not Specified' || !String(row.group || '').trim() ? '-' : row.group}</td>
+                            <td className="px-4 py-3 text-slate-800 font-medium">{row.total_children > 0 ? row.total_children : '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -123,7 +374,7 @@ export default function AdminAnalyticsPage() {
                 {/* Summary Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
-                    <p className="text-sm text-slate-600 font-medium">Total Children</p>
+                    <p className="text-sm text-slate-600 font-medium">Total Students</p>
                     <p className="text-3xl font-bold text-slate-900 mt-2">
                       {analytics.summary.totalChildren}
                     </p>
@@ -157,19 +408,19 @@ export default function AdminAnalyticsPage() {
                         const total = analytics.summary.totalChildren || 1
                         const pendingPercent = (analytics.summary.totalPending / total) * 100
                         const approvedPercent = (analytics.summary.totalApproved / total) * 100
-                        
+
                         const pendingAngle = (pendingPercent / 100) * 360
                         const approvedAngle = (approvedPercent / 100) * 360
-                        
+
                         const x1 = 100 + 80 * Math.cos(Math.PI * 2 * (0) - Math.PI / 2)
                         const y1 = 100 + 80 * Math.sin(Math.PI * 2 * (0) - Math.PI / 2)
-                        
+
                         const x2 = 100 + 80 * Math.cos(Math.PI * 2 * (pendingPercent / 100) - Math.PI / 2)
                         const y2 = 100 + 80 * Math.sin(Math.PI * 2 * (pendingPercent / 100) - Math.PI / 2)
-                        
+
                         const x3 = 100 + 80 * Math.cos(Math.PI * 2 * ((pendingPercent + approvedPercent) / 100) - Math.PI / 2)
                         const y3 = 100 + 80 * Math.sin(Math.PI * 2 * ((pendingPercent + approvedPercent) / 100) - Math.PI / 2)
-                        
+
                         const x4 = 100 + 80 * Math.cos(Math.PI * 2 * 1 - Math.PI / 2)
                         const y4 = 100 + 80 * Math.sin(Math.PI * 2 * 1 - Math.PI / 2)
 
@@ -300,65 +551,6 @@ export default function AdminAnalyticsPage() {
                   </div>
                 )}
 
-                {/* Timeline Chart */}
-                <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
-                  <h2 className="text-xl font-bold text-slate-900 mb-6">30-Day Approval Timeline</h2>
-                  <div className="h-64 flex items-end gap-1 overflow-x-auto pb-8">
-                    {analytics.timeline.map((day) => {
-                      const total = day.pending + day.approved + day.rejected || 1
-                      const maxHeight = 200
-                      const pendingHeight = (day.pending / total) * maxHeight
-                      const approvedHeight = (day.approved / total) * maxHeight
-                      const rejectedHeight = (day.rejected / total) * maxHeight
-
-                      return (
-                        <div key={day.date} className="flex flex-col items-center gap-1 min-w-max">
-                          <div className="flex flex-col h-48 gap-0 bg-slate-50 rounded">
-                            {rejectedHeight > 0 && (
-                              <div
-                                className="bg-red-400"
-                                style={{ height: `${rejectedHeight}px` }}
-                                title={`Rejected: ${day.rejected}`}
-                              ></div>
-                            )}
-                            {approvedHeight > 0 && (
-                              <div
-                                className="bg-green-400"
-                                style={{ height: `${approvedHeight}px` }}
-                                title={`Approved: ${day.approved}`}
-                              ></div>
-                            )}
-                            {pendingHeight > 0 && (
-                              <div
-                                className="bg-yellow-400"
-                                style={{ height: `${pendingHeight}px` }}
-                                title={`Pending: ${day.pending}`}
-                              ></div>
-                            )}
-                          </div>
-                          <span className="text-xs text-slate-500 mt-2 w-full text-center">
-                            {new Date(day.date).getDate()}
-                          </span>
-                        </div>
-                      )
-                    })}
-                  </div>
-                  <div className="flex justify-center gap-4 mt-4 text-sm">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-yellow-400 rounded"></div>
-                      <span>Pending</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-green-400 rounded"></div>
-                      <span>Approved</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-red-400 rounded"></div>
-                      <span>Rejected</span>
-                    </div>
-                  </div>
-                </div>
-
                 {/* Gender Distribution */}
                 {analytics.genderDistribution && Object.keys(analytics.genderDistribution).length > 0 && (
                   <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
@@ -484,8 +676,8 @@ export default function AdminAnalyticsPage() {
                           <div className="flex-1 bg-slate-200 rounded-full h-6">
                             <div
                               className="bg-slate-400 h-6 rounded-full flex items-center justify-end px-3"
-                              style={{ 
-                                width: `${Math.max((analytics.gradeDistribution['Unknown'] / Math.max(...Object.values(analytics.gradeDistribution))) * 100, 5)}%` 
+                              style={{
+                                width: `${Math.max((analytics.gradeDistribution['Unknown'] / Math.max(...Object.values(analytics.gradeDistribution))) * 100, 5)}%`
                               }}
                             >
                               <span className="text-xs font-semibold text-white">{analytics.gradeDistribution['Unknown']}</span>
@@ -503,8 +695,8 @@ export default function AdminAnalyticsPage() {
                     <div>
                       <p className="text-indigo-100 text-sm font-medium mb-2">Overall Approval Rate</p>
                       <p className="text-5xl font-bold">
-                        {analytics.summary.totalChildren > 0 
-                          ? Math.round((analytics.summary.totalApproved / analytics.summary.totalChildren) * 100) 
+                        {analytics.summary.totalChildren > 0
+                          ? Math.round((analytics.summary.totalApproved / analytics.summary.totalChildren) * 100)
                           : 0}%
                       </p>
                       <p className="text-indigo-100 text-sm mt-2">
