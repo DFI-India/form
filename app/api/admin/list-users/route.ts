@@ -37,9 +37,47 @@ export async function GET(req: Request) {
   try {
     await requireAdmin(req)
 
-    const { data, error } = await supabase.from('profiles').select('id, username, email, role')
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json({ users: data })
+    const { data: profiles, error: profileErr } = await supabase
+      .from('profiles')
+      .select('id, username, email, role, first_name, last_name, phone_no, centre_eac_no')
+
+    if (profileErr) return NextResponse.json({ error: profileErr.message }, { status: 500 })
+
+    const dfiFieldStaffIds = (profiles || [])
+      .filter((profile: any) => profile.role === 'dfi_field_staff')
+      .map((profile: any) => profile.id)
+
+    let assignedEacMap: Record<string, number[]> = {}
+
+    if (dfiFieldStaffIds.length > 0) {
+      const { data: assignments, error: assignmentErr } = await supabase
+        .from('dfi_field_staff_assigned_eacs')
+        .select('id, assigned_eac')
+        .in('id', dfiFieldStaffIds)
+
+      if (assignmentErr) return NextResponse.json({ error: assignmentErr.message }, { status: 500 })
+
+      assignedEacMap = (assignments || []).reduce((acc: Record<string, number[]>, row: any) => {
+        const userId = row.id
+        const assignedEac = Number(row.assigned_eac)
+        if (!acc[userId]) acc[userId] = []
+        if (!Number.isNaN(assignedEac)) {
+          acc[userId].push(assignedEac)
+        }
+        return acc
+      }, {})
+
+      Object.keys(assignedEacMap).forEach((userId) => {
+        assignedEacMap[userId] = assignedEacMap[userId].sort((a, b) => a - b)
+      })
+    }
+
+    const users = (profiles || []).map((profile: any) => ({
+      ...profile,
+      assigned_eacs: assignedEacMap[profile.id] || [],
+    }))
+
+    return NextResponse.json({ users })
   } catch (err: any) {
     const message = err?.message || String(err)
     if (message === 'Unauthorized' || message === 'Forbidden') {

@@ -16,6 +16,11 @@ export interface UserProfile {
   username: string
   email: string | null
   role: UserRole | null
+  first_name?: string | null
+  last_name?: string | null
+  phone_no?: string | null
+  centre_eac_no?: string | null
+  assigned_eacs?: number[]
   created_at?: string
   updated_at?: string
 }
@@ -47,11 +52,16 @@ export interface UsersListResponse {
 
 // Common form state
 export interface CreateUserForm {
+  first_name: string
+  last_name: string
+  phone_no: string
   username: string
   email: string
   password: string
   confirmPassword: string
   role: UserRole
+  centre_eac_no: string
+  assigned_eacs: string[]
 }
 
 // Delete confirmation state
