@@ -17,7 +17,7 @@ import { User, Users, Shirt, LogOut, BookOpen, Laptop, AlertCircle, History, Che
 import { ROLE_CONFIG } from '../../../lib/types'
 
 type TabType = 'child' | 'family' | 'sibling' | 'uniform' | 'leaving' | 'vocational' | 'computer' | 'rejected'
-type RejectedSubTabType = 'child' | 'family' | 'sibling' | 'uniform' | 'leaving'
+type RejectedSubTabType = 'child' | 'family' | 'sibling' | 'uniform' | 'leaving' | 'vocational' | 'computer'
 
 type CentreOption = {
   eac_no: string | number
@@ -142,6 +142,29 @@ type RejectedLeavingRecord = {
   leav_addr3: string
   leav_pincode: string
   leav_remarks: string
+  rejection_reason?: string
+  rejected_at?: string
+}
+
+type RejectedVocationalRecord = {
+  record_id: number | string
+  approval_id: number | string | null
+  eac_no: string
+  reg_no: string
+  trainee_name?: string
+  reason: string
+  rejection_reason?: string
+  rejected_at?: string
+}
+
+// computer course rejection records are very similar to vocational but
+// include the trainee/child name so it can be shown in the table.
+type RejectedComputerRecord = {
+  record_id: number
+  approval_id: string
+  eac_no: string
+  reg_no: string
+  child_name: string
   rejection_reason?: string
   rejected_at?: string
 }
@@ -621,6 +644,8 @@ export default function ChildForm() {
   const [rejectedSiblingData, setRejectedSiblingData] = useState<RejectedSiblingRecord[]>([])
   const [rejectedUniformData, setRejectedUniformData] = useState<RejectedUniformRecord[]>([])
   const [rejectedLeavingData, setRejectedLeavingData] = useState<RejectedLeavingRecord[]>([])
+  const [rejectedVocationalData, setRejectedVocationalData] = useState<RejectedVocationalRecord[]>([])
+  const [rejectedComputerData, setRejectedComputerData] = useState<RejectedComputerRecord[]>([])
   const [rejectedLoading, setRejectedLoading] = useState(false)
   const [rejectedMessage, setRejectedMessage] = useState<MessageState>(null)
 
@@ -764,6 +789,16 @@ export default function ChildForm() {
           setter = setRejectedLeavingData
           entityType = 'childleaving'
           break
+        case 'vocational':
+          viewName = 'vocational_course_rejected_for_volunteers'
+          setter = setRejectedVocationalData
+          entityType = 'vocational_course'
+          break
+        case 'computer':
+          viewName = 'computer_course_rejected_for_volunteers'
+          setter = setRejectedComputerData
+          entityType = 'computer_course'
+          break
       }
 
       const { data, error } = await supabase
@@ -773,14 +808,20 @@ export default function ChildForm() {
       if (error) throw error
 
       // Fetch approval IDs for these records
-      const recordIds = (data ?? []).map((r: any) => r.record_id)
+      // Handle both record_id (for child/family/sibling/uniform/leaving) and id (for vocational/computer)
+      const recordIds = (data ?? []).map((r: any) => r.record_id ?? r.id).filter((id: any) => id !== undefined && id !== null)
       if (recordIds.length === 0) {
         setter([])
         return
       }
 
+      // Use different approval tables based on entity type
+      const approvalTableName = ['vocational_course', 'computer_course'].includes(entityType) 
+        ? 'vocational_training_approvals' 
+        : 'child_approvals'
+
       const { data: approvals, error: approvalsError } = await supabase
-        .from('child_approvals')
+        .from(approvalTableName)
         .select('id, entity_id')
         .eq('entity_type', entityType)
         .in('entity_id', recordIds)
@@ -792,10 +833,11 @@ export default function ChildForm() {
         (approvals ?? []).map((a: any) => [a.entity_id, a.id])
       )
 
-      // Add approval_id to each record
+      // Add approval_id to each record and ensure record_id field exists
       const enrichedData = (data ?? []).map((record: any) => ({
         ...record,
-        approval_id: approvalMap.get(record.record_id)
+        record_id: record.record_id ?? record.id,
+        approval_id: approvalMap.get(record.record_id ?? record.id)
       }))
 
       setter(enrichedData as any[])
@@ -1835,6 +1877,12 @@ export default function ChildForm() {
         case 'leaving':
           tableName = 'childleaving'
           break
+        case 'vocational':
+          tableName = 'vocational_course'
+          break
+        case 'computer':
+          tableName = 'computer_course'
+          break
       }
 
       // Handle photo upload for child data
@@ -1996,13 +2044,30 @@ export default function ChildForm() {
           leav_pincode: toNullableString(updatePayload.leav_pincode),
           leav_remarks: toNullableString(updatePayload.leav_remarks),
         }
+      } else if (editModalType === 'vocational') {
+        updatePayload = {
+          eac_no: toNullableString(updatePayload.eac_no),
+          reg_no: toNullableString(updatePayload.reg_no),
+          trainee_name: toNullableString(updatePayload.trainee_name),
+          reason_for_leaving: toNullableString(updatePayload.reason),
+        }
+      } else if (editModalType === 'computer') {
+        updatePayload = {
+          eac_no: toNullableString(updatePayload.eac_no),
+          reg_no: toNullableString(updatePayload.reg_no),
+          child_name: toNullableString(updatePayload.child_name),
+        }
       }
 
       // Update base table
+      // For vocational/computer, use 'id', for others use 'record_id'
+      const idField = ['vocational', 'computer'].includes(editModalType) ? 'id' : 'record_id'
+      const idValue = editingRecord[idField] || editingRecord.record_id || editingRecord.id
+
       const { error: updateError } = await supabase
         .from(tableName)
         .update(updatePayload)
-        .eq('record_id', record_id)
+        .eq(idField, idValue)
 
       if (updateError) throw updateError
 
@@ -2011,15 +2076,28 @@ export default function ChildForm() {
       const userId = authData.user?.id
       console.log('Current user ID for approval update:', userId)
 
+      // Use correct approval table based on type
+      const approvalTableName = ['vocational', 'computer'].includes(editModalType)
+        ? 'vocational_training_approvals'
+        : 'child_approvals'
+
+      // Build update payload based on table type
+      const approvalUpdatePayload = ['vocational', 'computer'].includes(editModalType)
+        ? {
+            status: 'Pending',
+            rejection_reason: null,
+          }
+        : {
+            status: 'Pending',
+            rejection_reason: null,
+            decided_by: null,
+            decided_at: null,
+            resubmitted_at: new Date().toISOString(),
+          }
+
       const { error: approvalError } = await supabase
-        .from('child_approvals')
-        .update({
-          status: 'Pending',
-          rejection_reason: null,
-          decided_by: null,
-          decided_at: null,
-          resubmitted_at: new Date().toISOString(),
-        })
+        .from(approvalTableName)
+        .update(approvalUpdatePayload)
         .eq('id', approval_id)
 
       if (approvalError) {
@@ -2066,6 +2144,12 @@ export default function ChildForm() {
         case 'leaving':
           tableName = 'childleaving'
           break
+        case 'vocational':
+          tableName = 'vocational_course'
+          break
+        case 'computer':
+          tableName = 'computer_course'
+          break
       }
 
       // Reset approval status to Pending without updating data
@@ -2073,15 +2157,28 @@ export default function ChildForm() {
       const userId = authData.user?.id
       console.log('Current user ID for resubmit:', userId)
 
+      // Use correct approval table based on type
+      const approvalTableName = ['vocational', 'computer'].includes(type)
+        ? 'vocational_training_approvals'
+        : 'child_approvals'
+
+      // Build update payload based on table type
+      const approvalUpdatePayload = ['vocational', 'computer'].includes(type)
+        ? {
+            status: 'Pending',
+            rejection_reason: null,
+          }
+        : {
+            status: 'Pending',
+            rejection_reason: null,
+            decided_by: null,
+            decided_at: null,
+            resubmitted_at: new Date().toISOString(),
+          }
+
       const { error: approvalError } = await supabase
-        .from('child_approvals')
-        .update({
-          status: 'Pending',
-          rejection_reason: null,
-          decided_by: null,
-          decided_at: null,
-          resubmitted_at: new Date().toISOString(),
-        })
+        .from(approvalTableName)
+        .update(approvalUpdatePayload)
         .eq('id', approval_id)
 
       if (approvalError) {
@@ -3787,7 +3884,7 @@ export default function ChildForm() {
 
                   <div className="mb-6 border-b border-slate-200">
                     <div className="flex flex-wrap gap-2 sm:gap-0">
-                      {(['child', 'family', 'sibling', 'uniform', 'leaving'] as RejectedSubTabType[]).map((subTab) => (
+                      {(['child', 'family', 'sibling', 'uniform', 'leaving', 'vocational', 'computer'] as RejectedSubTabType[]).map((subTab) => (
                         <button
                           key={subTab}
                           onClick={() => setActiveRejectedSubTab(subTab)}
@@ -3801,6 +3898,8 @@ export default function ChildForm() {
                           {subTab === 'sibling' && 'Child Sibling'}
                           {subTab === 'uniform' && 'Child Uniform'}
                           {subTab === 'leaving' && 'Child Leaving'}
+                          {subTab === 'vocational' && 'Vocational'}
+                          {subTab === 'computer' && 'Computer'}
                         </button>
                       ))}
                     </div>
@@ -3836,6 +3935,17 @@ export default function ChildForm() {
                             )}
                             {activeRejectedSubTab === 'leaving' && (
                               <th className="px-4 py-2 text-left font-medium text-slate-700">Reason</th>
+                            )}
+                            {activeRejectedSubTab === 'vocational' && (
+                              <>
+                                <th className="px-4 py-2 text-left font-medium text-slate-700">Name</th>
+                                <th className="px-4 py-2 text-left font-medium text-slate-700">Reason</th>
+                              </>
+                            )}
+                            {activeRejectedSubTab === 'computer' && (
+                              <>
+                                <th className="px-4 py-2 text-left font-medium text-slate-700">Child Name</th>
+                              </>
                             )}
                             <th className="px-4 py-2 text-left font-medium text-slate-700">Rejection Reason</th>
                             <th className="px-4 py-2 text-left font-medium text-slate-700">Actions</th>
@@ -4003,6 +4113,73 @@ export default function ChildForm() {
                               </td>
                             </tr>
                           ))}
+
+                          {/* vocational rejected rows */}
+                          {activeRejectedSubTab === 'vocational' && rejectedVocationalData.length === 0 && (
+                            <tr className="border-b border-slate-200">
+                              <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
+                                No rejected vocational data found.
+                              </td>
+                            </tr>
+                          )}
+                          {activeRejectedSubTab === 'vocational' && rejectedVocationalData.map((record) => (
+                            <tr key={record.record_id} className="border-b border-slate-200 hover:bg-slate-50">
+                              <td className="px-4 py-2 text-slate-700">{record.reg_no}</td>
+                              <td className="px-4 py-2 text-slate-700">{record.trainee_name}</td>
+                              <td className="px-4 py-2 text-slate-700">{record.reason}</td>
+                              <td className="px-4 py-2 text-slate-700 text-xs">{record.rejection_reason}</td>
+                              <td className="px-4 py-2 text-slate-700">
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => openEditModal(record, 'vocational')}
+                                    className="inline-flex items-center justify-center rounded bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700 hover:bg-blue-200"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    onClick={() => handleResubmit(record, 'vocational')}
+                                    disabled={rejectedLoading}
+                                    className="inline-flex items-center justify-center rounded bg-green-100 px-3 py-1 text-xs font-medium text-green-700 hover:bg-green-200 disabled:bg-gray-100 disabled:text-gray-500"
+                                  >
+                                    Resubmit
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+
+                          {/* computer rejected rows */}
+                          {activeRejectedSubTab === 'computer' && rejectedComputerData.length === 0 && (
+                            <tr className="border-b border-slate-200">
+                              <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
+                                No rejected computer data found.
+                              </td>
+                            </tr>
+                          )}
+                          {activeRejectedSubTab === 'computer' && rejectedComputerData.map((record) => (
+                            <tr key={record.record_id} className="border-b border-slate-200 hover:bg-slate-50">
+                              <td className="px-4 py-2 text-slate-700">{record.reg_no}</td>
+                              <td className="px-4 py-2 text-slate-700">{record.child_name}</td>
+                              <td className="px-4 py-2 text-slate-700 text-xs">{record.rejection_reason}</td>
+                              <td className="px-4 py-2 text-slate-700">
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => openEditModal(record, 'computer')}
+                                    className="inline-flex items-center justify-center rounded bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700 hover:bg-blue-200"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    onClick={() => handleResubmit(record, 'computer')}
+                                    disabled={rejectedLoading}
+                                    className="inline-flex items-center justify-center rounded bg-green-100 px-3 py-1 text-xs font-medium text-green-700 hover:bg-green-200 disabled:bg-gray-100 disabled:text-gray-500"
+                                  >
+                                    Resubmit
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
                         </tbody>
                       </table>
                     </div>
@@ -4073,6 +4250,8 @@ function EditModal({
             {modalType === 'sibling' && 'Sibling Data'}
             {modalType === 'uniform' && 'Uniform Data'}
             {modalType === 'leaving' && 'Leaving Data'}
+            {modalType === 'vocational' && 'Vocational Data'}
+            {modalType === 'computer' && 'Computer Data'}
           </h2>
           <button
             onClick={onClose}
@@ -4450,6 +4629,66 @@ function EditModal({
                   className={baseInputClass}
                 />
               </div>
+            </>
+          )}
+
+          {modalType === 'vocational' && (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <TextInput
+                  label="EAC No"
+                  name="eac_no"
+                  value={formData.eac_no}
+                  onChange={onFormChange}
+                />
+                <TextInput
+                  label="Registration No"
+                  name="reg_no"
+                  value={formData.reg_no}
+                  onChange={onFormChange}
+                />
+              </div>
+              <TextInput
+                label="Trainee Name"
+                name="trainee_name"
+                value={formData.trainee_name}
+                onChange={onFormChange}
+              />
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Reason</label>
+                <textarea
+                  name="reason"
+                  value={formData.reason}
+                  onChange={onFormChange}
+                  rows={2}
+                  className={baseInputClass}
+                />
+              </div>
+            </>
+          )}
+
+          {modalType === 'computer' && (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <TextInput
+                  label="EAC No"
+                  name="eac_no"
+                  value={formData.eac_no}
+                  onChange={onFormChange}
+                />
+                <TextInput
+                  label="Registration No"
+                  name="reg_no"
+                  value={formData.reg_no}
+                  onChange={onFormChange}
+                />
+              </div>
+              <TextInput
+                label="Child Name"
+                name="child_name"
+                value={formData.child_name}
+                onChange={onFormChange}
+              />
             </>
           )}
         </div>
