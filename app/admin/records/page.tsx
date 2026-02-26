@@ -91,6 +91,8 @@ export default function AdminRecordsPage() {
     isOpen: false,
     url: ''
   })
+  const [deletingRecord, setDeletingRecord] = useState<DataRecord | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const getEntityIdentity = (record: DataRecord) => {
     const keys = ENTITY_ID_CANDIDATES[activeTab]
@@ -276,6 +278,44 @@ export default function AdminRecordsPage() {
     }
   }
 
+  const handleDelete = async () => {
+    if (!sessionToken || !deletingRecord) return
+
+    const identity = getEntityIdentity(deletingRecord)
+    if (!identity) {
+      setError('Unable to determine record identity for delete')
+      return
+    }
+
+    setDeleting(true)
+    setError('')
+    try {
+      const res = await fetch('/api/admin/records/delete', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${sessionToken}`,
+        },
+        body: JSON.stringify({
+          entityType: activeTab,
+          entityId: identity.value,
+          entityKey: identity.key,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error)
+
+      setSuccess('Record deleted successfully!')
+      setDeletingRecord(null)
+      setTimeout(() => setSuccess(''), 3000)
+      await fetchRecords(sessionToken)
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -438,12 +478,20 @@ export default function AdminRecordsPage() {
                       {records.map((record) => (
                         <tr key={String(getEntityIdentity(record)?.value ?? record.record_id)} className="hover:bg-slate-50">
                           <td className="px-4 py-3 text-left">
-                            <button
-                              onClick={() => handleEdit(record)}
-                              className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                            >
-                              ✏️ Edit
-                            </button>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleEdit(record)}
+                                className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                              >
+                                ✏️ Edit
+                              </button>
+                              <button
+                                onClick={() => setDeletingRecord(record)}
+                                className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded transition-colors"
+                              >
+                                🗑️ Delete
+                              </button>
+                            </div>
                           </td>
                           {visibleColumns.map((field: string) => (
                             <td key={`${String(getEntityIdentity(record)?.value ?? record.record_id)}-${field}`} className="px-4 py-3 text-sm text-slate-600 whitespace-nowrap align-top">
@@ -600,6 +648,33 @@ export default function AdminRecordsPage() {
                 alt="Record photo"
                 className="max-h-[70vh] w-auto rounded-lg border border-slate-200 bg-white"
               />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deletingRecord && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+            <h3 className="text-xl font-bold text-slate-900 mb-3">Delete Record</h3>
+            <p className="text-slate-600 mb-5">
+              Are you sure you want to delete record <span className="font-semibold">#{String(getEntityIdentity(deletingRecord)?.value ?? '-')}</span> from {ENTITY_LABELS[activeTab]}?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeletingRecord(null)}
+                disabled={deleting}
+                className="flex-1 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                {deleting ? 'Deleting...' : 'Delete'}
+              </button>
             </div>
           </div>
         </div>

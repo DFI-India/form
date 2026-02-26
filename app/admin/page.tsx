@@ -374,12 +374,12 @@ export default function AdminPage() {
             {/* Quick Actions */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <a
-                href="/admin/approvals"
+                href="/admin/center-management"
                 className="bg-white rounded-lg border border-slate-200 p-6 hover:border-blue-400 hover:shadow-md transition-all group"
               >
                 <CheckCircle className="w-8 h-8 mb-2 text-slate-700 group-hover:text-blue-600" />
-                <h3 className="font-semibold text-slate-900 group-hover:text-blue-600">Approvals Queue</h3>
-                <p className="text-sm text-slate-600 mt-1">Review pending submissions</p>
+                <h3 className="font-semibold text-slate-900 group-hover:text-blue-600">Centre Management</h3>
+                <p className="text-sm text-slate-600 mt-1">Manage Centre Data</p>
               </a>
               <a
                 href="/admin/records"
@@ -743,60 +743,6 @@ export default function AdminPage() {
               {/* Footer */}
               <div className="flex items-center justify-between border-t border-slate-200 px-6 py-4 bg-slate-50 text-sm text-slate-600">
                 <span>Showing {filteredUsers.length} of {users.length} users</span>
-              </div>
-            </div>
-
-            {/* Centre Management Section */}
-            <div className="rounded-lg bg-white border border-slate-200 shadow-sm">
-              {/* Header */}
-              <div className="border-b border-slate-200 p-6 bg-slate-50">
-                <h2 className="text-2xl font-bold text-slate-900">Centre Management</h2>
-                <p className="text-slate-600 mt-1">Manage data collection centres and their details.</p>
-              </div>
-
-              {/* Centres Table */}
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-slate-200 bg-slate-50">
-                      <th className="px-6 py-3 text-left font-semibold text-slate-900">EAC No</th>
-                      <th className="px-6 py-3 text-left font-semibold text-slate-900">Village Name</th>
-                      <th className="px-6 py-3 text-left font-semibold text-slate-900">Centre ID</th>
-                      <th className="px-6 py-3 text-left font-semibold text-slate-900">District</th>
-                      <th className="px-6 py-3 text-left font-semibold text-slate-900">Taluk</th>
-                      <th className="px-6 py-3 text-left font-semibold text-slate-900">Panchayat</th>
-                      <th className="px-6 py-3 text-left font-semibold text-slate-900">Village</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {centres.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="px-6 py-12 text-center text-slate-500">
-                          No centres found
-                        </td>
-                      </tr>
-                    ) : (
-                      centres.map((centre) => (
-                        <tr key={centre.id} className="border-b border-slate-200 hover:bg-slate-50 transition-colors">
-                          <td className="px-6 py-4">
-                            <span className="font-medium text-slate-900">{centre.eac_no}</span>
-                          </td>
-                          <td className="px-6 py-4 text-slate-700">{centre.village_name}</td>
-                          <td className="px-6 py-4 text-slate-700">{centre.centre_id}</td>
-                          <td className="px-6 py-4 text-slate-700">{centre.district}</td>
-                          <td className="px-6 py-4 text-slate-700">{centre.taluk}</td>
-                          <td className="px-6 py-4 text-slate-700">{centre.panchayat}</td>
-                          <td className="px-6 py-4 text-slate-700">{centre.village}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Footer */}
-              <div className="flex items-center justify-between border-t border-slate-200 px-6 py-4 bg-slate-50 text-sm text-slate-600">
-                <span>Showing {centres.length} centre{centres.length !== 1 ? 's' : ''}</span>
               </div>
             </div>
 
