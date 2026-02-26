@@ -88,7 +88,7 @@ export function Sidebar({ role }: SidebarProps) {
     ],
     admin: [
       { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
-      { label: 'Approvals Queue', href: '/admin/approvals', icon: CheckCircle },
+      { label: 'Centre Management', href: '/admin/center-management', icon: CheckCircle },
       { label: 'All Records', href: '/admin/records', icon: ClipboardList },
       { label: 'Analytics', href: '/admin/analytics', icon: TrendingUp },
       { label: 'Reports & Export', href: '/tech-support/reports', icon: Download },

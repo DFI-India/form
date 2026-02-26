@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useRequireRole } from '../../../lib/hooks'
 import { supabase } from '../../../lib/supabase'
@@ -9,7 +9,8 @@ import { Navbar, Sidebar, PageContainer } from '../../components/Navbar'
 import { ROLE_CONFIG } from '../../../lib/types'
 
 type EntityType = 'child_data' | 'childfmly' | 'childsibling' | 'childuniform' | 'childleaving' | 'vocational_course' | 'computer_course'
-type StatusFilter = 'all' | 'Pending' | 'Approved' | 'Rejected'
+type StatusFilter = 'all' | 'Pending' | 'Verified' | 'Approved' | 'Rejected'
+type SearchBy = 'name' | 'reg_no'
 
 interface DataRecord {
   record_id: number
@@ -38,15 +39,31 @@ const ENTITY_LABELS: { [key in EntityType]: string } = {
   computer_course: 'Computer'
 }
 
-// Fields to display for each entity type
-const DISPLAY_FIELDS: { [key in EntityType]: string[] } = {
-  child_data: ['first_name', 'last_name', 'gender', 'aadhar_no', 'school_name', 'class_std'],
-  childfmly: ['f_name', 'f_occup', 'f_mobile', 'm_name', 'm_occup', 'm_mobile'],
-  childsibling: ['names_1', 'ages_1', 'genders_1', 'names_2', 'ages_2', 'genders_2'],
-  childuniform: ['shirtsize', 'knickersize', 'pant_skirtsize', 'footwearsize'],
-  childleaving: ['reason', 'leav_class', 'leav_date', 'leav_addr1'],
-  vocational_course: ['trainee_name', 'enrolled_course', 'batch_no', 'district'],
-  computer_course: ['child_name', 'course_name', 'batch_no', 'school_name']
+const NON_EDITABLE_FIELDS = new Set([
+  'id',
+  'record_id',
+  'vocational_id',
+  'computer_id',
+  'submitted_by',
+  'verified_by',
+  'verified_at',
+  'approved_by',
+  'approved_at',
+  'created_at',
+  'updated_at',
+  'status',
+  'submitter',
+  'approver'
+])
+
+const ENTITY_ID_CANDIDATES: Record<EntityType, string[]> = {
+  child_data: ['record_id', 'id'],
+  childfmly: ['record_id', 'id'],
+  childsibling: ['record_id', 'id'],
+  childuniform: ['record_id', 'id'],
+  childleaving: ['record_id', 'id'],
+  vocational_course: ['record_id', 'vocational_id', 'id'],
+  computer_course: ['record_id', 'computer_id', 'id']
 }
 
 export default function AdminRecordsPage() {
@@ -55,6 +72,7 @@ export default function AdminRecordsPage() {
 
   const [activeTab, setActiveTab] = useState<EntityType>('child_data')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [searchBy, setSearchBy] = useState<SearchBy>('name')
   const [searchQuery, setSearchQuery] = useState('')
   const [records, setRecords] = useState<DataRecord[]>([])
   const [totalRecords, setTotalRecords] = useState(0)
@@ -68,6 +86,34 @@ export default function AdminRecordsPage() {
   const [editingRecord, setEditingRecord] = useState<DataRecord | null>(null)
   const [editFormData, setEditFormData] = useState<{ [key: string]: any }>({})
   const [saving, setSaving] = useState(false)
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [photoPreviewModal, setPhotoPreviewModal] = useState<{ isOpen: boolean; url: string }>({
+    isOpen: false,
+    url: ''
+  })
+  const [deletingRecord, setDeletingRecord] = useState<DataRecord | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
+  const getEntityIdentity = (record: DataRecord) => {
+    const keys = ENTITY_ID_CANDIDATES[activeTab]
+    for (const key of keys) {
+      const value = record[key]
+      if (value !== null && value !== undefined && String(value).trim() !== '') {
+        return { key, value }
+      }
+    }
+    return null
+  }
+
+  const visibleColumns = useMemo(() => {
+    if (records.length === 0) return []
+    const allColumns = Array.from(new Set(records.flatMap((record) => Object.keys(record))))
+    return allColumns.filter((column) => {
+      if (['submitter', 'approver'].includes(column)) return false
+      if ((activeTab === 'vocational_course' || activeTab === 'computer_course') && column === 'record_id') return false
+      return true
+    })
+  }, [records])
 
   useEffect(() => {
     const init = async () => {
@@ -97,6 +143,7 @@ export default function AdminRecordsPage() {
         entityType: activeTab,
         status: statusFilter,
         search: searchQuery,
+        searchBy,
         page: String(page),
         limit: '20'
       })
@@ -122,19 +169,86 @@ export default function AdminRecordsPage() {
     }
   }
 
+  const handleRefreshFilters = () => {
+    setSearchQuery('')
+    setSearchBy('name')
+    setStatusFilter('all')
+    setPage(1)
+    if (sessionToken) {
+      const params = new URLSearchParams({
+        entityType: activeTab,
+        status: 'all',
+        search: '',
+        searchBy: 'name',
+        page: '1',
+        limit: '20'
+      })
+      fetch(`/api/admin/records/list?${params}`, {
+        headers: { Authorization: `Bearer ${sessionToken}` }
+      })
+        .then((res) => res.json())
+        .then((json) => {
+          if (!json?.error) {
+            setRecords(json.data || [])
+            setTotalRecords(json.total || 0)
+          }
+        })
+        .catch(() => {
+          // no-op: existing error state handled by normal fetch flow
+        })
+    }
+  }
+
   const handleEdit = (record: DataRecord) => {
     setEditingRecord(record)
     // Create a copy for editing, excluding meta fields
     const editableFields: { [key: string]: any } = { ...record }
-    delete editableFields['submitter']
-    delete editableFields['approver']
-    delete editableFields['created_at']
-    delete editableFields['verified_at']
+    Array.from(NON_EDITABLE_FIELDS).forEach((field) => {
+      delete editableFields[field]
+    })
     setEditFormData(editableFields)
+  }
+
+  const handlePhotoUpload = async (file: File) => {
+    if (!file) return
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image must be 5MB or smaller')
+      return
+    }
+
+    setUploadingPhoto(true)
+    setError('')
+
+    try {
+      const safeName = file.name.replace(/\s+/g, '-')
+      const fileName = `${Date.now()}-${safeName}`
+      const filePath = `admin_records_photos/${fileName}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('profiles')
+        .upload(filePath, file)
+
+      if (uploadError) throw uploadError
+
+      const { data } = supabase.storage.from('profiles').getPublicUrl(filePath)
+      setEditFormData((prev) => ({
+        ...prev,
+        photo_link: data.publicUrl
+      }))
+    } catch (err: any) {
+      setError(err.message || 'Failed to upload photo')
+    } finally {
+      setUploadingPhoto(false)
+    }
   }
 
   const handleSaveEdit = async () => {
     if (!sessionToken || !editingRecord) return
+    const identity = getEntityIdentity(editingRecord)
+    if (!identity) {
+      setError('Unable to determine record identity for update')
+      return
+    }
     setSaving(true)
     setError('')
     try {
@@ -146,7 +260,8 @@ export default function AdminRecordsPage() {
         },
         body: JSON.stringify({
           entityType: activeTab,
-          entityId: editingRecord.record_id,
+          entityId: identity.value,
+          entityKey: identity.key,
           updates: editFormData
         })
       })
@@ -163,22 +278,42 @@ export default function AdminRecordsPage() {
     }
   }
 
-  const getRecordName = (record: DataRecord): string => {
-    if (record.first_name && record.last_name) {
-      return `${record.first_name} ${record.last_name}`
-    }
-    if (record.trainee_name) return record.trainee_name
-    if (record.child_name) return record.child_name
-    if (record.f_name) return `Father: ${record.f_name}`
-    return `Record #${record.record_id}`
-  }
+  const handleDelete = async () => {
+    if (!sessionToken || !deletingRecord) return
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    })
+    const identity = getEntityIdentity(deletingRecord)
+    if (!identity) {
+      setError('Unable to determine record identity for delete')
+      return
+    }
+
+    setDeleting(true)
+    setError('')
+    try {
+      const res = await fetch('/api/admin/records/delete', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${sessionToken}`,
+        },
+        body: JSON.stringify({
+          entityType: activeTab,
+          entityId: identity.value,
+          entityKey: identity.key,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error)
+
+      setSuccess('Record deleted successfully!')
+      setDeletingRecord(null)
+      setTimeout(() => setSuccess(''), 3000)
+      await fetchRecords(sessionToken)
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setDeleting(false)
+    }
   }
 
   if (authLoading) {
@@ -235,30 +370,60 @@ export default function AdminRecordsPage() {
 
           {/* Search & Filters */}
           <div className="bg-white rounded-lg border border-slate-200 p-4 mb-6">
-            <form onSubmit={handleSearch} className="flex flex-wrap items-center gap-4">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by Reg No, Name, Aadhar..."
-                className="flex-1 min-w-[200px] px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-                className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="all">All Status</option>
-                <option value="Pending">Pending</option>
-                <option value="Approved">Approved</option>
-                <option value="Rejected">Rejected</option>
-              </select>
-              <button
-                type="submit"
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                🔍 Search
-              </button>
+            <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-slate-700 mb-1">Search</label>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={searchBy === 'reg_no' ? 'Search by Reg No' : 'Search by Name'}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Search By</label>
+                <select
+                  value={searchBy}
+                  onChange={(e) => setSearchBy(e.target.value as SearchBy)}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="name">Name</option>
+                  <option value="reg_no">Reg No</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Status Filter</label>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="all">All Status</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Verified">Verified</option>
+                  <option value="Approved">Approved</option>
+                  <option value="Rejected">Rejected</option>
+                </select>
+              </div>
+
+              <div className="md:col-span-4 flex gap-3">
+                <button
+                  type="submit"
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  🔍 Search
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRefreshFilters}
+                  className="px-6 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
+                >
+                  ↻ Refresh
+                </button>
+              </div>
             </form>
           </div>
 
@@ -273,8 +438,8 @@ export default function AdminRecordsPage() {
                     setPage(1)
                   }}
                   className={`flex-1 min-w-[100px] px-4 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === type
-                      ? 'border-blue-600 text-blue-600 bg-blue-50'
-                      : 'border-transparent text-slate-600 hover:bg-slate-50'
+                    ? 'border-blue-600 text-blue-600 bg-blue-50'
+                    : 'border-transparent text-slate-600 hover:bg-slate-50'
                     }`}
                 >
                   {ENTITY_LABELS[type]}
@@ -301,47 +466,57 @@ export default function AdminRecordsPage() {
                   <table className="w-full">
                     <thead className="bg-slate-50 border-b border-slate-200">
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">ID</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Name</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">EAC</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Reg No</th>
-                        {DISPLAY_FIELDS[activeTab].slice(0, 3).map((field: string) => (
-                          <th key={field} className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap">Actions</th>
+                        {visibleColumns.map((field: string) => (
+                          <th key={field} className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap">
                             {field.replace(/_/g, ' ')}
                           </th>
                         ))}
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Status</th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200">
                       {records.map((record) => (
-                        <tr key={record.record_id} className="hover:bg-slate-50">
-                          <td className="px-4 py-3 text-sm text-slate-900 font-mono">#{record.record_id}</td>
-                          <td className="px-4 py-3 text-sm text-slate-900 font-medium">{getRecordName(record)}</td>
-                          <td className="px-4 py-3 text-sm text-slate-600">{record.eac_no || '-'}</td>
-                          <td className="px-4 py-3 text-sm text-slate-600">{record.reg_no || '-'}</td>
-                          {DISPLAY_FIELDS[activeTab].slice(0, 3).map((field: string) => (
-                            <td key={field} className="px-4 py-3 text-sm text-slate-600">
-                              {record[field] || '-'}
+                        <tr key={String(getEntityIdentity(record)?.value ?? record.record_id)} className="hover:bg-slate-50">
+                          <td className="px-4 py-3 text-left">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleEdit(record)}
+                                className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                              >
+                                ✏️ Edit
+                              </button>
+                              <button
+                                onClick={() => setDeletingRecord(record)}
+                                className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded transition-colors"
+                              >
+                                🗑️ Delete
+                              </button>
+                            </div>
+                          </td>
+                          {visibleColumns.map((field: string) => (
+                            <td key={`${String(getEntityIdentity(record)?.value ?? record.record_id)}-${field}`} className="px-4 py-3 text-sm text-slate-600 whitespace-nowrap align-top">
+                              {field === 'photo_link' ? (
+                                record[field] ? (
+                                  <button
+                                    onClick={() => setPhotoPreviewModal({ isOpen: true, url: String(record[field]) })}
+                                    className="px-2.5 py-1.5 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 text-xs font-medium"
+                                  >
+                                    View Photo
+                                  </button>
+                                ) : '-'
+                              ) : field === 'status' ? (
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${record.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+                                  record.status === 'Approved' ? 'bg-green-100 text-green-800' :
+                                    record.status === 'Verified' ? 'bg-blue-100 text-blue-800' :
+                                      'bg-red-100 text-red-800'
+                                  }`}>
+                                  {String(record[field] ?? '-')}
+                                </span>
+                              ) : (
+                                String(record[field] ?? '-')
+                              )}
                             </td>
                           ))}
-                          <td className="px-4 py-3">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${record.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
-                                record.status === 'Approved' ? 'bg-green-100 text-green-800' :
-                                  'bg-red-100 text-red-800'
-                              }`}>
-                              {record.status}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            <button
-                              onClick={() => handleEdit(record)}
-                              className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                            >
-                              ✏️ Edit
-                            </button>
-                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -385,7 +560,7 @@ export default function AdminRecordsPage() {
           <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full my-8 max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
               <h3 className="text-xl font-bold text-slate-900">
-                Edit {ENTITY_LABELS[activeTab]} - #{editingRecord.record_id}
+                Edit {ENTITY_LABELS[activeTab]} - #{String(getEntityIdentity(editingRecord)?.value ?? '-')}
               </h3>
               <button
                 onClick={() => setEditingRecord(null)}
@@ -397,8 +572,7 @@ export default function AdminRecordsPage() {
             <div className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {Object.entries(editFormData).map(([key, value]: [string, unknown]) => {
-                  // Skip non-editable fields
-                  if (['record_id', 'id', 'submitted_by', 'verified_by', 'status'].includes(key)) {
+                  if (NON_EDITABLE_FIELDS.has(key)) {
                     return null
                   }
                   return (
@@ -406,12 +580,32 @@ export default function AdminRecordsPage() {
                       <label className="block text-sm font-medium text-slate-700 mb-1">
                         {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                       </label>
-                      <input
-                        type={key.includes('date') ? 'date' : 'text'}
-                        value={String(value ?? '')}
-                        onChange={(e) => setEditFormData(prev => ({ ...prev, [key]: e.target.value }))}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                      />
+                      {key === 'photo_link' ? (
+                        <div className="space-y-2">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0]
+                              if (file) handlePhotoUpload(file)
+                            }}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                          />
+                          {uploadingPhoto && <p className="text-xs text-slate-500">Uploading image...</p>}
+                          {value ? (
+                            <a href={String(value)} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline break-all">
+                              {String(value)}
+                            </a>
+                          ) : null}
+                        </div>
+                      ) : (
+                        <input
+                          type={key.includes('date') ? 'date' : 'text'}
+                          value={String(value ?? '')}
+                          onChange={(e) => setEditFormData(prev => ({ ...prev, [key]: e.target.value }))}
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                        />
+                      )}
                     </div>
                   )
                 })}
@@ -425,12 +619,62 @@ export default function AdminRecordsPage() {
                 </button>
                 <button
                   onClick={handleSaveEdit}
-                  disabled={saving}
+                  disabled={saving || uploadingPhoto}
                   className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
                 >
-                  {saving ? 'Saving...' : '💾 Save Changes'}
+                  {uploadingPhoto ? 'Uploading Photo...' : saving ? 'Saving...' : '💾 Save Changes'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {photoPreviewModal.isOpen && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-slate-900">Photo Preview</h3>
+              <button
+                onClick={() => setPhotoPreviewModal({ isOpen: false, url: '' })}
+                className="text-slate-600 hover:text-slate-900"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-4 flex justify-center bg-slate-50">
+              <img
+                src={photoPreviewModal.url}
+                alt="Record photo"
+                className="max-h-[70vh] w-auto rounded-lg border border-slate-200 bg-white"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deletingRecord && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+            <h3 className="text-xl font-bold text-slate-900 mb-3">Delete Record</h3>
+            <p className="text-slate-600 mb-5">
+              Are you sure you want to delete record <span className="font-semibold">#{String(getEntityIdentity(deletingRecord)?.value ?? '-')}</span> from {ENTITY_LABELS[activeTab]}?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeletingRecord(null)}
+                disabled={deleting}
+                className="flex-1 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                {deleting ? 'Deleting...' : 'Delete'}
+              </button>
             </div>
           </div>
         </div>
