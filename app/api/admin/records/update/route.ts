@@ -22,7 +22,7 @@ export async function PUT(request: NextRequest) {
 
     const token = authHeader.split(' ')[1]
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
-    
+
     if (authError || !user) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
@@ -39,9 +39,9 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { entityType, entityId, updates } = body
+    const { entityType, entityId, entityKey, updates } = body
 
-    if (!entityType || !entityId || !updates) {
+    if (!entityType || entityId === null || entityId === undefined || !updates) {
       return NextResponse.json({ error: 'entityType, entityId, and updates are required' }, { status: 400 })
     }
 
@@ -49,14 +49,42 @@ export async function PUT(request: NextRequest) {
     let tableName = entityType
     if (entityType === 'child_data') tableName = 'Child_Data'
 
-    // Get current record for change tracking
-    const { data: currentRecord, error: fetchError } = await supabaseAdmin
-      .from(tableName)
-      .select('*')
-      .eq('record_id', entityId)
-      .single()
+    const primaryKeyCandidatesByEntity: Record<string, string[]> = {
+      child_data: ['record_id', 'id'],
+      childfmly: ['record_id', 'id'],
+      childsibling: ['record_id', 'id'],
+      childuniform: ['record_id', 'id'],
+      childleaving: ['record_id', 'id'],
+      vocational_course: ['record_id', 'vocational_id', 'id'],
+      computer_course: ['record_id', 'computer_id', 'id']
+    }
 
-    if (fetchError || !currentRecord) {
+    const candidates = [
+      ...(entityKey ? [String(entityKey)] : []),
+      ...(primaryKeyCandidatesByEntity[entityType] || ['record_id', 'id'])
+    ]
+
+    const uniqueCandidates = Array.from(new Set(candidates))
+
+    let currentRecord: any = null
+    let resolvedPrimaryKey: string | null = null
+
+    for (const key of uniqueCandidates) {
+      const { data, error } = await supabaseAdmin
+        .from(tableName)
+        .select('*')
+        .eq(key, entityId)
+        .maybeSingle()
+
+      if (!error && data) {
+        currentRecord = data
+        resolvedPrimaryKey = key
+        break
+      }
+    }
+
+    // Get current record for change tracking
+    if (!currentRecord || !resolvedPrimaryKey) {
       return NextResponse.json({ error: 'Record not found' }, { status: 404 })
     }
 
@@ -84,7 +112,7 @@ export async function PUT(request: NextRequest) {
     const { data: updatedRecord, error: updateError } = await supabaseAdmin
       .from(tableName)
       .update(updates)
-      .eq('record_id', entityId)
+      .eq(resolvedPrimaryKey, entityId)
       .select()
       .single()
 
@@ -100,12 +128,13 @@ export async function PUT(request: NextRequest) {
         user_id: user.id,
         action_type: 'edit',
         entity_type: entityType,
-        entity_id: String(entityId),
+        entity_id: String(currentRecord[resolvedPrimaryKey] ?? entityId),
         changes,
         metadata: {
           edited_by_username: profile.username,
           edited_by_role: profile.role,
-          fields_changed: Object.keys(changes)
+          fields_changed: Object.keys(changes),
+          primary_key: resolvedPrimaryKey
         }
       })
 

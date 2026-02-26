@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
 
     const token = authHeader.split(' ')[1]
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
-    
+
     if (authError || !user) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
     const results: Record<string, any[]> = {}
     const counts: Record<string, number> = {}
 
-    const entityTypes = entityType === 'all' 
+    const entityTypes = entityType === 'all'
       ? ['child_data', 'childfmly', 'childsibling', 'childuniform', 'childleaving', 'vocational_course', 'computer_course']
       : [entityType]
 
@@ -64,8 +64,8 @@ export async function GET(request: NextRequest) {
         .select('*', { count: 'exact', head: true })
         .eq('status', status)
 
-      // Filter by centre for non-admin roles
-      if (profile.role !== 'admin' && profile.centre_eac_no) {
+      // Filter by centre only for DFI field staff
+      if (profile.role === 'dfi_field_staff' && profile.centre_eac_no) {
         countQuery = countQuery.eq('eac_no', profile.centre_eac_no)
       }
 
@@ -80,8 +80,8 @@ export async function GET(request: NextRequest) {
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1)
 
-      // Filter by centre for non-admin roles
-      if (profile.role !== 'admin' && profile.centre_eac_no) {
+      // Filter by centre only for DFI field staff
+      if (profile.role === 'dfi_field_staff' && profile.centre_eac_no) {
         dataQuery = dataQuery.eq('eac_no', profile.centre_eac_no)
       }
 

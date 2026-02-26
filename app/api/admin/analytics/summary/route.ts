@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
 
     const token = authHeader.split(' ')[1]
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
-    
+
     if (authError || !user) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
@@ -41,6 +41,10 @@ export async function GET(request: NextRequest) {
     // Build filters for non-admin users
     const isAdmin = profile.role === 'admin'
     const centreFilter = !isAdmin && profile.centre_eac_no ? { eac_no: profile.centre_eac_no } : {}
+
+    const { count: totalEacs } = await supabaseAdmin
+      .from('centre_data')
+      .select('*', { count: 'exact', head: true })
 
     // Get total children counts by status
     const [pendingRes, approvedRes, rejectedRes] = await Promise.all([
@@ -99,6 +103,15 @@ export async function GET(request: NextRequest) {
     const { data: vocationalData } = await supabaseAdmin
       .from('vocational_course')
       .select('course_name, status')
+
+    const { count: totalVocationalStudents } = await supabaseAdmin
+      .from('vocational_course')
+      .select('*', { count: 'exact', head: true })
+
+    const { count: totalApprovedVocationalStudents } = await supabaseAdmin
+      .from('vocational_course')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'Approved')
 
     const { data: computerData } = await supabaseAdmin
       .from('computer_course')
@@ -175,6 +188,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       summary: {
+        totalEacs: totalEacs || 0,
+        totalVocationalStudents: totalVocationalStudents || 0,
+        totalApprovedVocationalStudents: totalApprovedVocationalStudents || 0,
+        totalApprovedChildren: approvedRes.count || 0,
         totalPending: pendingRes.count || 0,
         totalApproved: approvedRes.count || 0,
         totalRejected: rejectedRes.count || 0,
