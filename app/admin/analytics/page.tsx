@@ -207,6 +207,43 @@ export default function AdminAnalyticsPage() {
     }
   }
 
+  const handleExportCsv = () => {
+    if (reportRows.length === 0) {
+      setReportError('No report data to export')
+      return
+    }
+
+    const escapeCsv = (value: string | number) => {
+      const str = String(value ?? '')
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`
+      }
+      return str
+    }
+
+    const headers = ['Group', 'Total Students']
+    const rows = reportRows.map((row) => [
+      row.group === 'Not Specified' || !String(row.group || '').trim() ? '-' : row.group,
+      row.total_children,
+    ])
+
+    const csv = [
+      headers.join(','),
+      ...rows.map((row) => row.map((cell) => escapeCsv(cell)).join(',')),
+    ].join('\n')
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    const groupBy = reportGroupBy[reportTab] || 'group'
+    link.href = url
+    link.download = `${reportTab}_${groupBy}_report.csv`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
   useEffect(() => {
     if (sessionToken) {
       setReportRows([])
@@ -318,13 +355,22 @@ export default function AdminAnalyticsPage() {
               </div>
 
               <div className="mb-6">
-                <button
-                  onClick={handleGenerateReport}
-                  disabled={reportLoading || reportOptionsLoading}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {reportLoading ? 'Generating...' : 'Generate Report'}
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={handleGenerateReport}
+                    disabled={reportLoading || reportOptionsLoading}
+                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {reportLoading ? 'Generating...' : 'Generate Report'}
+                  </button>
+                  <button
+                    onClick={handleExportCsv}
+                    disabled={reportLoading || reportRows.length === 0}
+                    className="px-6 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Export as CSV
+                  </button>
+                </div>
               </div>
 
               {reportError && (
