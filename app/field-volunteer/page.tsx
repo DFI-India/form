@@ -1,13 +1,49 @@
 'use client'
 
+import Link from 'next/link'
+import { useEffect, useState } from 'react'
 import { useRequireRole } from '../../lib/hooks'
 import { LoadingSpinner } from '../components/UI'
 import { Navbar, Sidebar, PageContainer } from '../components/Navbar'
-import { ROLE_CONFIG, getRoleCapabilities } from '../../lib/types'
+import { ROLE_CONFIG } from '../../lib/types'
+import { supabase } from '../../lib/supabase'
 import { ClipboardList, FileEdit } from 'lucide-react'
 
 export default function FieldVolunteerPage() {
   const { profile, loading, isAuthorized } = useRequireRole(['field_volunteer'])
+  const [statsLoading, setStatsLoading] = useState(true)
+  const [childrenEnrolled, setChildrenEnrolled] = useState(0)
+  const [girlsCount, setGirlsCount] = useState(0)
+  const [boysCount, setBoysCount] = useState(0)
+
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        setStatsLoading(true)
+
+        const [{ count: totalCount }, { count: girls }, { count: boys }] = await Promise.all([
+          supabase.from('Child_Data').select('*', { count: 'exact', head: true }),
+          supabase.from('Child_Data').select('*', { count: 'exact', head: true }).eq('gender', 'Female'),
+          supabase.from('Child_Data').select('*', { count: 'exact', head: true }).eq('gender', 'Male'),
+        ])
+
+        setChildrenEnrolled(totalCount ?? 0)
+        setGirlsCount(girls ?? 0)
+        setBoysCount(boys ?? 0)
+      } catch (error) {
+        console.error('Failed to load field volunteer stats:', error)
+        setChildrenEnrolled(0)
+        setGirlsCount(0)
+        setBoysCount(0)
+      } finally {
+        setStatsLoading(false)
+      }
+    }
+
+    if (isAuthorized && profile) {
+      loadStats()
+    }
+  }, [isAuthorized, profile])
 
   if (loading) {
     return (
@@ -29,7 +65,7 @@ export default function FieldVolunteerPage() {
   }
 
   const roleInfo = ROLE_CONFIG.find(r => r.value === 'field_volunteer')!
-  const capabilities = getRoleCapabilities('field_volunteer')
+  const capabilities = ['Update field data', 'View personal activity history']
 
   return (
     <main className="min-h-screen bg-slate-50">
@@ -52,19 +88,19 @@ export default function FieldVolunteerPage() {
           {/* Quick Stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
             <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
-              <p className="text-slate-600 text-sm font-medium mb-2">Assigned Tasks</p>
-              <p className="text-4xl font-bold text-blue-600">5</p>
-              <p className="text-xs text-slate-500 mt-2">2 overdue</p>
+              <p className="text-slate-600 text-sm font-medium mb-2">Children Enrolled</p>
+              <p className="text-4xl font-bold text-blue-600">{statsLoading ? '...' : childrenEnrolled}</p>
+              <p className="text-xs text-slate-500 mt-2">Total records in Child_Data</p>
             </div>
             <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
-              <p className="text-slate-600 text-sm font-medium mb-2">Submitted Reports</p>
-              <p className="text-4xl font-bold text-green-600">12</p>
-              <p className="text-xs text-slate-500 mt-2">8 approved</p>
+              <p className="text-slate-600 text-sm font-medium mb-2">Number of Girls</p>
+              <p className="text-4xl font-bold text-pink-600">{statsLoading ? '...' : girlsCount}</p>
+              <p className="text-xs text-slate-500 mt-2">Gender = Female in Child_Data</p>
             </div>
             <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
-              <p className="text-slate-600 text-sm font-medium mb-2">Pending Review</p>
-              <p className="text-4xl font-bold text-orange-600">3</p>
-              <p className="text-xs text-slate-500 mt-2">Avg 2 days</p>
+              <p className="text-slate-600 text-sm font-medium mb-2">Number of Boys</p>
+              <p className="text-4xl font-bold text-emerald-600">{statsLoading ? '...' : boysCount}</p>
+              <p className="text-xs text-slate-500 mt-2">Gender = Male in Child_Data</p>
             </div>
           </div>
 
@@ -85,12 +121,18 @@ export default function FieldVolunteerPage() {
 
           {/* Action Buttons */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <button className="bg-blue-600 text-white px-6 py-4 rounded-lg hover:bg-blue-700 transition-colors font-medium text-lg flex items-center justify-center gap-2">
-              <ClipboardList className="w-5 h-5" /> View Assigned Tasks
-            </button>
-            <button className="bg-green-600 text-white px-6 py-4 rounded-lg hover:bg-green-700 transition-colors font-medium text-lg flex items-center justify-center gap-2">
-              <FileEdit className="w-5 h-5" /> Submit New Report
-            </button>
+            <Link
+              href="/field-volunteer/child-data-entry"
+              className="bg-blue-600 text-white px-6 py-4 rounded-lg hover:bg-blue-700 transition-colors font-medium text-lg flex items-center justify-center gap-2"
+            >
+              <FileEdit className="w-5 h-5" /> Update field data
+            </Link>
+            <Link
+              href="/field-volunteer/history"
+              className="bg-green-600 text-white px-6 py-4 rounded-lg hover:bg-green-700 transition-colors font-medium text-lg flex items-center justify-center gap-2"
+            >
+              <ClipboardList className="w-5 h-5" /> View personal activity history
+            </Link>
           </div>
         </div>
       </PageContainer>
