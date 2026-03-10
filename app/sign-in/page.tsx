@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { supabase } from '../../lib/supabase'
 import { Alert, LoadingSpinner } from '../components/UI'
-import { ROLE_CONFIG } from '../../lib/types'
 
 export default function SignInPage() {
   const router = useRouter()
@@ -25,7 +25,7 @@ export default function SignInPage() {
   const redirectByRole = async (routerInstance: any) => {
     try {
       console.log('redirectByRole called')
-      
+
       const {
         data: { user },
       } = await supabase.auth.getUser()
@@ -54,13 +54,13 @@ export default function SignInPage() {
       }
 
       console.log('Profile found, role:', profile.role)
-      const redirectPath = 
+      const redirectPath =
         profile.role === 'field_volunteer' ? '/field-volunteer' :
-        profile.role === 'dfi_field_staff' ? '/dfi-field-staff' :
-        profile.role === 'dfi_staff' ? '/dfi-staff' :
-        profile.role === 'admin' ? '/admin' :
-        profile.role === 'tech_support' ? '/tech-support' :
-        '/unauthorized'
+          profile.role === 'dfi_field_staff' ? '/dfi-field-staff' :
+            profile.role === 'dfi_staff' ? '/dfi-staff' :
+              profile.role === 'admin' ? '/admin' :
+                profile.role === 'tech_support' ? '/tech-support' :
+                  '/unauthorized'
 
       console.log('Navigating to:', redirectPath)
       routerInstance.replace(redirectPath)
@@ -98,7 +98,7 @@ export default function SignInPage() {
     }
 
     checkSession()
-    
+
     return () => {
       isMounted = false
     }
@@ -122,7 +122,7 @@ export default function SignInPage() {
       console.log('Submitting sign-in form with username:', normalizedUsername)
       const res = await fetch('/api/auth/signin', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
@@ -169,7 +169,7 @@ export default function SignInPage() {
           }
 
           console.log('Supabase sign-in successful, waiting for session...')
-          
+
           // Wait for session to be fully established
           await new Promise(resolve => setTimeout(resolve, 1000))
 
@@ -177,7 +177,7 @@ export default function SignInPage() {
           setRedirecting(true)
           // Now redirect based on role
           await redirectByRole(router)
-          
+
           // Don't stop loading - let the page redirect
         } catch (supabaseErr: any) {
           console.error('Supabase auth error:', supabaseErr?.message || supabaseErr)
@@ -257,9 +257,9 @@ export default function SignInPage() {
             />
           </div>
 
-        {error && (
-          <Alert type="error" message={error} />
-        )}
+          {error && (
+            <Alert type="error" message={error} />
+          )}
 
           <button
             type="submit"
@@ -268,6 +268,15 @@ export default function SignInPage() {
           >
             {loading ? 'Signing in…' : 'Sign in'}
           </button>
+
+          <div className="text-center">
+            <Link
+              href="/forgot-password"
+              className="text-sm font-medium text-blue-700 underline-offset-2 hover:underline"
+            >
+              Forgot password?
+            </Link>
+          </div>
         </form>
 
         <p className="mt-6 text-center text-xs text-slate-500">
