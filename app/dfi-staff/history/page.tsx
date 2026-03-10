@@ -308,8 +308,6 @@ export default function DFIStaffPersonalActivityPage() {
 
     const roleInfo = ROLE_CONFIG.find((r) => r.value === 'dfi_staff')!
     const totalRecords = Object.values(counts).reduce((sum, item) => sum + (item?.total || 0), 0)
-    const totalApproved = Object.values(counts).reduce((sum, item) => sum + (item?.approved || 0), 0)
-    const totalRejected = Object.values(counts).reduce((sum, item) => sum + (item?.rejected || 0), 0)
 
     return (
         <main className="min-h-screen bg-slate-50">
@@ -330,12 +328,6 @@ export default function DFIStaffPersonalActivityPage() {
                                 Approved and rejected records acted on by you
                                 <span className="ml-2 px-2 py-1 bg-slate-100 text-slate-700 rounded-full text-sm font-medium">
                                     {totalRecords} total
-                                </span>
-                                <span className="ml-2 px-2 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
-                                    {totalApproved} approved
-                                </span>
-                                <span className="ml-2 px-2 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium">
-                                    {totalRejected} rejected
                                 </span>
                             </p>
                         </div>
@@ -401,8 +393,8 @@ export default function DFIStaffPersonalActivityPage() {
                                     key={tab.key}
                                     onClick={() => setActiveTab(tab.key)}
                                     className={`flex-1 min-w-[160px] px-4 py-4 text-sm font-medium transition-colors border-b-2 ${activeTab === tab.key
-                                            ? 'border-purple-600 text-purple-600 bg-purple-50'
-                                            : 'border-transparent text-slate-600 hover:bg-slate-50'
+                                        ? 'border-purple-600 text-purple-600 bg-purple-50'
+                                        : 'border-transparent text-slate-600 hover:bg-slate-50'
                                         }`}
                                 >
                                     {tab.label}

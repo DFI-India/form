@@ -26,8 +26,6 @@ export default function AdminPage() {
   const [editEacUser, setEditEacUser] = useState<UserProfile | null>(null)
   const [editAssignedEacs, setEditAssignedEacs] = useState<string[]>([])
   const [editCentreEac, setEditCentreEac] = useState('')
-  const [resetPasswordResult, setResetPasswordResult] = useState<{ username: string; temporaryPassword: string } | null>(null)
-  const [passwordCopied, setPasswordCopied] = useState(false)
 
   // ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS
   useEffect(() => {
@@ -302,45 +300,6 @@ export default function AdminPage() {
     setEditAssignedEacs([])
     setEditCentreEac('')
     await loadUsers(sessionToken)
-  }
-
-  const resetUserPassword = async (user: UserProfile) => {
-    if (!sessionToken) {
-      setError('Not signed in')
-      return
-    }
-
-    const isConfirmed = window.confirm(`Reset password for ${user.username}?`)
-    if (!isConfirmed) return
-
-    setLoading(true)
-    setError('')
-
-    const res = await fetch('/api/admin/reset-password', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sessionToken}` },
-      body: JSON.stringify({ id: user.id }),
-    })
-    const json = await res.json()
-    setLoading(false)
-
-    if (!res.ok) {
-      setError(json.error || 'Failed to reset password')
-      return
-    }
-
-    setResetPasswordResult({ username: user.username, temporaryPassword: json.temporaryPassword })
-    setPasswordCopied(false)
-  }
-
-  const copyTemporaryPassword = async () => {
-    if (!resetPasswordResult) return
-    try {
-      await navigator.clipboard.writeText(resetPasswordResult.temporaryPassword)
-      setPasswordCopied(true)
-    } catch {
-      setError('Failed to copy password to clipboard')
-    }
   }
 
   const filteredUsers = users.filter(u => {
@@ -650,14 +609,13 @@ export default function AdminPage() {
                       <th className="px-6 py-3 text-left font-semibold text-slate-900">Assigned EAC(s)</th>
                       <th className="px-6 py-3 text-left font-semibold text-slate-900">Status</th>
                       <th className="px-6 py-3 text-left font-semibold text-slate-900">Edit EAC</th>
-                      <th className="px-6 py-3 text-left font-semibold text-slate-900">Reset Password</th>
                       <th className="px-6 py-3 text-left font-semibold text-slate-900">Delete</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredUsers.length === 0 ? (
                       <tr>
-                        <td colSpan={11} className="px-6 py-12 text-center text-slate-500">
+                        <td colSpan={10} className="px-6 py-12 text-center text-slate-500">
                           No users found
                         </td>
                       </tr>
@@ -715,14 +673,6 @@ export default function AdminPage() {
                               ) : (
                                 <span className="text-slate-400">-</span>
                               )}
-                            </td>
-                            <td className="px-6 py-4">
-                              <button
-                                onClick={() => resetUserPassword(u)}
-                                className="text-amber-600 hover:text-amber-700 text-sm font-medium"
-                              >
-                                Reset Password
-                              </button>
                             </td>
                             <td className="px-6 py-4">
                               <button
@@ -864,37 +814,6 @@ export default function AdminPage() {
               </div>
             )}
 
-            {resetPasswordResult && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6 space-y-4">
-                  <h3 className="text-lg font-semibold text-slate-900">Temporary Password Generated</h3>
-                  <p className="text-sm text-slate-600">
-                    Temporary password for <span className="font-semibold">{resetPasswordResult.username}</span>:
-                  </p>
-                  <div className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 font-mono text-sm text-slate-900 break-all">
-                    {resetPasswordResult.temporaryPassword}
-                  </div>
-                  <p className="text-xs text-slate-500">This password remains valid until it is changed again.</p>
-                  <div className="flex items-center justify-between pt-2">
-                    <button
-                      onClick={copyTemporaryPassword}
-                      className="px-4 py-2 bg-slate-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-300 transition-colors"
-                    >
-                      {passwordCopied ? 'Copied' : 'Copy Password'}
-                    </button>
-                    <button
-                      onClick={() => {
-                        setResetPasswordResult(null)
-                        setPasswordCopied(false)
-                      }}
-                      className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                      Close
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </PageContainer>
