@@ -3,6 +3,7 @@
 import {
   useState,
   useEffect,
+  useRef,
   type ChangeEvent,
   type ChangeEventHandler,
   type HTMLInputTypeAttribute,
@@ -18,6 +19,7 @@ import { ROLE_CONFIG } from '../../../lib/types'
 
 type TabType = 'child' | 'family' | 'sibling' | 'uniform' | 'leaving' | 'vocational' | 'computer' | 'rejected'
 type RejectedSubTabType = 'child' | 'family' | 'sibling' | 'uniform' | 'leaving' | 'vocational' | 'computer'
+type WizardStepType = 'child' | 'family' | 'sibling' | 'uniform'
 
 type CentreOption = {
   eac_no: string | number
@@ -587,7 +589,9 @@ const vocationalCourseOptions = ['Tailoring', 'Beautician', 'Kuchi/Embroidery', 
 
 export default function ChildForm() {
   const router = useRouter()
+  const finalSubmitArmedRef = useRef(false)
   const [activeTab, setActiveTab] = useState<TabType>('child')
+  const [wizardStep, setWizardStep] = useState(0)
   const [eacOptions, setEacOptions] = useState<CentreOption[]>([])
 
   // Child form state
@@ -694,6 +698,7 @@ export default function ChildForm() {
   const [isSubmittingSibling, setIsSubmittingSibling] = useState(false)
   const [isSubmittingUniform, setIsSubmittingUniform] = useState(false)
   const [isSubmittingLeaving, setIsSubmittingLeaving] = useState(false)
+  const [isSubmittingUnified, setIsSubmittingUnified] = useState(false)
 
   const [checkedAuth, setCheckedAuth] = useState(false)
   const [authorized, setAuthorized] = useState(false)
@@ -816,8 +821,8 @@ export default function ChildForm() {
       }
 
       // Use different approval tables based on entity type
-      const approvalTableName = ['vocational_course', 'computer_course'].includes(entityType) 
-        ? 'vocational_training_approvals' 
+      const approvalTableName = ['vocational_course', 'computer_course'].includes(entityType)
+        ? 'vocational_training_approvals'
         : 'child_approvals'
 
       const { data: approvals, error: approvalsError } = await supabase
@@ -1037,6 +1042,321 @@ export default function ChildForm() {
       ...prev,
       [e.target.name]: e.target.value
     }))
+  }
+
+  const wizardSteps: { id: WizardStepType; label: string }[] = [
+    { id: 'child', label: 'Child Data' },
+    { id: 'family', label: 'Child Family' },
+    { id: 'sibling', label: 'Child Sibling' },
+    { id: 'uniform', label: 'Child Uniform' },
+  ]
+
+  const syncSharedFormValues = () => {
+    setFamilyData((prev) => ({
+      ...prev,
+      village_name: formData.village_name,
+      eac_no: formData.eac_no,
+      reg_no: formData.reg_no,
+    }))
+    setSiblingData((prev) => ({
+      ...prev,
+      village_name: formData.village_name,
+      eac_no: formData.eac_no,
+      reg_no: formData.reg_no,
+    }))
+    setUniformData((prev) => ({
+      ...prev,
+      village_name: formData.village_name,
+      eac_no: formData.eac_no,
+      reg_no: formData.reg_no,
+    }))
+  }
+
+  const validateWizardStep = (step: number): string | null => {
+    if (step === 0) {
+      if (!formData.eac_no.trim()) return 'EAC number is required.'
+      if (!formData.reg_no.trim()) return 'Registration number is required.'
+      if (!formData.first_name.trim()) return 'First name is required.'
+      return null
+    }
+
+    return null
+  }
+
+  const handleWizardNext = () => {
+    finalSubmitArmedRef.current = false
+    syncSharedFormValues()
+    const stepError = validateWizardStep(wizardStep)
+    if (stepError) {
+      setMessage({ type: 'error', text: stepError })
+      return
+    }
+
+    setMessage(null)
+    setWizardStep((prev) => Math.min(prev + 1, wizardSteps.length - 1))
+  }
+
+  const handleWizardBack = () => {
+    finalSubmitArmedRef.current = false
+    setMessage(null)
+    setWizardStep((prev) => Math.max(prev - 1, 0))
+  }
+
+  const handleUnifiedSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (wizardStep < wizardSteps.length - 1 || !finalSubmitArmedRef.current) {
+      return
+    }
+    finalSubmitArmedRef.current = false
+
+    if (isSubmittingUnified) return
+
+    syncSharedFormValues()
+    for (let step = 0; step < wizardSteps.length; step += 1) {
+      const stepError = validateWizardStep(step)
+      if (stepError) {
+        setWizardStep(step)
+        setMessage({ type: 'error', text: stepError })
+        return
+      }
+    }
+
+    setIsSubmittingUnified(true)
+    setLoading(true)
+    setMessage(null)
+
+    try {
+      const toNullableString = (value: string) => (value.trim() === '' ? null : value)
+      const toNullableNumber = (value: string) => {
+        if (value.trim() === '') return null
+        const parsed = Number(value)
+        return Number.isNaN(parsed) ? null : parsed
+      }
+
+      const { data: userData } = await supabase.auth.getUser()
+      const userId = userData.user?.id
+
+      if (!userId) {
+        throw new Error('User session not found. Please sign in again.')
+      }
+
+      const eacNumber = Number(formData.eac_no)
+      if (Number.isNaN(eacNumber)) {
+        throw new Error('EAC number must be a valid number.')
+      }
+
+      let photoUrl: string | null = formData.photo_link ? formData.photo_link : null
+      const registrationNumber = formData.reg_no.trim()
+
+      if (photoFile) {
+        if (registrationNumber === '') {
+          throw new Error('Registration number is required to upload a photo.')
+        }
+
+        const extension = (photoFile.name.split('.').pop() || 'jpg').toLowerCase()
+        const sanitizedIdentifier = registrationNumber.replace(/[^a-zA-Z0-9_-]+/g, '-').toLowerCase()
+        const uniqueFallback =
+          typeof crypto !== 'undefined' && 'randomUUID' in crypto
+            ? crypto.randomUUID()
+            : Date.now().toString(36)
+        const safeIdentifier = sanitizedIdentifier || uniqueFallback
+        const filePath = `${safeIdentifier}.${extension}`
+
+        const { error: uploadError } = await supabase.storage.from('profiles').upload(filePath, photoFile, {
+          cacheControl: '3600',
+          upsert: true,
+        })
+
+        if (uploadError) throw uploadError
+
+        const { data: publicData } = supabase.storage.from('profiles').getPublicUrl(filePath)
+        photoUrl =
+          publicData.publicUrl ??
+          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/profile/${filePath}`
+      }
+
+      const childPayload = {
+        eac_no: eacNumber,
+        village_name: toNullableString(formData.village_name),
+        centre_id: toNullableString(formData.centre_id),
+        district: toNullableString(formData.district),
+        taluk: toNullableString(formData.taluk),
+        panchayat: toNullableString(formData.panchayat),
+        village: toNullableString(formData.village),
+        adm_date: toNullableString(formData.adm_date),
+        reg_no: toNullableNumber(formData.reg_no),
+        first_name: toNullableString(formData.first_name),
+        last_name: toNullableString(formData.last_name),
+        gender: toNullableString(formData.gender),
+        aadhar_no: toNullableNumber(formData.aadhar_no),
+        birth_place: toNullableString(formData.birth_place),
+        height: toNullableNumber(formData.height),
+        weight: toNullableNumber(formData.weight),
+        blood_group: toNullableString(formData.blood_group),
+        health: toNullableString(formData.health),
+        caste: toNullableString(formData.caste),
+        mother_tongue: toNullableString(formData.mother_tongue),
+        class_std: toNullableNumber(formData.class_std),
+        school_name: toNullableString(formData.school_name),
+        school_category: toNullableString(formData.school_category),
+        sats_no: toNullableNumber(formData.sats_no),
+        pen_no: toNullableNumber(formData.pen_no),
+        medium_of_study: toNullableString(formData.medium_of_study),
+        life_ambition: toNullableString(formData.life_ambition),
+        fav_subject: toNullableString(formData.fav_subject),
+        child_other_info: toNullableString(formData.child_other_info),
+        photo_link: photoUrl,
+      }
+
+      const { data: childRow, error: childError } = await supabase
+        .from('Child_Data')
+        .insert([childPayload])
+        .select()
+        .single()
+
+      if (childError) throw childError
+
+      const { error: childApprovalError } = await supabase
+        .from('child_approvals')
+        .insert([{
+          entity_type: 'Child_Data',
+          entity_id: childRow.record_id,
+          submitted_by: userId,
+        }])
+
+      if (childApprovalError) throw childApprovalError
+
+      const familyPayload = {
+        village_name: toNullableString(formData.village_name),
+        eac_no: toNullableString(formData.eac_no),
+        reg_no: toNullableString(formData.reg_no),
+        f_name: toNullableString(familyData.f_name),
+        f_occup: toNullableString(familyData.f_occup),
+        f_inc: toNullableNumber(familyData.f_inc),
+        f_aadhar: toNullableString(familyData.f_aadhar),
+        f_mobile: toNullableString(familyData.f_mobile),
+        m_name: toNullableString(familyData.m_name),
+        m_occup: toNullableString(familyData.m_occup),
+        m_inc: toNullableNumber(familyData.m_inc),
+        m_aadhar: toNullableString(familyData.m_aadhar),
+        m_mobile: toNullableString(familyData.m_mobile),
+        fmly_addr1: toNullableString(familyData.fmly_addr1),
+        fmly_addr2: toNullableString(familyData.fmly_addr2),
+        fmly_addr3: toNullableString(familyData.fmly_addr3),
+        fmly_pincode: toNullableString(familyData.fmly_pincode),
+        fmly_remarks: toNullableString(familyData.fmly_remarks),
+      }
+
+      const { data: familyRow, error: familyError } = await supabase
+        .from('childfmly')
+        .insert([familyPayload])
+        .select()
+        .single()
+
+      if (familyError) throw familyError
+
+      const { error: familyApprovalError } = await supabase
+        .from('child_approvals')
+        .insert([{
+          entity_type: 'childfmly',
+          entity_id: familyRow.record_id,
+          submitted_by: userId,
+        }])
+
+      if (familyApprovalError) throw familyApprovalError
+
+      const siblingPayload = {
+        village_name: toNullableString(formData.village_name),
+        eac_no: toNullableString(formData.eac_no),
+        reg_no: toNullableString(formData.reg_no),
+        names_1: toNullableString(siblingData.names_1),
+        ages_1: toNullableNumber(siblingData.ages_1),
+        genders_1: toNullableString(siblingData.genders_1),
+        class_occup_1: toNullableString(siblingData.class_occup_1),
+        names_2: toNullableString(siblingData.names_2),
+        ages_2: toNullableNumber(siblingData.ages_2),
+        genders_2: toNullableString(siblingData.genders_2),
+        class_occup_2: toNullableString(siblingData.class_occup_2),
+        names_3: toNullableString(siblingData.names_3),
+        ages_3: toNullableNumber(siblingData.ages_3),
+        genders_3: toNullableString(siblingData.genders_3),
+        class_occup_3: toNullableString(siblingData.class_occup_3),
+        names_4: toNullableString(siblingData.names_4),
+        ages_4: toNullableNumber(siblingData.ages_4),
+        genders_4: toNullableString(siblingData.genders_4),
+        class_occup_4: toNullableString(siblingData.class_occup_4),
+        names_5: toNullableString(siblingData.names_5),
+        ages_5: toNullableNumber(siblingData.ages_5),
+        genders_5: toNullableString(siblingData.genders_5),
+        class_occup_5: toNullableString(siblingData.class_occup_5),
+        sibling_remarks: toNullableString(siblingData.sibling_remarks),
+      }
+
+      const { data: siblingRow, error: siblingError } = await supabase
+        .from('childsibling')
+        .insert([siblingPayload])
+        .select()
+        .single()
+
+      if (siblingError) throw siblingError
+
+      const { error: siblingApprovalError } = await supabase
+        .from('child_approvals')
+        .insert([{
+          entity_type: 'childsibling',
+          entity_id: siblingRow.record_id,
+          submitted_by: userId,
+        }])
+
+      if (siblingApprovalError) throw siblingApprovalError
+
+      const uniformPayload = {
+        village_name: toNullableString(formData.village_name),
+        eac_no: toNullableString(formData.eac_no),
+        reg_no: toNullableString(formData.reg_no),
+        shirtsize: toNullableString(uniformData.shirtsize),
+        knickersize: toNullableString(uniformData.knickersize),
+        pant_skirtsize: toNullableString(uniformData.pant_skirtsize),
+        chudidharsize: toNullableString(uniformData.chudidharsize),
+        top_pantsize: toNullableString(uniformData.top_pantsize),
+        footwearsize: toNullableString(uniformData.footwearsize),
+        uniform_updated: toNullableString(uniformData.uniform_updated),
+      }
+
+      const { data: uniformRow, error: uniformError } = await supabase
+        .from('childuniform')
+        .insert([uniformPayload])
+        .select()
+        .single()
+
+      if (uniformError) throw uniformError
+
+      const { error: uniformApprovalError } = await supabase
+        .from('child_approvals')
+        .insert([{
+          entity_type: 'childuniform',
+          entity_id: uniformRow.record_id,
+          submitted_by: userId,
+        }])
+
+      if (uniformApprovalError) throw uniformApprovalError
+
+      setMessage({ type: 'success', text: 'Child profile form submitted successfully for approval.' })
+      setFormData(createEmptyForm())
+      setFamilyData(createEmptyFamilyForm())
+      setSiblingData(createEmptySiblingForm())
+      setUniformData(createEmptyUniformForm())
+      setPhotoFile(null)
+      setPhotoInputKey(Date.now())
+      setWizardStep(0)
+    } catch (error: unknown) {
+      const fallback = error instanceof Error ? error.message : 'Unexpected error occurred.'
+      setMessage({ type: 'error', text: `Unable to submit complete form: ${fallback}` })
+    } finally {
+      setLoading(false)
+      setIsSubmittingUnified(false)
+    }
   }
 
   const handleVocationalChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -2084,16 +2404,16 @@ export default function ChildForm() {
       // Build update payload based on table type
       const approvalUpdatePayload = ['vocational', 'computer'].includes(editModalType)
         ? {
-            status: 'Pending',
-            rejection_reason: null,
-          }
+          status: 'Pending',
+          rejection_reason: null,
+        }
         : {
-            status: 'Pending',
-            rejection_reason: null,
-            decided_by: null,
-            decided_at: null,
-            resubmitted_at: new Date().toISOString(),
-          }
+          status: 'Pending',
+          rejection_reason: null,
+          decided_by: null,
+          decided_at: null,
+          resubmitted_at: new Date().toISOString(),
+        }
 
       const { error: approvalError } = await supabase
         .from(approvalTableName)
@@ -2165,16 +2485,16 @@ export default function ChildForm() {
       // Build update payload based on table type
       const approvalUpdatePayload = ['vocational', 'computer'].includes(type)
         ? {
-            status: 'Pending',
-            rejection_reason: null,
-          }
+          status: 'Pending',
+          rejection_reason: null,
+        }
         : {
-            status: 'Pending',
-            rejection_reason: null,
-            decided_by: null,
-            decided_at: null,
-            resubmitted_at: new Date().toISOString(),
-          }
+          status: 'Pending',
+          rejection_reason: null,
+          decided_by: null,
+          decided_at: null,
+          resubmitted_at: new Date().toISOString(),
+        }
 
       const { error: approvalError } = await supabase
         .from(approvalTableName)
@@ -2220,9 +2540,6 @@ export default function ChildForm() {
   const roleInfo = ROLE_CONFIG.find(r => r.value === 'field_volunteer')!
   const tabs: { id: TabType; label: string }[] = [
     { id: 'child', label: 'Child Data' },
-    { id: 'family', label: 'Child Family' },
-    { id: 'sibling', label: 'Child Sibling' },
-    { id: 'uniform', label: 'Child Uniform' },
     { id: 'leaving', label: 'Child Leaving' },
     { id: 'vocational', label: 'Vocational Course' },
     { id: 'computer', label: 'Computer Course' },
@@ -2283,215 +2600,281 @@ export default function ChildForm() {
             {/* Child Data Tab */}
             {activeTab === 'child' && (
               <div className="space-y-8">
-                {message && (
-                  <div
-                    className={`rounded-lg border px-4 py-3 text-sm font-medium ${message.type === 'success'
-                      ? 'border-green-200 bg-green-50 text-green-700'
-                      : 'border-red-200 bg-red-50 text-red-700'
-                      }`}
-                  >
-                    {message.text}
-                  </div>
-                )}
-                <form onSubmit={handleSubmit} className="space-y-8">
+                <form onSubmit={handleUnifiedSubmit} className="space-y-8">
                   <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <div className="mb-4 flex items-center justify-between">
+                    <div className="mb-4 flex items-center justify-between gap-4">
                       <div>
-                        <h2 className="text-lg font-semibold text-slate-900">Centre Information</h2>
-                        <p className="mt-1 text-sm text-slate-500">Select the EAC to auto-fill the location details.</p>
+                        <h2 className="text-lg font-semibold text-slate-900">Unified Child Profile Form</h2>
+                        <p className="mt-1 text-sm text-slate-500">
+                          Step {wizardStep + 1} of {wizardSteps.length}: {wizardSteps[wizardStep].label}
+                        </p>
                       </div>
                       <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-600">
-                        Step 1
+                        Step {wizardStep + 1}
                       </span>
                     </div>
 
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div>
-                        <label className="mb-1 block text-sm font-medium text-slate-700">EAC No *</label>
-                        <select
-                          name="eac_no"
-                          value={formData.eac_no}
-                          onChange={handleEacChange}
-                          required
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                        >
-                          <option value="">Select EAC No</option>
-                          {eacOptions.map((eac) => (
-                            <option key={eac.eac_no} value={eac.eac_no}>
-                              {eac.eac_no}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="mb-1 block text-sm font-medium text-slate-700">Admission Date</label>
-                        <input
-                          type="date"
-                          name="adm_date"
-                          value={formData.adm_date}
-                          onChange={handleChange}
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                        />
-                      </div>
-
-                      <ReadOnlyInput label="Village Name" value={formData.village_name} />
-                      <ReadOnlyInput label="Centre ID" value={formData.centre_id} />
-                      <ReadOnlyInput label="District" value={formData.district} />
-                      <ReadOnlyInput label="Taluk" value={formData.taluk} />
-                      <ReadOnlyInput label="Panchayat" value={formData.panchayat} />
-                      <ReadOnlyInput label="Village" value={formData.village} />
-
-                      <div>
-                        <label className="mb-1 block text-sm font-medium text-slate-700">Registration No</label>
-                        <input
-                          type="number"
-                          name="reg_no"
-                          value={formData.reg_no}
-                          onChange={handleChange}
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                        />
-                      </div>
-                    </div>
-                  </section>
-
-                  <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <div className="mb-4 flex items-center justify-between">
-                      <div>
-                        <h2 className="text-lg font-semibold text-slate-900">Child Profile</h2>
-                        <p className="mt-1 text-sm text-slate-500">Capture core identity information for the child.</p>
-                      </div>
-                      <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-600">
-                        Step 2
-                      </span>
-                    </div>
-
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <TextInput label="First Name" name="first_name" value={formData.first_name} onChange={handleChange} />
-                      <TextInput label="Last Name" name="last_name" value={formData.last_name} onChange={handleChange} />
-
-                      <div>
-                        <label className="mb-1 block text-sm font-medium text-slate-700">Gender</label>
-                        <select
-                          name="gender"
-                          value={formData.gender}
-                          onChange={handleChange}
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                        >
-                          <option value="">Select Gender</option>
-                          {genderOptions.map((option) => (
-                            <option key={option} value={option}>
-                              {option}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <NumberInput label="Aadhar No" name="aadhar_no" value={formData.aadhar_no} onChange={handleChange} />
-                      <TextInput label="Birth Place" name="birth_place" value={formData.birth_place} onChange={handleChange} />
-                      <NumberInput label="Height (cm)" name="height" value={formData.height} onChange={handleChange} />
-                      <NumberInput label="Weight (kg)" name="weight" value={formData.weight} onChange={handleChange} />
-
-                      <div>
-                        <label className="mb-1 block text-sm font-medium text-slate-700">Blood Group</label>
-                        <select
-                          name="blood_group"
-                          value={formData.blood_group}
-                          onChange={handleChange}
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                        >
-                          <option value="">Select Blood Group</option>
-                          {bloodGroupOptions.map((group) => (
-                            <option key={group} value={group}>
-                              {group}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <TextInput label="Health Status" name="health" value={formData.health} onChange={handleChange} />
-                      <TextInput label="Caste" name="caste" value={formData.caste} onChange={handleChange} />
-                      <TextInput label="Mother Tongue" name="mother_tongue" value={formData.mother_tongue} onChange={handleChange} />
-                    </div>
-                  </section>
-
-                  <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <div className="mb-4 flex items-center justify-between">
-                      <div>
-                        <h2 className="text-lg font-semibold text-slate-900">Academic Details</h2>
-                        <p className="mt-1 text-sm text-slate-500">Schooling, identification numbers, and learning context.</p>
-                      </div>
-                      <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-600">
-                        Step 3
-                      </span>
-                    </div>
-
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <NumberInput label="Class/Standard" name="class_std" value={formData.class_std} onChange={handleChange} />
-                      <TextInput label="School Name" name="school_name" value={formData.school_name} onChange={handleChange} />
-                      <TextInput label="School Category" name="school_category" value={formData.school_category} onChange={handleChange} />
-                      <NumberInput label="SATS No" name="sats_no" value={formData.sats_no} onChange={handleChange} />
-                      <NumberInput label="PEN No" name="pen_no" value={formData.pen_no} onChange={handleChange} />
-                      <TextInput label="Medium of Study" name="medium_of_study" value={formData.medium_of_study} onChange={handleChange} />
-                    </div>
-                  </section>
-
-                  <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <div className="mb-4 flex items-center justify-between">
-                      <div>
-                        <h2 className="text-lg font-semibold text-slate-900">Aspirations & Extras</h2>
-                        <p className="mt-1 text-sm text-slate-500">Capture interests, ambitions, and supporting details.</p>
-                      </div>
-                      <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-600">
-                        Step 4
-                      </span>
-                    </div>
-
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <TextInput label="Life Ambition" name="life_ambition" value={formData.life_ambition} onChange={handleChange} />
-                      <TextInput label="Favorite Subject" name="fav_subject" value={formData.fav_subject} onChange={handleChange} />
-                      <div>
-                        <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="photoUpload">
-                          Child Photo
-                        </label>
-                        <input
-                          key={photoInputKey}
-                          id="photoUpload"
-                          type="file"
-                          accept="image/*"
-                          capture="environment"
-                          onChange={handlePhotoChange}
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition file:mr-3 file:rounded-md file:border-none file:bg-blue-600 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-blue-700 focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                        />
-                        <p className="mt-1 text-xs text-slate-500">Use your camera or upload an existing image (max 5MB).</p>
-                        {photoFile && (
-                          <p className="mt-1 text-xs font-medium text-slate-600">
-                            Selected: {photoFile.name}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="mt-4">
-                      <label className="mb-1 block text-sm font-medium text-slate-700">Other Information</label>
-                      <textarea
-                        name="child_other_info"
-                        value={formData.child_other_info}
-                        onChange={handleChange}
-                        rows={4}
-                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                    <div className="mb-5 h-2 w-full rounded-full bg-slate-100">
+                      <div
+                        className="h-2 rounded-full bg-blue-600 transition-all"
+                        style={{ width: `${((wizardStep + 1) / wizardSteps.length) * 100}%` }}
                       />
                     </div>
+
+                    <div className="mb-6 grid gap-2 md:grid-cols-4">
+                      {wizardSteps.map((step, index) => (
+                        <div
+                          key={step.id}
+                          className={`rounded-lg border px-3 py-2 text-xs font-semibold ${index <= wizardStep
+                            ? 'border-blue-200 bg-blue-50 text-blue-700'
+                            : 'border-slate-200 bg-white text-slate-500'
+                            }`}
+                        >
+                          {index + 1}. {step.label}
+                        </div>
+                      ))}
+                    </div>
+
+                    {wizardStep === 0 && (
+                      <div className="space-y-8">
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <div>
+                            <label className="mb-1 block text-sm font-medium text-slate-700">EAC No *</label>
+                            <select
+                              name="eac_no"
+                              value={formData.eac_no}
+                              onChange={handleEacChange}
+                              required
+                              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                            >
+                              <option value="">Select EAC No</option>
+                              {eacOptions.map((eac) => (
+                                <option key={eac.eac_no} value={eac.eac_no}>
+                                  {eac.eac_no}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <TextInput label="Registration No *" name="reg_no" value={formData.reg_no} onChange={handleChange} type="number" />
+                          <ReadOnlyInput label="Village Name" value={formData.village_name} />
+                          <ReadOnlyInput label="Centre ID" value={formData.centre_id} />
+                          <ReadOnlyInput label="District" value={formData.district} />
+                          <ReadOnlyInput label="Taluk" value={formData.taluk} />
+                          <ReadOnlyInput label="Panchayat" value={formData.panchayat} />
+                          <ReadOnlyInput label="Village" value={formData.village} />
+                          <TextInput label="Admission Date" name="adm_date" value={formData.adm_date} onChange={handleChange} type="date" />
+                          <TextInput label="First Name *" name="first_name" value={formData.first_name} onChange={handleChange} />
+                          <TextInput label="Last Name" name="last_name" value={formData.last_name} onChange={handleChange} />
+
+                          <div>
+                            <label className="mb-1 block text-sm font-medium text-slate-700">Gender</label>
+                            <select
+                              name="gender"
+                              value={formData.gender}
+                              onChange={handleChange}
+                              className={baseInputClass}
+                            >
+                              <option value="">Select Gender</option>
+                              {genderOptions.map((option) => (
+                                <option key={option} value={option}>{option}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <NumberInput label="Aadhar No" name="aadhar_no" value={formData.aadhar_no} onChange={handleChange} />
+                          <TextInput label="Birth Place" name="birth_place" value={formData.birth_place} onChange={handleChange} />
+                          <NumberInput label="Height (cm)" name="height" value={formData.height} onChange={handleChange} />
+                          <NumberInput label="Weight (kg)" name="weight" value={formData.weight} onChange={handleChange} />
+
+                          <div>
+                            <label className="mb-1 block text-sm font-medium text-slate-700">Blood Group</label>
+                            <select
+                              name="blood_group"
+                              value={formData.blood_group}
+                              onChange={handleChange}
+                              className={baseInputClass}
+                            >
+                              <option value="">Select Blood Group</option>
+                              {bloodGroupOptions.map((group) => (
+                                <option key={group} value={group}>{group}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <TextInput label="Health Status" name="health" value={formData.health} onChange={handleChange} />
+                          <TextInput label="Caste" name="caste" value={formData.caste} onChange={handleChange} />
+                          <TextInput label="Mother Tongue" name="mother_tongue" value={formData.mother_tongue} onChange={handleChange} />
+                          <NumberInput label="Class/Standard" name="class_std" value={formData.class_std} onChange={handleChange} />
+                          <TextInput label="School Name" name="school_name" value={formData.school_name} onChange={handleChange} />
+                          <TextInput label="School Category" name="school_category" value={formData.school_category} onChange={handleChange} />
+                          <NumberInput label="SATS No" name="sats_no" value={formData.sats_no} onChange={handleChange} />
+                          <NumberInput label="PEN No" name="pen_no" value={formData.pen_no} onChange={handleChange} />
+                          <TextInput label="Medium of Study" name="medium_of_study" value={formData.medium_of_study} onChange={handleChange} />
+                          <TextInput label="Life Ambition" name="life_ambition" value={formData.life_ambition} onChange={handleChange} />
+                          <TextInput label="Favorite Subject" name="fav_subject" value={formData.fav_subject} onChange={handleChange} />
+
+                          <div>
+                            <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="photoUploadWizard">
+                              Child Photo
+                            </label>
+                            <input
+                              key={photoInputKey}
+                              id="photoUploadWizard"
+                              type="file"
+                              accept="image/*"
+                              capture="environment"
+                              onChange={handlePhotoChange}
+                              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition file:mr-3 file:rounded-md file:border-none file:bg-blue-600 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-blue-700 focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                            />
+                            {photoFile && <p className="mt-1 text-xs text-slate-600">Selected: {photoFile.name}</p>}
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="mb-1 block text-sm font-medium text-slate-700">Other Information</label>
+                          <textarea
+                            name="child_other_info"
+                            value={formData.child_other_info}
+                            onChange={handleChange}
+                            rows={4}
+                            className={baseInputClass}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {wizardStep === 1 && (
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <TextInput label="Father's Name *" name="f_name" value={familyData.f_name} onChange={(e) => setFamilyData({ ...familyData, f_name: e.target.value })} />
+                        <TextInput label="Father's Occupation" name="f_occup" value={familyData.f_occup} onChange={(e) => setFamilyData({ ...familyData, f_occup: e.target.value })} />
+                        <TextInput label="Father's Income" name="f_inc" value={familyData.f_inc} onChange={(e) => setFamilyData({ ...familyData, f_inc: e.target.value })} type="number" />
+                        <TextInput label="Father's Aadhar No" name="f_aadhar" value={familyData.f_aadhar} onChange={(e) => setFamilyData({ ...familyData, f_aadhar: e.target.value })} />
+                        <TextInput label="Father's Mobile" name="f_mobile" value={familyData.f_mobile} onChange={(e) => setFamilyData({ ...familyData, f_mobile: e.target.value })} />
+                        <TextInput label="Mother's Name *" name="m_name" value={familyData.m_name} onChange={(e) => setFamilyData({ ...familyData, m_name: e.target.value })} />
+                        <TextInput label="Mother's Occupation" name="m_occup" value={familyData.m_occup} onChange={(e) => setFamilyData({ ...familyData, m_occup: e.target.value })} />
+                        <TextInput label="Mother's Income" name="m_inc" value={familyData.m_inc} onChange={(e) => setFamilyData({ ...familyData, m_inc: e.target.value })} type="number" />
+                        <TextInput label="Mother's Aadhar No" name="m_aadhar" value={familyData.m_aadhar} onChange={(e) => setFamilyData({ ...familyData, m_aadhar: e.target.value })} />
+                        <TextInput label="Mother's Mobile" name="m_mobile" value={familyData.m_mobile} onChange={(e) => setFamilyData({ ...familyData, m_mobile: e.target.value })} />
+
+                        <div className="md:col-span-2">
+                          <label className="mb-1 block text-sm font-medium text-slate-700">Address Line 1</label>
+                          <textarea name="fmly_addr1" value={familyData.fmly_addr1} onChange={(e) => setFamilyData({ ...familyData, fmly_addr1: e.target.value })} rows={2} className={baseInputClass} />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="mb-1 block text-sm font-medium text-slate-700">Address Line 2</label>
+                          <textarea name="fmly_addr2" value={familyData.fmly_addr2} onChange={(e) => setFamilyData({ ...familyData, fmly_addr2: e.target.value })} rows={2} className={baseInputClass} />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="mb-1 block text-sm font-medium text-slate-700">Address Line 3</label>
+                          <textarea name="fmly_addr3" value={familyData.fmly_addr3} onChange={(e) => setFamilyData({ ...familyData, fmly_addr3: e.target.value })} rows={2} className={baseInputClass} />
+                        </div>
+                        <TextInput label="Pincode" name="fmly_pincode" value={familyData.fmly_pincode} onChange={(e) => setFamilyData({ ...familyData, fmly_pincode: e.target.value })} />
+
+                        <div className="md:col-span-2">
+                          <label className="mb-1 block text-sm font-medium text-slate-700">Remarks</label>
+                          <textarea name="fmly_remarks" value={familyData.fmly_remarks} onChange={(e) => setFamilyData({ ...familyData, fmly_remarks: e.target.value })} rows={3} className={baseInputClass} />
+                        </div>
+                      </div>
+                    )}
+
+                    {wizardStep === 2 && (
+                      <div className="space-y-4">
+                        {[1, 2, 3, 4, 5].map((num) => (
+                          <div key={num} className="rounded-lg border border-slate-200 p-4">
+                            <h3 className="mb-3 text-sm font-semibold text-slate-900">Sibling {num}</h3>
+                            <div className="grid gap-4 md:grid-cols-4">
+                              <TextInput
+                                label={`Sibling ${num} Name${num === 1 ? ' *' : ''}`}
+                                name={`names_${num}`}
+                                value={siblingData[`names_${num}` as keyof ChildSiblingState]}
+                                onChange={(e) => setSiblingData({ ...siblingData, [`names_${num}`]: e.target.value })}
+                              />
+                              <NumberInput
+                                name={`ages_${num}`}
+                                label="Age"
+                                value={siblingData[`ages_${num}` as keyof ChildSiblingState]}
+                                onChange={(e) => setSiblingData({ ...siblingData, [`ages_${num}`]: e.target.value })}
+                              />
+                              <div>
+                                <label className="mb-1 block text-sm font-medium text-slate-700">Gender</label>
+                                <select
+                                  name={`genders_${num}`}
+                                  value={siblingData[`genders_${num}` as keyof ChildSiblingState]}
+                                  onChange={(e) => setSiblingData({ ...siblingData, [`genders_${num}`]: e.target.value })}
+                                  className={baseInputClass}
+                                >
+                                  <option value="">Select</option>
+                                  {genderOptions.map((option) => (
+                                    <option key={option} value={option}>{option}</option>
+                                  ))}
+                                </select>
+                              </div>
+                              <TextInput
+                                label="Class/Occupation"
+                                name={`class_occup_${num}`}
+                                value={siblingData[`class_occup_${num}` as keyof ChildSiblingState]}
+                                onChange={(e) => setSiblingData({ ...siblingData, [`class_occup_${num}`]: e.target.value })}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                        <div>
+                          <label className="mb-1 block text-sm font-medium text-slate-700">Sibling Remarks</label>
+                          <textarea
+                            name="sibling_remarks"
+                            value={siblingData.sibling_remarks}
+                            onChange={(e) => setSiblingData({ ...siblingData, sibling_remarks: e.target.value })}
+                            rows={3}
+                            className={baseInputClass}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {wizardStep === 3 && (
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <TextInput label="Shirt Size *" name="shirtsize" value={uniformData.shirtsize} onChange={(e) => setUniformData({ ...uniformData, shirtsize: e.target.value })} />
+                        <TextInput label="Knicker Size" name="knickersize" value={uniformData.knickersize} onChange={(e) => setUniformData({ ...uniformData, knickersize: e.target.value })} />
+                        <TextInput label="Pant/Skirt Size" name="pant_skirtsize" value={uniformData.pant_skirtsize} onChange={(e) => setUniformData({ ...uniformData, pant_skirtsize: e.target.value })} />
+                        <TextInput label="Chudidhar Size" name="chudidharsize" value={uniformData.chudidharsize} onChange={(e) => setUniformData({ ...uniformData, chudidharsize: e.target.value })} />
+                        <TextInput label="Top/Pant Size" name="top_pantsize" value={uniformData.top_pantsize} onChange={(e) => setUniformData({ ...uniformData, top_pantsize: e.target.value })} />
+                        <TextInput label="Footwear Size *" name="footwearsize" value={uniformData.footwearsize} onChange={(e) => setUniformData({ ...uniformData, footwearsize: e.target.value })} />
+                        <TextInput label="Uniform Updated Date" name="uniform_updated" value={uniformData.uniform_updated} onChange={(e) => setUniformData({ ...uniformData, uniform_updated: e.target.value })} type="date" />
+                      </div>
+                    )}
                   </section>
 
-                  <div className="flex justify-end pt-2">
+                  <div className="flex items-center justify-between gap-3 pt-2">
                     <button
-                      type="submit"
-                      disabled={loading}
-                      className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+                      type="button"
+                      onClick={handleWizardBack}
+                      disabled={wizardStep === 0 || loading}
+                      className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      {loading ? 'Saving...' : 'Save Child Data'}
+                      Back
                     </button>
+
+                    {wizardStep < wizardSteps.length - 1 ? (
+                      <button
+                        type="button"
+                        onClick={handleWizardNext}
+                        disabled={loading}
+                        className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+                      >
+                        Next
+                      </button>
+                    ) : (
+                      <button
+                        type="submit"
+                        onMouseDown={() => {
+                          finalSubmitArmedRef.current = true
+                        }}
+                        disabled={loading || isSubmittingUnified}
+                        className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+                      >
+                        {loading ? 'Submitting...' : 'Submit Complete Form'}
+                      </button>
+                    )}
                   </div>
                 </form>
               </div>
