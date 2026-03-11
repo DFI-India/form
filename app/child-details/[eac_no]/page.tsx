@@ -28,7 +28,9 @@ type FormState = {
     health: string
     caste: string
     mother_tongue: string
-    class_std: string
+    class_std_text: string
+    religion: string
+    dateofbirth: string
     school_name: string
     school_category: string
     sats_no: string
@@ -136,6 +138,8 @@ export default function ChildDetailsPage({ params }: { params: { eac_no: string 
                                     <th className="border px-3 py-2 text-left">Health</th>
                                     <th className="border px-3 py-2 text-left">Caste</th>
                                     <th className="border px-3 py-2 text-left">Mother Tongue</th>
+                                    <th className="border px-3 py-2 text-left">Religion</th>
+                                    <th className="border px-3 py-2 text-left">Date of Birth</th>
                                     <th className="border px-3 py-2 text-left">Class/Std</th>
                                     <th className="border px-3 py-2 text-left">School Name</th>
                                     <th className="border px-3 py-2 text-left">School Category</th>
@@ -167,7 +171,9 @@ export default function ChildDetailsPage({ params }: { params: { eac_no: string 
                                         <td className="border px-3 py-2">{c.health ?? '-'}</td>
                                         <td className="border px-3 py-2">{c.caste ?? '-'}</td>
                                         <td className="border px-3 py-2">{c.mother_tongue ?? '-'}</td>
-                                        <td className="border px-3 py-2">{c.class_std ?? '-'}</td>
+                                        <td className="border px-3 py-2">{c.religion ?? '-'}</td>
+                                        <td className="border px-3 py-2">{c.dateofbirth ?? '-'}</td>
+                                        <td className="border px-3 py-2">{c.class_std_text ?? (c as any).class_std ?? '-'}</td>
                                         <td className="border px-3 py-2">{c.school_name ?? '-'}</td>
                                         <td className="border px-3 py-2">{c.school_category ?? '-'}</td>
                                         <td className="border px-3 py-2">{c.sats_no ?? '-'}</td>

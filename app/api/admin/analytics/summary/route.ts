@@ -156,7 +156,7 @@ export async function GET(request: NextRequest) {
     // Get gender distribution
     const { data: allChildren } = await supabaseAdmin
       .from('Child_Data')
-      .select('gender, adm_date, class_std')
+      .select('gender, adm_date, dateofbirth, class_std_text')
 
     const genderStats = allChildren?.reduce((acc: any, child: any) => {
       const gender = child.gender || 'Unknown'
@@ -164,23 +164,39 @@ export async function GET(request: NextRequest) {
       return acc
     }, {}) || {}
 
-    // Age distribution - using class_std as proxy since no DOB field exists
+    // Age distribution from dateofbirth
     const ageGroups = allChildren?.reduce((acc: any, child: any) => {
-      if (!child.class_std) return acc
-      const classNum = parseInt(String(child.class_std))
+      const dobValue = child.dateofbirth
+      if (!dobValue) {
+        acc.Unknown = (acc.Unknown || 0) + 1
+        return acc
+      }
+
+      const dob = new Date(dobValue)
+      if (Number.isNaN(dob.getTime())) {
+        acc.Unknown = (acc.Unknown || 0) + 1
+        return acc
+      }
+
+      const now = new Date()
+      let age = now.getFullYear() - dob.getFullYear()
+      const monthDiff = now.getMonth() - dob.getMonth()
+      if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < dob.getDate())) {
+        age -= 1
+      }
+
       let group = 'Unknown'
-      if (isNaN(classNum)) group = 'Unknown'
-      else if (classNum <= 5) group = '6-10'
-      else if (classNum <= 8) group = '11-14'
-      else if (classNum <= 12) group = '15-18'
-      else group = '18+'
+      if (age <= 10) group = '6-10'
+      else if (age <= 14) group = '11-14'
+      else if (age <= 18) group = '15-18'
+      else if (age > 18) group = '18+'
       acc[group] = (acc[group] || 0) + 1
       return acc
     }, {}) || {}
 
     // Grade distribution
     const gradeStats = allChildren?.reduce((acc: any, child: any) => {
-      const grade = child.class_std || 'Unknown'
+      const grade = child.class_std_text || 'Unknown'
       acc[grade] = (acc[grade] || 0) + 1
       return acc
     }, {}) || {}

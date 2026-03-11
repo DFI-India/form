@@ -20,7 +20,9 @@ const ALL_COLUMNS: ColumnDef[] = [
   { key: 'last_name', label: 'Last Name', category: 'basic' },
   { key: 'adm_date', label: 'Admission Date', category: 'basic' },
   { key: 'gender', label: 'Gender', category: 'basic' },
-  { key: 'class_std', label: 'Class/Standard', category: 'basic' },
+  { key: 'class_std_text', label: 'Class/Standard', category: 'basic' },
+  { key: 'religion', label: 'Religion', category: 'basic' },
+  { key: 'dateofbirth', label: 'Date of Birth', category: 'basic' },
   { key: 'eac_no', label: 'EAC Number', category: 'basic' },
   { key: 'village_name', label: 'Village Name', category: 'basic' },
   { key: 'status', label: 'Status', category: 'basic' },
@@ -77,7 +79,7 @@ export default function EnhancedReportsPage() {
 
   // Column selection
   const [selectedColumns, setSelectedColumns] = useState<string[]>([
-    'record_id', 'first_name', 'last_name', 'adm_date', 'gender', 'class_std', 'eac_no', 'village_name', 'status'
+    'record_id', 'first_name', 'last_name', 'adm_date', 'gender', 'class_std_text', 'eac_no', 'village_name', 'status'
   ])
 
   // Data
@@ -167,7 +169,7 @@ export default function EnhancedReportsPage() {
         query = query.eq('gender', selectedGender)
       }
       if (selectedGrade) {
-        query = query.eq('class_std', selectedGrade)
+        query = query.eq('class_std_text', selectedGrade)
       }
 
       const { data, error: err } = await query.limit(100)
@@ -387,7 +389,7 @@ export default function EnhancedReportsPage() {
                     type="text"
                     value={selectedGrade}
                     onChange={e => setSelectedGrade(e.target.value)}
-                    placeholder="e.g., 5, 10"
+                    placeholder="e.g., 1st std, 10th std"
                     className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>

@@ -24,7 +24,7 @@ const ALLOWED_COLUMNS_BY_SOURCE = {
         'gender',
         'caste',
         'mother_tongue',
-        'class_std'
+        'class_std_text'
     ],
     vocational_course: [
         'eac_no',
@@ -44,7 +44,7 @@ const TABLE_MAP: Record<ReportSource, string> = {
     vocational_course: 'vocational_course'
 }
 
-const NUMERIC_COLUMNS = new Set<string>(['eac_no', 'class_std', 'centre_id'])
+const NUMERIC_COLUMNS = new Set<string>(['eac_no', 'centre_id'])
 
 export async function POST(request: NextRequest) {
     try {

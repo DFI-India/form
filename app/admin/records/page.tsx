@@ -56,6 +56,16 @@ const NON_EDITABLE_FIELDS = new Set([
   'approver'
 ])
 
+const HIDDEN_TABLE_METADATA_FIELDS = new Set([
+  'submitted_by',
+  'verified_by',
+  'verified_at',
+  'approved_by',
+  'approved_at',
+  'submitter',
+  'approver'
+])
+
 const ENTITY_ID_CANDIDATES: Record<EntityType, string[]> = {
   child_data: ['record_id', 'id'],
   childfmly: ['record_id', 'id'],
@@ -64,6 +74,18 @@ const ENTITY_ID_CANDIDATES: Record<EntityType, string[]> = {
   childleaving: ['record_id', 'id'],
   vocational_course: ['record_id', 'vocational_id', 'id'],
   computer_course: ['record_id', 'computer_id', 'id']
+}
+
+const EXPORTABLE_ENTITY_TYPES: EntityType[] = ['child_data', 'childfmly', 'childsibling', 'childuniform', 'childleaving']
+
+const TABLE_NAME_BY_ENTITY: Record<EntityType, string> = {
+  child_data: 'Child_Data',
+  childfmly: 'childfmly',
+  childsibling: 'childsibling',
+  childuniform: 'childuniform',
+  childleaving: 'childleaving',
+  vocational_course: 'vocational_course',
+  computer_course: 'computer_course'
 }
 
 export default function AdminRecordsPage() {
@@ -93,6 +115,7 @@ export default function AdminRecordsPage() {
   })
   const [deletingRecord, setDeletingRecord] = useState<DataRecord | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [exporting, setExporting] = useState(false)
 
   const getEntityIdentity = (record: DataRecord) => {
     const keys = ENTITY_ID_CANDIDATES[activeTab]
@@ -108,11 +131,30 @@ export default function AdminRecordsPage() {
   const visibleColumns = useMemo(() => {
     if (records.length === 0) return []
     const allColumns = Array.from(new Set(records.flatMap((record) => Object.keys(record))))
-    return allColumns.filter((column) => {
-      if (['submitter', 'approver'].includes(column)) return false
+    const filteredColumns = allColumns.filter((column) => {
+      if (HIDDEN_TABLE_METADATA_FIELDS.has(column)) return false
       if ((activeTab === 'vocational_course' || activeTab === 'computer_course') && column === 'record_id') return false
       return true
     })
+
+    const columnsToReposition = ['dateofbirth', 'religion', 'class_std_text'].filter((column) =>
+      filteredColumns.includes(column)
+    )
+
+    if (columnsToReposition.length === 0) return filteredColumns
+
+    const baseColumns = filteredColumns.filter((column) => !columnsToReposition.includes(column))
+    const lastNameIndex = baseColumns.indexOf('last_name')
+
+    if (lastNameIndex === -1) {
+      return [...baseColumns, ...columnsToReposition]
+    }
+
+    return [
+      ...baseColumns.slice(0, lastNameIndex + 1),
+      ...columnsToReposition,
+      ...baseColumns.slice(lastNameIndex + 1)
+    ]
   }, [records])
 
   useEffect(() => {
@@ -316,6 +358,76 @@ export default function AdminRecordsPage() {
     }
   }
 
+  const handleExportCSV = async () => {
+    if (!EXPORTABLE_ENTITY_TYPES.includes(activeTab)) {
+      setError('CSV export is only available for child data tables.')
+      return
+    }
+
+    setExporting(true)
+    setError('')
+
+    try {
+      const tableName = TABLE_NAME_BY_ENTITY[activeTab]
+      const pageSize = 1000
+      let from = 0
+      const rows: Record<string, any>[] = []
+
+      while (true) {
+        const { data, error } = await supabase
+          .from(tableName)
+          .select('*')
+          .order('created_at', { ascending: false })
+          .range(from, from + pageSize - 1)
+
+        if (error) throw error
+
+        const chunk = (data || []) as Record<string, any>[]
+        rows.push(...chunk)
+
+        if (chunk.length < pageSize) break
+        from += pageSize
+      }
+
+      if (rows.length === 0) {
+        setError(`No records found in ${ENTITY_LABELS[activeTab]} to export.`)
+        return
+      }
+
+      const headers = Array.from(new Set(rows.flatMap((row) => Object.keys(row))))
+
+      const escapeCsv = (value: unknown) => {
+        if (value === null || value === undefined) return ''
+        const str = String(value)
+        const escaped = str.replace(/"/g, '""')
+        return /[",\n]/.test(escaped) ? `"${escaped}"` : escaped
+      }
+
+      const csv = [
+        headers.join(','),
+        ...rows.map((row) => headers.map((header) => escapeCsv(row[header])).join(','))
+      ].join('\n')
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      const dateStamp = new Date().toISOString().split('T')[0]
+      a.href = url
+      a.download = `${activeTab}_${dateStamp}.csv`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+
+      setSuccess(`Exported ${rows.length} records from ${ENTITY_LABELS[activeTab]}.`)
+      setTimeout(() => setSuccess(''), 3000)
+    } catch (err: any) {
+      setError(err.message || 'Failed to export CSV')
+    } finally {
+      setExporting(false)
+    }
+  }
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -356,12 +468,23 @@ export default function AdminRecordsPage() {
               <h2 className="text-3xl font-bold text-slate-900">All Records</h2>
               <p className="text-slate-600 mt-2">View, search, and edit all records</p>
             </div>
-            <button
-              onClick={() => router.push('/admin')}
-              className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
-            >
-              ← Back to Dashboard
-            </button>
+            <div className="flex items-center gap-3">
+              {EXPORTABLE_ENTITY_TYPES.includes(activeTab) && (
+                <button
+                  onClick={handleExportCSV}
+                  disabled={exporting}
+                  className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50"
+                >
+                  {exporting ? 'Exporting...' : 'Export as CSV'}
+                </button>
+              )}
+              <button
+                onClick={() => router.push('/admin')}
+                className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
+              >
+                ← Back to Dashboard
+              </button>
+            </div>
           </div>
 
           {/* Alerts */}

@@ -186,10 +186,10 @@ export default function ApproveDataPage() {
 
     // Fetch data for current verify subtab
     useEffect(() => {
-        if (authorized) {
+        if (authorized && userEacNos.length > 0) {
             fetchVerifyData(verifySubTab)
         }
-    }, [authorized, verifySubTab, verifyPagination])
+    }, [authorized, verifySubTab, verifyPagination, userEacNos])
 
     const fetchVerifyData = async (tabType: VerifySubTabType) => {
         setVerifyLoading((prev) => ({ ...prev, [tabType]: true }))
@@ -213,6 +213,7 @@ export default function ApproveDataPage() {
                 .from(viewName)
                 .select('*')
                 .eq('approval_status', 'Pending')
+                .in('eac_no', userEacNos)
                 .range(from, to)
 
             if (error) throw error
