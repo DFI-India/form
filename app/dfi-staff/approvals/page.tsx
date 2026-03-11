@@ -46,6 +46,16 @@ const ENTITY_ICONS: Record<EntityType, string> = {
   computer_course: '💻'
 }
 
+const HIDDEN_METADATA_COLUMNS = new Set([
+  'verified_at',
+  'verified_by',
+  'submitted_by',
+  'submitted_at',
+  'approved_by',
+  'approved_at',
+  'status'
+])
+
 export default function DFIStaffApprovalsPage() {
   const router = useRouter()
   const { profile, loading: authLoading, isAuthorized } = useRequireRole(['dfi_staff'])
@@ -64,6 +74,7 @@ export default function DFIStaffApprovalsPage() {
   const [rejectingRecord, setRejectingRecord] = useState<ApprovalRecord | null>(null)
   const [rejectReason, setRejectReason] = useState('')
   const [actionLoading, setActionLoading] = useState(false)
+  const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null)
 
   useEffect(() => {
     const init = async () => {
@@ -237,10 +248,15 @@ export default function DFIStaffApprovalsPage() {
 
   const toggleSelectAll = () => {
     const currentRecords = data[activeTab] || []
-    if (selectedRecords.size === currentRecords.length) {
+    const selectableRecordIds = currentRecords
+      .filter((record) => isRowSelectable(record))
+      .map((record) => getEntityId(record))
+      .filter((id): id is string => Boolean(id))
+
+    if (selectableRecordIds.length > 0 && selectableRecordIds.every((id) => selectedRecords.has(id))) {
       setSelectedRecords(new Set())
     } else {
-      setSelectedRecords(new Set(currentRecords.map(r => getEntityId(r)).filter((id): id is string => Boolean(id))))
+      setSelectedRecords(new Set(selectableRecordIds))
     }
   }
 
@@ -260,6 +276,51 @@ export default function DFIStaffApprovalsPage() {
       month: 'short',
       year: 'numeric'
     })
+  }
+
+  const allColumnKeys = Array.from(
+    new Set(
+      (data[activeTab] || [])
+        .flatMap((record) => Object.keys(record))
+        .filter((columnKey) => !HIDDEN_METADATA_COLUMNS.has(columnKey.trim().toLowerCase()))
+    )
+  )
+
+  const isPhotoLinkColumn = (columnKey: string) => columnKey.trim().toLowerCase() === 'photo_link'
+
+  const formatColumnLabel = (columnKey: string) =>
+    columnKey
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, (letter) => letter.toUpperCase())
+
+  const formatCellValue = (record: ApprovalRecord, columnKey: string): string => {
+    const value = record[columnKey]
+    if (value === null || value === undefined || value === '') return '-'
+    if (typeof value === 'object') return JSON.stringify(value)
+
+    if (columnKey === 'created_at' || columnKey === 'updated_at' || columnKey === 'verified_at') {
+      const parsedDate = new Date(String(value))
+      if (!Number.isNaN(parsedDate.getTime())) {
+        return formatDate(String(value))
+      }
+    }
+
+    return String(value)
+  }
+
+  const isHeaderLikeRecord = (record: ApprovalRecord): boolean => {
+    const entries = Object.entries(record).filter(([, value]) => typeof value === 'string') as Array<[string, string]>
+    if (entries.length === 0) return false
+
+    const matches = entries.filter(([key, value]) =>
+      value.trim().toLowerCase() === key.trim().toLowerCase()
+    ).length
+
+    return matches >= Math.max(3, Math.ceil(entries.length * 0.3))
+  }
+
+  const isRowSelectable = (record: ApprovalRecord): boolean => {
+    return Boolean(getEntityId(record)) && !isHeaderLikeRecord(record)
   }
 
   if (authLoading) {
@@ -283,6 +344,7 @@ export default function DFIStaffApprovalsPage() {
 
   const roleInfo = ROLE_CONFIG.find(r => r.value === 'dfi_staff')!
   const currentTabData = data[activeTab] || []
+  const selectableRows = currentTabData.filter((record) => isRowSelectable(record))
   const totalVerified = Object.values(counts).reduce((a, b) => a + b, 0)
 
   return (
@@ -391,71 +453,92 @@ export default function DFIStaffApprovalsPage() {
                 <p className="text-slate-600 font-medium">No verified {ENTITY_LABELS[activeTab]} records</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-slate-50 border-b border-slate-200">
+              <div className="max-h-[70vh] overflow-auto">
+                <table className="w-full min-w-max">
+                  <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
                     <tr>
                       <th className="px-4 py-3 text-left">
                         <input
                           type="checkbox"
-                          checked={selectedRecords.size === currentTabData.length && currentTabData.length > 0}
+                          checked={selectableRows.length > 0 && selectableRows.every((record) => selectedRecords.has(getEntityId(record) || ''))}
                           onChange={toggleSelectAll}
+                          disabled={selectableRows.length === 0}
                           className="w-4 h-4 rounded border-slate-300"
                         />
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">ID</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Name</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">EAC No</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Reg No</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Submitted By</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Date</th>
+                      {allColumnKeys.map((columnKey) => (
+                        <th
+                          key={columnKey}
+                          className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap"
+                        >
+                          {formatColumnLabel(columnKey)}
+                        </th>
+                      ))}
                       <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200">
-                    {currentTabData.map((record) => (
-                      <tr key={getEntityId(record) || `${activeTab}-${record.created_at}`} className={`hover:bg-slate-50 ${selectedRecords.has(getEntityId(record) || '') ? 'bg-blue-50' : ''
-                        }`}>
-                        <td className="px-4 py-3">
-                          <input
-                            type="checkbox"
-                            checked={selectedRecords.has(getEntityId(record) || '')}
-                            onChange={() => {
-                              const entityId = getEntityId(record)
-                              if (entityId) toggleSelectRecord(entityId)
-                            }}
-                            className="w-4 h-4 rounded border-slate-300"
-                          />
-                        </td>
-                        <td className="px-4 py-3 text-sm text-slate-900 font-mono">#{getEntityId(record) || '-'}</td>
-                        <td className="px-4 py-3 text-sm text-slate-900 font-medium">{getRecordName(record)}</td>
-                        <td className="px-4 py-3 text-sm text-slate-600">{record.eac_no || '-'}</td>
-                        <td className="px-4 py-3 text-sm text-slate-600">{record.reg_no || '-'}</td>
-                        <td className="px-4 py-3 text-sm text-slate-600">{record.submitter?.username || 'Unknown'}</td>
-                        <td className="px-4 py-3 text-sm text-slate-600">{formatDate(record.created_at)}</td>
-                        <td className="px-4 py-3 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              onClick={() => handleApprove(record)}
-                              disabled={actionLoading}
-                              className="px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 disabled:opacity-50 text-sm font-medium"
-                            >
-                              ✅ Approve
-                            </button>
-                            <button
-                              onClick={() => {
-                                setRejectingRecord(record)
-                                setShowRejectModal(true)
+                    {currentTabData.map((record) => {
+                      const entityId = getEntityId(record)
+                      const selectable = isRowSelectable(record)
+
+                      return (
+                        <tr key={getEntityId(record) || `${activeTab}-${record.created_at}`} className={`hover:bg-slate-50 ${selectedRecords.has(getEntityId(record) || '') ? 'bg-blue-50' : ''
+                          }`}>
+                          <td className="px-4 py-3">
+                            <input
+                              type="checkbox"
+                              checked={entityId ? selectedRecords.has(entityId) : false}
+                              onChange={() => {
+                                if (entityId && selectable) toggleSelectRecord(entityId)
                               }}
-                              disabled={actionLoading}
-                              className="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 disabled:opacity-50 text-sm font-medium"
-                            >
-                              ❌ Reject
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                              disabled={!selectable}
+                              className="w-4 h-4 rounded border-slate-300"
+                            />
+                          </td>
+                          {allColumnKeys.map((columnKey) => {
+                            const rawValue = record[columnKey]
+                            const photoUrl = typeof rawValue === 'string' ? rawValue.trim() : ''
+
+                            return (
+                              <td key={`${getEntityId(record) || record.created_at}-${columnKey}`} className="px-4 py-3 text-sm text-slate-700 align-top whitespace-nowrap">
+                                {isPhotoLinkColumn(columnKey) && photoUrl ? (
+                                  <button
+                                    onClick={() => setPhotoPreviewUrl(photoUrl)}
+                                    className="px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 text-sm font-medium"
+                                  >
+                                    View Photo
+                                  </button>
+                                ) : (
+                                  formatCellValue(record, columnKey)
+                                )}
+                              </td>
+                            )
+                          })}
+                          <td className="px-4 py-3 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => handleApprove(record)}
+                                disabled={actionLoading || !selectable}
+                                className="px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 disabled:opacity-50 text-sm font-medium"
+                              >
+                                ✅ Approve
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setRejectingRecord(record)
+                                  setShowRejectModal(true)
+                                }}
+                                disabled={actionLoading || !selectable}
+                                className="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 disabled:opacity-50 text-sm font-medium"
+                              >
+                                ❌ Reject
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -497,6 +580,29 @@ export default function DFIStaffApprovalsPage() {
               >
                 {actionLoading ? 'Rejecting...' : 'Reject'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {photoPreviewUrl && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-bold text-slate-900">Photo Preview</h3>
+              <button
+                onClick={() => setPhotoPreviewUrl(null)}
+                className="px-2 py-1 bg-slate-100 text-slate-700 rounded hover:bg-slate-200"
+              >
+                Close
+              </button>
+            </div>
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-2">
+              <img
+                src={photoPreviewUrl}
+                alt="Record Photo"
+                className="w-full h-auto max-h-[55vh] object-contain rounded"
+              />
             </div>
           </div>
         </div>

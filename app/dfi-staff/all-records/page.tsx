@@ -34,9 +34,12 @@ const ENTITY_LABELS: Record<EntityType, string> = {
 
 const HIDDEN_COLUMNS = new Set([
     'id',
+    'status',
     'submitted_by',
     'verified_by',
     'verified_at',
+    'approved_by',
+    'approved_at',
     'created_at',
     'updated_at',
 ])

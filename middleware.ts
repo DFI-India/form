@@ -43,7 +43,7 @@ export async function middleware(request: NextRequest) {
   console.log('[Middleware]', pathname, 'User:', user ? user.id : 'none')
 
   // Public routes - no auth required
-  const publicRoutes = ['/sign-in', '/unauthorized']
+  const publicRoutes = ['/sign-in', '/forgot-password', '/reset-password', '/unauthorized']
   if (publicRoutes.includes(pathname)) {
     console.log('[Middleware] Public route, allowing')
     return response
