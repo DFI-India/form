@@ -137,6 +137,7 @@ type RejectedLeavingRecord = {
   eac_no: string
   reg_no: string
   reason: string
+  pass_status: string
   leav_class: string
   leav_date: string | null
   leav_addr1: string
@@ -180,10 +181,12 @@ type FormState = {
   panchayat: string
   village: string
   adm_date: string
+  dateofbirth: string
   reg_no: string
   first_name: string
   last_name: string
   gender: string
+  religion: string
   aadhar_no: string
   birth_place: string
   height: string
@@ -192,7 +195,7 @@ type FormState = {
   health: string
   caste: string
   mother_tongue: string
-  class_std: string
+  class_std_text: string
   school_name: string
   school_category: string
   sats_no: string
@@ -271,6 +274,7 @@ type ChildLeavingState = {
   eac_no: string
   reg_no: string
   reason: string
+  pass_status: string
   leav_class: string
   leav_date: string
   leav_addr1: string
@@ -388,10 +392,12 @@ const createEmptyForm = (): FormState => ({
   panchayat: '',
   village: '',
   adm_date: '',
+  dateofbirth: '',
   reg_no: '',
   first_name: '',
   last_name: '',
   gender: '',
+  religion: '',
   aadhar_no: '',
   birth_place: '',
   height: '',
@@ -400,7 +406,7 @@ const createEmptyForm = (): FormState => ({
   health: '',
   caste: '',
   mother_tongue: '',
-  class_std: '',
+  class_std_text: '',
   school_name: '',
   school_category: '',
   sats_no: '',
@@ -477,6 +483,7 @@ const createEmptyLeavingForm = (): ChildLeavingState => ({
   eac_no: '',
   reg_no: '',
   reason: '',
+  pass_status: '',
   leav_class: '',
   leav_date: '',
   leav_addr1: '',
@@ -585,6 +592,23 @@ const createEmptyComputerCourseForm = (): ComputerCourseState => ({
 
 const genderOptions = ['Male', 'Female', 'Other']
 const bloodGroupOptions = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
+const religionOptions = ['Hindu', 'Muslim', 'Christian', 'Jain', 'Buddhist', 'Other']
+const passStatusOptions = ['Pass', 'Drop Out']
+const classStandardOptions = [
+  '1st Class',
+  '2nd Class',
+  '3rd Class',
+  '4th Class',
+  '5th Class',
+  '6th Class',
+  '7th Class',
+  '8th Class',
+  '9th Class',
+  '10th Class',
+  '11th Class',
+  '12th Class',
+  'Other',
+]
 const vocationalCourseOptions = ['Tailoring', 'Beautician', 'Kuchi/Embroidery', 'Driving']
 
 export default function ChildForm() {
@@ -1044,6 +1068,22 @@ export default function ChildForm() {
     }))
   }
 
+  const hasFamilyIncomeColumnError = (error: any) => {
+    const message = `${error?.message ?? ''} ${error?.details ?? ''} ${error?.hint ?? ''}`.toLowerCase()
+    const hasMissingColumnSignal = message.includes('column') && (message.includes('does not exist') || message.includes('not found') || message.includes('schema cache'))
+    return hasMissingColumnSignal && (message.includes('f_inc') || message.includes('m_inc'))
+  }
+
+  const hasRegNoIdentityUpdateError = (error: any) => {
+    const code = String(error?.code ?? '')
+    const message = `${error?.message ?? ''} ${error?.details ?? ''} ${error?.hint ?? ''}`.toLowerCase()
+    return (
+      code === '428c9' &&
+      message.includes('reg_no') &&
+      message.includes('identity')
+    )
+  }
+
   const wizardSteps: { id: WizardStepType; label: string }[] = [
     { id: 'child', label: 'Child Data' },
     { id: 'family', label: 'Child Family' },
@@ -1153,9 +1193,11 @@ export default function ChildForm() {
         panchayat: toNullableString(formData.panchayat),
         village: toNullableString(formData.village),
         adm_date: toNullableString(formData.adm_date),
+        dateofbirth: toNullableString(formData.dateofbirth),
         first_name: toNullableString(formData.first_name),
         last_name: toNullableString(formData.last_name),
         gender: toNullableString(formData.gender),
+        religion: toNullableString(formData.religion),
         aadhar_no: toNullableNumber(formData.aadhar_no),
         birth_place: toNullableString(formData.birth_place),
         height: toNullableNumber(formData.height),
@@ -1164,7 +1206,7 @@ export default function ChildForm() {
         health: toNullableString(formData.health),
         caste: toNullableString(formData.caste),
         mother_tongue: toNullableString(formData.mother_tongue),
-        class_std: toNullableNumber(formData.class_std),
+        class_std_text: toNullableString(formData.class_std_text),
         school_name: toNullableString(formData.school_name),
         school_category: toNullableString(formData.school_category),
         sats_no: toNullableNumber(formData.sats_no),
@@ -1245,13 +1287,23 @@ export default function ChildForm() {
         fmly_remarks: toNullableString(familyData.fmly_remarks),
       }
 
-      const { data: familyRow, error: familyError } = await supabase
+      let familyInsertResult = await supabase
         .from('childfmly')
         .insert([familyPayload])
         .select()
         .single()
 
-      if (familyError) throw familyError
+      if (familyInsertResult.error && hasFamilyIncomeColumnError(familyInsertResult.error)) {
+        const { f_inc, m_inc, ...restPayload } = familyPayload
+        familyInsertResult = await supabase
+          .from('childfmly')
+          .insert([{ ...restPayload, f_inc_int: f_inc, m_inc_int: m_inc }])
+          .select()
+          .single()
+      }
+
+      if (familyInsertResult.error) throw familyInsertResult.error
+      const familyRow = familyInsertResult.data
 
       const { error: familyApprovalError } = await supabase
         .from('child_approvals')
@@ -1522,9 +1574,11 @@ export default function ChildForm() {
         panchayat: toNullableString(formData.panchayat),
         village: toNullableString(formData.village),
         adm_date: toNullableString(formData.adm_date),
+        dateofbirth: toNullableString(formData.dateofbirth),
         first_name: toNullableString(formData.first_name),
         last_name: toNullableString(formData.last_name),
         gender: toNullableString(formData.gender),
+        religion: toNullableString(formData.religion),
         aadhar_no: toNullableNumber(formData.aadhar_no),
         birth_place: toNullableString(formData.birth_place),
         height: toNullableNumber(formData.height),
@@ -1533,7 +1587,7 @@ export default function ChildForm() {
         health: toNullableString(formData.health),
         caste: toNullableString(formData.caste),
         mother_tongue: toNullableString(formData.mother_tongue),
-        class_std: toNullableNumber(formData.class_std),
+        class_std_text: toNullableString(formData.class_std_text),
         school_name: toNullableString(formData.school_name),
         school_category: toNullableString(formData.school_category),
         sats_no: toNullableNumber(formData.sats_no),
@@ -1651,13 +1705,23 @@ export default function ChildForm() {
         fmly_remarks: toNullableString(familyData.fmly_remarks),
       }
 
-      const { data, error } = await supabase
+      let familyInsertResult = await supabase
         .from('childfmly')
         .insert([payload])
         .select()
         .single()
 
-      if (error) throw error
+      if (familyInsertResult.error && hasFamilyIncomeColumnError(familyInsertResult.error)) {
+        const { f_inc, m_inc, ...restPayload } = payload
+        familyInsertResult = await supabase
+          .from('childfmly')
+          .insert([{ ...restPayload, f_inc_int: f_inc, m_inc_int: m_inc }])
+          .select()
+          .single()
+      }
+
+      if (familyInsertResult.error) throw familyInsertResult.error
+      const data = familyInsertResult.data
 
       const { data: userData } = await supabase.auth.getUser()
       const userId = userData.user?.id
@@ -1831,6 +1895,7 @@ export default function ChildForm() {
         eac_no: toNullableString(leavingData.eac_no),
         reg_no: toNullableString(leavingData.reg_no),
         reason: toNullableString(leavingData.reason),
+        pass_status: toNullableString(leavingData.pass_status),
         leav_class: toNullableString(leavingData.leav_class),
         leav_date: toNullableString(leavingData.leav_date),
         leav_addr1: toNullableString(leavingData.leav_addr1),
@@ -2249,10 +2314,11 @@ export default function ChildForm() {
           panchayat: toNullableString(updatePayload.panchayat),
           village: toNullableString(updatePayload.village),
           adm_date: toNullableString(updatePayload.adm_date),
-          reg_no: toNullableNumber(updatePayload.reg_no),
+          dateofbirth: toNullableString(updatePayload.dateofbirth),
           first_name: toNullableString(updatePayload.first_name),
           last_name: toNullableString(updatePayload.last_name),
           gender: toNullableString(updatePayload.gender),
+          religion: toNullableString(updatePayload.religion),
           aadhar_no: toNullableNumber(updatePayload.aadhar_no),
           birth_place: toNullableString(updatePayload.birth_place),
           height: toNullableNumber(updatePayload.height),
@@ -2261,7 +2327,7 @@ export default function ChildForm() {
           health: toNullableString(updatePayload.health),
           caste: toNullableString(updatePayload.caste),
           mother_tongue: toNullableString(updatePayload.mother_tongue),
-          class_std: toNullableNumber(updatePayload.class_std),
+          class_std_text: toNullableString(updatePayload.class_std_text),
           school_name: toNullableString(updatePayload.school_name),
           school_category: toNullableString(updatePayload.school_category),
           sats_no: toNullableNumber(updatePayload.sats_no),
@@ -2338,6 +2404,7 @@ export default function ChildForm() {
           eac_no: toNullableString(updatePayload.eac_no),
           reg_no: toNullableString(updatePayload.reg_no),
           reason: toNullableString(updatePayload.reason),
+          pass_status: toNullableString(updatePayload.pass_status),
           leav_class: toNullableString(updatePayload.leav_class),
           leav_date: toNullableString(updatePayload.leav_date),
           leav_addr1: toNullableString(updatePayload.leav_addr1),
@@ -2366,12 +2433,28 @@ export default function ChildForm() {
       const idField = ['vocational', 'computer'].includes(editModalType) ? 'id' : 'record_id'
       const idValue = editingRecord[idField] || editingRecord.record_id || editingRecord.id
 
-      const { error: updateError } = await supabase
+      let updateResult = await supabase
         .from(tableName)
         .update(updatePayload)
         .eq(idField, idValue)
 
-      if (updateError) throw updateError
+      if (updateResult.error && editModalType === 'family' && hasFamilyIncomeColumnError(updateResult.error)) {
+        const { f_inc, m_inc, ...restPayload } = updatePayload
+        updateResult = await supabase
+          .from(tableName)
+          .update({ ...restPayload, f_inc_int: f_inc, m_inc_int: m_inc })
+          .eq(idField, idValue)
+      }
+
+      if (updateResult.error && hasRegNoIdentityUpdateError(updateResult.error) && Object.prototype.hasOwnProperty.call(updatePayload, 'reg_no')) {
+        const { reg_no, ...restPayload } = updatePayload
+        updateResult = await supabase
+          .from(tableName)
+          .update(restPayload)
+          .eq(idField, idValue)
+      }
+
+      if (updateResult.error) throw updateResult.error
 
       // Reset approval status to Pending
       const { data: authData } = await supabase.auth.getUser()
@@ -2644,6 +2727,7 @@ export default function ChildForm() {
                           <ReadOnlyInput label="Panchayat" value={formData.panchayat} />
                           <ReadOnlyInput label="Village" value={formData.village} />
                           <TextInput label="Admission Date" name="adm_date" value={formData.adm_date} onChange={handleChange} type="date" />
+                          <TextInput label="Date of Birth" name="dateofbirth" value={formData.dateofbirth} onChange={handleChange} type="date" />
                           <TextInput label="First Name *" name="first_name" value={formData.first_name} onChange={handleChange} />
                           <TextInput label="Last Name" name="last_name" value={formData.last_name} onChange={handleChange} />
 
@@ -2657,6 +2741,21 @@ export default function ChildForm() {
                             >
                               <option value="">Select Gender</option>
                               {genderOptions.map((option) => (
+                                <option key={option} value={option}>{option}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="mb-1 block text-sm font-medium text-slate-700">Religion</label>
+                            <select
+                              name="religion"
+                              value={formData.religion}
+                              onChange={handleChange}
+                              className={baseInputClass}
+                            >
+                              <option value="">Select Religion</option>
+                              {religionOptions.map((option) => (
                                 <option key={option} value={option}>{option}</option>
                               ))}
                             </select>
@@ -2685,7 +2784,20 @@ export default function ChildForm() {
                           <TextInput label="Health Status" name="health" value={formData.health} onChange={handleChange} />
                           <TextInput label="Caste" name="caste" value={formData.caste} onChange={handleChange} />
                           <TextInput label="Mother Tongue" name="mother_tongue" value={formData.mother_tongue} onChange={handleChange} />
-                          <NumberInput label="Class/Standard" name="class_std" value={formData.class_std} onChange={handleChange} />
+                          <div>
+                            <label className="mb-1 block text-sm font-medium text-slate-700">Class/Standard</label>
+                            <select
+                              name="class_std_text"
+                              value={formData.class_std_text}
+                              onChange={handleChange}
+                              className={baseInputClass}
+                            >
+                              <option value="">Select Class/Standard</option>
+                              {classStandardOptions.map((option) => (
+                                <option key={option} value={option}>{option}</option>
+                              ))}
+                            </select>
+                          </div>
                           <TextInput label="School Name" name="school_name" value={formData.school_name} onChange={handleChange} />
                           <TextInput label="School Category" name="school_category" value={formData.school_category} onChange={handleChange} />
                           <NumberInput label="SATS No" name="sats_no" value={formData.sats_no} onChange={handleChange} />
@@ -3247,6 +3359,20 @@ export default function ChildForm() {
                         value={leavingData.reason}
                         onChange={(e) => setLeavingData({ ...leavingData, reason: e.target.value })}
                       />
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-slate-700">Pass Status</label>
+                        <select
+                          name="pass_status"
+                          value={leavingData.pass_status}
+                          onChange={(e) => setLeavingData({ ...leavingData, pass_status: e.target.value })}
+                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                        >
+                          <option value="">Select Pass Status</option>
+                          {passStatusOptions.map((option) => (
+                            <option key={option} value={option}>{option}</option>
+                          ))}
+                        </select>
+                      </div>
                       <TextInput
                         label="Leaving Class/Standard"
                         name="leav_class"
@@ -4627,6 +4753,31 @@ function EditModal({
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <TextInput
+                  label="Date of Birth"
+                  name="dateofbirth"
+                  value={formData.dateofbirth}
+                  onChange={onFormChange}
+                  type="date"
+                />
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Religion</label>
+                  <select
+                    name="religion"
+                    value={formData.religion || ''}
+                    onChange={onFormChange}
+                    className={baseInputClass}
+                  >
+                    <option value="">Select Religion</option>
+                    {religionOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <TextInput
                   label="First Name"
                   name="first_name"
                   value={formData.first_name}
@@ -4722,12 +4873,22 @@ function EditModal({
                   value={formData.mother_tongue}
                   onChange={onFormChange}
                 />
-                <NumberInput
-                  label="Class/Standard"
-                  name="class_std"
-                  value={formData.class_std}
-                  onChange={onFormChange}
-                />
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Class/Standard</label>
+                  <select
+                    name="class_std_text"
+                    value={formData.class_std_text || ''}
+                    onChange={onFormChange}
+                    className={baseInputClass}
+                  >
+                    <option value="">Select Class/Standard</option>
+                    {classStandardOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <TextInput
@@ -4941,6 +5102,24 @@ function EditModal({
                   value={formData.reason}
                   onChange={onFormChange}
                 />
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Pass Status</label>
+                  <select
+                    name="pass_status"
+                    value={formData.pass_status || ''}
+                    onChange={onFormChange}
+                    className={baseInputClass}
+                  >
+                    <option value="">Select Pass Status</option>
+                    {passStatusOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
                 <TextInput
                   label="Leaving Class"
                   name="leav_class"

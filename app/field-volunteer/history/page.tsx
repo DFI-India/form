@@ -31,7 +31,7 @@ type FormState = {
   health: string
   caste: string
   mother_tongue: string
-  class_std: string
+  class_std_text: string
   school_name: string
   school_category: string
   sats_no: string
@@ -477,7 +477,7 @@ export default function ActivityHistoryPage() {
                                 <td className="px-4 py-3 text-slate-700">{row.health}</td>
                                 <td className="px-4 py-3 text-slate-700">{row.caste}</td>
                                 <td className="px-4 py-3 text-slate-700">{row.mother_tongue}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.class_std}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.class_std_text ?? row.class_std ?? ''}</td>
                                 <td className="px-4 py-3 text-slate-700">{row.school_name}</td>
                                 <td className="px-4 py-3 text-slate-700">{row.school_category}</td>
                                 <td className="px-4 py-3 text-slate-700">{row.life_ambition}</td>
@@ -533,12 +533,12 @@ export default function ActivityHistoryPage() {
                                 <td className="px-4 py-3 text-slate-700">{row.reg_no}</td>
                                 <td className="px-4 py-3 text-slate-700">{row.f_name}</td>
                                 <td className="px-4 py-3 text-slate-700">{row.f_occup}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.f_inc}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.f_inc ?? row.f_inc_int ?? ''}</td>
                                 <td className="px-4 py-3 text-slate-700">{row.f_aadhar}</td>
                                 <td className="px-4 py-3 text-slate-700">{row.f_mobile}</td>
                                 <td className="px-4 py-3 text-slate-700">{row.m_name}</td>
                                 <td className="px-4 py-3 text-slate-700">{row.m_occup}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.m_inc}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.m_inc ?? row.m_inc_int ?? ''}</td>
                                 <td className="px-4 py-3 text-slate-700">{row.m_aadhar}</td>
                                 <td className="px-4 py-3 text-slate-700">{row.m_mobile}</td>
                                 <td className="px-4 py-3 text-slate-700">{row.fmly_addr1}</td>

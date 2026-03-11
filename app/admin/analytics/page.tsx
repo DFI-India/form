@@ -8,7 +8,7 @@ import { Navbar, Sidebar, PageContainer } from '../../components/Navbar'
 import { CheckCircle } from 'lucide-react'
 
 type ReportTab = 'child_data' | 'vocational_course'
-type ReportColumn = 'village' | 'eac_no' | 'centre_id' | 'district' | 'taluk' | 'gender' | 'caste' | 'mother_tongue' | 'class_std' | 'religion'
+type ReportColumn = 'village' | 'eac_no' | 'centre_id' | 'district' | 'taluk' | 'gender' | 'caste' | 'mother_tongue' | 'class_std_text' | 'religion'
 
 interface ReportRow {
   group: string
@@ -25,7 +25,7 @@ const REPORT_COLUMNS_BY_TAB: Record<ReportTab, { key: ReportColumn; label: strin
     { key: 'gender', label: 'Gender' },
     { key: 'caste', label: 'Caste' },
     { key: 'mother_tongue', label: 'Mother Tongue' },
-    { key: 'class_std', label: 'Class Std' }
+    { key: 'class_std_text', label: 'Class Std' }
   ],
   vocational_course: [
     { key: 'eac_no', label: 'EAC' },
@@ -73,10 +73,10 @@ export default function AdminAnalyticsPage() {
   })
   const [reportOptions, setReportOptions] = useState<Record<ReportTab, Record<ReportColumn, string[]>>>({
     child_data: {
-      village: [], eac_no: [], centre_id: [], district: [], taluk: [], gender: [], caste: [], mother_tongue: [], class_std: [], religion: []
+      village: [], eac_no: [], centre_id: [], district: [], taluk: [], gender: [], caste: [], mother_tongue: [], class_std_text: [], religion: []
     },
     vocational_course: {
-      village: [], eac_no: [], centre_id: [], district: [], taluk: [], gender: [], caste: [], mother_tongue: [], class_std: [], religion: []
+      village: [], eac_no: [], centre_id: [], district: [], taluk: [], gender: [], caste: [], mother_tongue: [], class_std_text: [], religion: []
     }
   })
   const [reportRows, setReportRows] = useState<ReportRow[]>([])
@@ -129,7 +129,7 @@ export default function AdminAnalyticsPage() {
     setReportError('')
     try {
       const nextOptions: Record<ReportColumn, string[]> = {
-        village: [], eac_no: [], centre_id: [], district: [], taluk: [], gender: [], caste: [], mother_tongue: [], class_std: [], religion: []
+        village: [], eac_no: [], centre_id: [], district: [], taluk: [], gender: [], caste: [], mother_tongue: [], class_std_text: [], religion: []
       }
 
       await Promise.all(
