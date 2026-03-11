@@ -1056,26 +1056,22 @@ export default function ChildForm() {
       ...prev,
       village_name: formData.village_name,
       eac_no: formData.eac_no,
-      reg_no: formData.reg_no,
     }))
     setSiblingData((prev) => ({
       ...prev,
       village_name: formData.village_name,
       eac_no: formData.eac_no,
-      reg_no: formData.reg_no,
     }))
     setUniformData((prev) => ({
       ...prev,
       village_name: formData.village_name,
       eac_no: formData.eac_no,
-      reg_no: formData.reg_no,
     }))
   }
 
   const validateWizardStep = (step: number): string | null => {
     if (step === 0) {
       if (!formData.eac_no.trim()) return 'EAC number is required.'
-      if (!formData.reg_no.trim()) return 'Registration number is required.'
       if (!formData.first_name.trim()) return 'First name is required.'
       return null
     }
@@ -1146,35 +1142,7 @@ export default function ChildForm() {
         throw new Error('EAC number must be a valid number.')
       }
 
-      let photoUrl: string | null = formData.photo_link ? formData.photo_link : null
-      const registrationNumber = formData.reg_no.trim()
-
-      if (photoFile) {
-        if (registrationNumber === '') {
-          throw new Error('Registration number is required to upload a photo.')
-        }
-
-        const extension = (photoFile.name.split('.').pop() || 'jpg').toLowerCase()
-        const sanitizedIdentifier = registrationNumber.replace(/[^a-zA-Z0-9_-]+/g, '-').toLowerCase()
-        const uniqueFallback =
-          typeof crypto !== 'undefined' && 'randomUUID' in crypto
-            ? crypto.randomUUID()
-            : Date.now().toString(36)
-        const safeIdentifier = sanitizedIdentifier || uniqueFallback
-        const filePath = `${safeIdentifier}.${extension}`
-
-        const { error: uploadError } = await supabase.storage.from('profiles').upload(filePath, photoFile, {
-          cacheControl: '3600',
-          upsert: true,
-        })
-
-        if (uploadError) throw uploadError
-
-        const { data: publicData } = supabase.storage.from('profiles').getPublicUrl(filePath)
-        photoUrl =
-          publicData.publicUrl ??
-          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/profile/${filePath}`
-      }
+      let photoUrl: string | null = photoFile ? null : (formData.photo_link ? formData.photo_link : null)
 
       const childPayload = {
         eac_no: eacNumber,
@@ -1185,7 +1153,6 @@ export default function ChildForm() {
         panchayat: toNullableString(formData.panchayat),
         village: toNullableString(formData.village),
         adm_date: toNullableString(formData.adm_date),
-        reg_no: toNullableNumber(formData.reg_no),
         first_name: toNullableString(formData.first_name),
         last_name: toNullableString(formData.last_name),
         gender: toNullableString(formData.gender),
@@ -1217,6 +1184,37 @@ export default function ChildForm() {
 
       if (childError) throw childError
 
+      if (photoFile) {
+        const extension = (photoFile.name.split('.').pop() || 'jpg').toLowerCase()
+        const uploadIdentifier = `${childRow.eac_no}-${childRow.reg_no}`
+        const sanitizedIdentifier = uploadIdentifier.replace(/[^a-zA-Z0-9_-]+/g, '-').toLowerCase()
+        const uniqueFallback =
+          typeof crypto !== 'undefined' && 'randomUUID' in crypto
+            ? crypto.randomUUID()
+            : Date.now().toString(36)
+        const safeIdentifier = sanitizedIdentifier || uniqueFallback
+        const filePath = `${safeIdentifier}.${extension}`
+
+        const { error: uploadError } = await supabase.storage.from('profiles').upload(filePath, photoFile, {
+          cacheControl: '3600',
+          upsert: true,
+        })
+
+        if (uploadError) throw uploadError
+
+        const { data: publicData } = supabase.storage.from('profiles').getPublicUrl(filePath)
+        photoUrl =
+          publicData.publicUrl ??
+          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/profile/${filePath}`
+
+        const { error: childPhotoUpdateError } = await supabase
+          .from('Child_Data')
+          .update({ photo_link: photoUrl })
+          .eq('record_id', childRow.record_id)
+
+        if (childPhotoUpdateError) throw childPhotoUpdateError
+      }
+
       const { error: childApprovalError } = await supabase
         .from('child_approvals')
         .insert([{
@@ -1230,7 +1228,6 @@ export default function ChildForm() {
       const familyPayload = {
         village_name: toNullableString(formData.village_name),
         eac_no: toNullableString(formData.eac_no),
-        reg_no: toNullableString(formData.reg_no),
         f_name: toNullableString(familyData.f_name),
         f_occup: toNullableString(familyData.f_occup),
         f_inc: toNullableNumber(familyData.f_inc),
@@ -1269,7 +1266,6 @@ export default function ChildForm() {
       const siblingPayload = {
         village_name: toNullableString(formData.village_name),
         eac_no: toNullableString(formData.eac_no),
-        reg_no: toNullableString(formData.reg_no),
         names_1: toNullableString(siblingData.names_1),
         ages_1: toNullableNumber(siblingData.ages_1),
         genders_1: toNullableString(siblingData.genders_1),
@@ -1314,7 +1310,6 @@ export default function ChildForm() {
       const uniformPayload = {
         village_name: toNullableString(formData.village_name),
         eac_no: toNullableString(formData.eac_no),
-        reg_no: toNullableString(formData.reg_no),
         shirtsize: toNullableString(uniformData.shirtsize),
         knickersize: toNullableString(uniformData.knickersize),
         pant_skirtsize: toNullableString(uniformData.pant_skirtsize),
@@ -1509,37 +1504,7 @@ export default function ChildForm() {
         throw new Error('EAC number must be a valid number.')
       }
 
-      let photoUrl: string | null = formData.photo_link ? formData.photo_link : null
-      const registrationNumber = formData.reg_no.trim()
-
-      if (photoFile) {
-        if (registrationNumber === '') {
-          throw new Error('Registration number is required to upload a photo.')
-        }
-
-        const extension = (photoFile.name.split('.').pop() || 'jpg').toLowerCase()
-        const sanitizedIdentifier = registrationNumber.replace(/[^a-zA-Z0-9_-]+/g, '-').toLowerCase()
-        const uniqueFallback =
-          typeof crypto !== 'undefined' && 'randomUUID' in crypto
-            ? crypto.randomUUID()
-            : Date.now().toString(36)
-        const safeIdentifier = sanitizedIdentifier || uniqueFallback
-        const filePath = `${safeIdentifier}.${extension}`
-
-        const { error: uploadError } = await supabase.storage.from('profiles').upload(filePath, photoFile, {
-          cacheControl: '3600',
-          upsert: true,
-        })
-
-        if (uploadError) {
-          throw uploadError
-        }
-
-        const { data: publicData } = supabase.storage.from('profiles').getPublicUrl(filePath)
-        photoUrl =
-          publicData.publicUrl ??
-          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/profile/${filePath}`
-      }
+      let photoUrl: string | null = photoFile ? null : (formData.photo_link ? formData.photo_link : null)
 
       const toNullableString = (value: string) => (value.trim() === '' ? null : value)
       const toNullableNumber = (value: string) => {
@@ -1557,7 +1522,6 @@ export default function ChildForm() {
         panchayat: toNullableString(formData.panchayat),
         village: toNullableString(formData.village),
         adm_date: toNullableString(formData.adm_date),
-        reg_no: toNullableNumber(formData.reg_no),
         first_name: toNullableString(formData.first_name),
         last_name: toNullableString(formData.last_name),
         gender: toNullableString(formData.gender),
@@ -1587,6 +1551,39 @@ export default function ChildForm() {
         .select()
         .single()
       if (error) throw error
+
+      if (photoFile) {
+        const extension = (photoFile.name.split('.').pop() || 'jpg').toLowerCase()
+        const uploadIdentifier = `${data.eac_no}-${data.reg_no}`
+        const sanitizedIdentifier = uploadIdentifier.replace(/[^a-zA-Z0-9_-]+/g, '-').toLowerCase()
+        const uniqueFallback =
+          typeof crypto !== 'undefined' && 'randomUUID' in crypto
+            ? crypto.randomUUID()
+            : Date.now().toString(36)
+        const safeIdentifier = sanitizedIdentifier || uniqueFallback
+        const filePath = `${safeIdentifier}.${extension}`
+
+        const { error: uploadError } = await supabase.storage.from('profiles').upload(filePath, photoFile, {
+          cacheControl: '3600',
+          upsert: true,
+        })
+
+        if (uploadError) {
+          throw uploadError
+        }
+
+        const { data: publicData } = supabase.storage.from('profiles').getPublicUrl(filePath)
+        photoUrl =
+          publicData.publicUrl ??
+          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/profile/${filePath}`
+
+        const { error: childPhotoUpdateError } = await supabase
+          .from('Child_Data')
+          .update({ photo_link: photoUrl })
+          .eq('record_id', data.record_id)
+
+        if (childPhotoUpdateError) throw childPhotoUpdateError
+      }
 
 
       const { data: userData } = await supabase.auth.getUser()
@@ -1627,10 +1624,6 @@ export default function ChildForm() {
     setFamilyMessage(null)
 
     try {
-      if (!familyData.reg_no) {
-        throw new Error('Registration number is required.')
-      }
-
       const toNullableString = (value: string) => (value.trim() === '' ? null : value)
       const toNullableNumber = (value: string) => {
         if (value.trim() === '') return null
@@ -1641,7 +1634,6 @@ export default function ChildForm() {
       const payload = {
         village_name: toNullableString(familyData.village_name),
         eac_no: toNullableString(familyData.eac_no),
-        reg_no: toNullableString(familyData.reg_no),
         f_name: toNullableString(familyData.f_name),
         f_occup: toNullableString(familyData.f_occup),
         f_inc: toNullableNumber(familyData.f_inc),
@@ -1700,10 +1692,6 @@ export default function ChildForm() {
     setSiblingMessage(null)
 
     try {
-      if (!siblingData.reg_no) {
-        throw new Error('Registration number is required.')
-      }
-
       const toNullableString = (value: string) => (value.trim() === '' ? null : value)
       const toNullableNumber = (value: string) => {
         if (value.trim() === '') return null
@@ -1714,7 +1702,6 @@ export default function ChildForm() {
       const payload = {
         village_name: toNullableString(siblingData.village_name),
         eac_no: toNullableString(siblingData.eac_no),
-        reg_no: toNullableString(siblingData.reg_no),
         names_1: toNullableString(siblingData.names_1),
         ages_1: toNullableNumber(siblingData.ages_1),
         genders_1: toNullableString(siblingData.genders_1),
@@ -1779,16 +1766,11 @@ export default function ChildForm() {
     setUniformMessage(null)
 
     try {
-      if (!uniformData.reg_no) {
-        throw new Error('Registration number is required.')
-      }
-
       const toNullableString = (value: string) => (value.trim() === '' ? null : value)
 
       const payload = {
         village_name: toNullableString(uniformData.village_name),
         eac_no: toNullableString(uniformData.eac_no),
-        reg_no: toNullableString(uniformData.reg_no),
         shirtsize: toNullableString(uniformData.shirtsize),
         knickersize: toNullableString(uniformData.knickersize),
         pant_skirtsize: toNullableString(uniformData.pant_skirtsize),
@@ -2655,7 +2637,6 @@ export default function ChildForm() {
                               ))}
                             </select>
                           </div>
-                          <TextInput label="Registration No *" name="reg_no" value={formData.reg_no} onChange={handleChange} type="number" />
                           <ReadOnlyInput label="Village Name" value={formData.village_name} />
                           <ReadOnlyInput label="Centre ID" value={formData.centre_id} />
                           <ReadOnlyInput label="District" value={formData.district} />
@@ -2745,12 +2726,12 @@ export default function ChildForm() {
 
                     {wizardStep === 1 && (
                       <div className="grid gap-4 md:grid-cols-2">
-                        <TextInput label="Father's Name *" name="f_name" value={familyData.f_name} onChange={(e) => setFamilyData({ ...familyData, f_name: e.target.value })} />
+                        <TextInput label="Father's Name" name="f_name" value={familyData.f_name} onChange={(e) => setFamilyData({ ...familyData, f_name: e.target.value })} />
                         <TextInput label="Father's Occupation" name="f_occup" value={familyData.f_occup} onChange={(e) => setFamilyData({ ...familyData, f_occup: e.target.value })} />
                         <TextInput label="Father's Income" name="f_inc" value={familyData.f_inc} onChange={(e) => setFamilyData({ ...familyData, f_inc: e.target.value })} type="number" />
                         <TextInput label="Father's Aadhar No" name="f_aadhar" value={familyData.f_aadhar} onChange={(e) => setFamilyData({ ...familyData, f_aadhar: e.target.value })} />
                         <TextInput label="Father's Mobile" name="f_mobile" value={familyData.f_mobile} onChange={(e) => setFamilyData({ ...familyData, f_mobile: e.target.value })} />
-                        <TextInput label="Mother's Name *" name="m_name" value={familyData.m_name} onChange={(e) => setFamilyData({ ...familyData, m_name: e.target.value })} />
+                        <TextInput label="Mother's Name" name="m_name" value={familyData.m_name} onChange={(e) => setFamilyData({ ...familyData, m_name: e.target.value })} />
                         <TextInput label="Mother's Occupation" name="m_occup" value={familyData.m_occup} onChange={(e) => setFamilyData({ ...familyData, m_occup: e.target.value })} />
                         <TextInput label="Mother's Income" name="m_inc" value={familyData.m_inc} onChange={(e) => setFamilyData({ ...familyData, m_inc: e.target.value })} type="number" />
                         <TextInput label="Mother's Aadhar No" name="m_aadhar" value={familyData.m_aadhar} onChange={(e) => setFamilyData({ ...familyData, m_aadhar: e.target.value })} />
@@ -2784,7 +2765,7 @@ export default function ChildForm() {
                             <h3 className="mb-3 text-sm font-semibold text-slate-900">Sibling {num}</h3>
                             <div className="grid gap-4 md:grid-cols-4">
                               <TextInput
-                                label={`Sibling ${num} Name${num === 1 ? ' *' : ''}`}
+                                label={`Sibling ${num} Name`}
                                 name={`names_${num}`}
                                 value={siblingData[`names_${num}` as keyof ChildSiblingState]}
                                 onChange={(e) => setSiblingData({ ...siblingData, [`names_${num}`]: e.target.value })}
@@ -2833,7 +2814,7 @@ export default function ChildForm() {
 
                     {wizardStep === 3 && (
                       <div className="grid gap-4 md:grid-cols-2">
-                        <TextInput label="Shirt Size *" name="shirtsize" value={uniformData.shirtsize} onChange={(e) => setUniformData({ ...uniformData, shirtsize: e.target.value })} />
+                        <TextInput label="Shirt Size" name="shirtsize" value={uniformData.shirtsize} onChange={(e) => setUniformData({ ...uniformData, shirtsize: e.target.value })} />
                         <TextInput label="Knicker Size" name="knickersize" value={uniformData.knickersize} onChange={(e) => setUniformData({ ...uniformData, knickersize: e.target.value })} />
                         <TextInput label="Pant/Skirt Size" name="pant_skirtsize" value={uniformData.pant_skirtsize} onChange={(e) => setUniformData({ ...uniformData, pant_skirtsize: e.target.value })} />
                         <TextInput label="Chudidhar Size" name="chudidharsize" value={uniformData.chudidharsize} onChange={(e) => setUniformData({ ...uniformData, chudidharsize: e.target.value })} />
@@ -2908,12 +2889,6 @@ export default function ChildForm() {
                         name="eac_no"
                         value={familyData.eac_no}
                         onChange={(e) => setFamilyData({ ...familyData, eac_no: e.target.value })}
-                      />
-                      <TextInput
-                        label="Registration No *"
-                        name="reg_no"
-                        value={familyData.reg_no}
-                        onChange={(e) => setFamilyData({ ...familyData, reg_no: e.target.value })}
                       />
 
                       <div className="md:col-span-2 border-t pt-4">
@@ -3080,12 +3055,6 @@ export default function ChildForm() {
                         value={siblingData.eac_no}
                         onChange={(e) => setSiblingData({ ...siblingData, eac_no: e.target.value })}
                       />
-                      <TextInput
-                        label="Registration No *"
-                        name="reg_no"
-                        value={siblingData.reg_no}
-                        onChange={(e) => setSiblingData({ ...siblingData, reg_no: e.target.value })}
-                      />
 
                       {[1, 2, 3, 4, 5].map((num) => (
                         <div key={num} className="md:col-span-2 border-t pt-4">
@@ -3180,12 +3149,6 @@ export default function ChildForm() {
                         name="eac_no"
                         value={uniformData.eac_no}
                         onChange={(e) => setUniformData({ ...uniformData, eac_no: e.target.value })}
-                      />
-                      <TextInput
-                        label="Registration No *"
-                        name="reg_no"
-                        value={uniformData.reg_no}
-                        onChange={(e) => setUniformData({ ...uniformData, reg_no: e.target.value })}
                       />
 
                       <div className="md:col-span-2 border-t pt-4">
