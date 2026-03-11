@@ -207,7 +207,7 @@ export default function SignInPage() {
       <div className="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
         <div className="mb-6 text-center">
           <h1 className="text-2xl font-semibold text-slate-900">
-            Admin Sign In
+            Sign In
           </h1>
           <p className="mt-2 text-sm text-slate-600">
             Enter credentials to continue.
