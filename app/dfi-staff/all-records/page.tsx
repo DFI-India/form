@@ -32,6 +32,14 @@ const ENTITY_LABELS: Record<EntityType, string> = {
     computer_course: 'Computer Course',
 }
 
+const VISIBLE_ENTITY_TABS: EntityType[] = [
+    'child_data',
+    'childfmly',
+    'childsibling',
+    'childuniform',
+    'childleaving',
+]
+
 const HIDDEN_COLUMNS = new Set([
     'id',
     'status',
@@ -393,7 +401,7 @@ export default function DFIStaffAllRecordsPage() {
 
                     <div className="bg-white rounded-lg border border-slate-200 mb-6">
                         <div className="flex overflow-x-auto">
-                            {(Object.keys(ENTITY_LABELS) as EntityType[]).map((type) => (
+                            {VISIBLE_ENTITY_TABS.map((type) => (
                                 <button
                                     key={type}
                                     onClick={() => setActiveTab(type)}
