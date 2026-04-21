@@ -12,32 +12,98 @@ type CentreRecord = {
   id: string
   eac_no: string | number
   village_name: string | null
-  centre_id: string | null
   district: string | null
   taluk: string | null
   panchayat: string | null
   village: string | null
+  start_date: string | null
+  end_date: string | null
+  cbv_name: string | null
+  in_charge: string | null
+  panchayat_member: string | null
+  head_master: string | null
+  anganvadi: string | null
+  asha_worker: string | null
+  head_master_mobile: string | null
+  in_charge_mobile: string | null
+  cbv_mobile: string | null
+  panchayat_member_mobile: string | null
+  anganvadi_mobile: string | null
+  asha_worker_mobile: string | null
+  cbv_email: string | null
 }
 
 type CentreFormState = {
   eac_no: string
   village_name: string
-  centre_id: string
   district: string
   taluk: string
   panchayat: string
   village: string
+  start_date: string
+  end_date: string
+  cbv_name: string
+  in_charge: string
+  panchayat_member: string
+  head_master: string
+  anganvadi: string
+  asha_worker: string
+  head_master_mobile: string
+  in_charge_mobile: string
+  cbv_mobile: string
+  panchayat_member_mobile: string
+  anganvadi_mobile: string
+  asha_worker_mobile: string
+  cbv_email: string
 }
 
 const emptyForm: CentreFormState = {
   eac_no: '',
   village_name: '',
-  centre_id: '',
   district: '',
   taluk: '',
   panchayat: '',
   village: '',
+  start_date: '',
+  end_date: '',
+  cbv_name: '',
+  in_charge: '',
+  panchayat_member: '',
+  head_master: '',
+  anganvadi: '',
+  asha_worker: '',
+  head_master_mobile: '',
+  in_charge_mobile: '',
+  cbv_mobile: '',
+  panchayat_member_mobile: '',
+  anganvadi_mobile: '',
+  asha_worker_mobile: '',
+  cbv_email: '',
 }
+
+const tableColumns: Array<{ key: keyof CentreFormState | 'eac_no' | 'village_name'; label: string }> = [
+  { key: 'eac_no', label: 'EAC No' },
+  { key: 'village_name', label: 'Village Name' },
+  { key: 'district', label: 'District' },
+  { key: 'taluk', label: 'Taluk' },
+  { key: 'panchayat', label: 'Panchayat' },
+  { key: 'village', label: 'Village' },
+  { key: 'start_date', label: 'Start Date' },
+  { key: 'end_date', label: 'End Date' },
+  { key: 'cbv_name', label: 'CBV Name' },
+  { key: 'in_charge', label: 'In Charge' },
+  { key: 'panchayat_member', label: 'Panchayat Member' },
+  { key: 'head_master', label: 'Head Master' },
+  { key: 'anganvadi', label: 'Anganvadi' },
+  { key: 'asha_worker', label: 'ASHA Worker' },
+  { key: 'head_master_mobile', label: 'Head Master Mobile' },
+  { key: 'in_charge_mobile', label: 'In Charge Mobile' },
+  { key: 'cbv_mobile', label: 'CBV Mobile' },
+  { key: 'panchayat_member_mobile', label: 'Panchayat Member Mobile' },
+  { key: 'anganvadi_mobile', label: 'Anganvadi Mobile' },
+  { key: 'asha_worker_mobile', label: 'ASHA Worker Mobile' },
+  { key: 'cbv_email', label: 'CBV Email' },
+]
 
 export default function CenterManagementPage() {
   const router = useRouter()
@@ -125,11 +191,25 @@ export default function CenterManagementPage() {
     setEditForm({
       eac_no: String(centre.eac_no || ''),
       village_name: centre.village_name || '',
-      centre_id: centre.centre_id || '',
       district: centre.district || '',
       taluk: centre.taluk || '',
       panchayat: centre.panchayat || '',
       village: centre.village || '',
+      start_date: centre.start_date || '',
+      end_date: centre.end_date || '',
+      cbv_name: centre.cbv_name || '',
+      in_charge: centre.in_charge || '',
+      panchayat_member: centre.panchayat_member || '',
+      head_master: centre.head_master || '',
+      anganvadi: centre.anganvadi || '',
+      asha_worker: centre.asha_worker || '',
+      head_master_mobile: centre.head_master_mobile || '',
+      in_charge_mobile: centre.in_charge_mobile || '',
+      cbv_mobile: centre.cbv_mobile || '',
+      panchayat_member_mobile: centre.panchayat_member_mobile || '',
+      anganvadi_mobile: centre.anganvadi_mobile || '',
+      asha_worker_mobile: centre.asha_worker_mobile || '',
+      cbv_email: centre.cbv_email || '',
     })
   }
 
@@ -240,7 +320,7 @@ export default function CenterManagementPage() {
 
           <div className="bg-white border border-slate-200 rounded-lg p-6">
             <h2 className="text-lg font-semibold text-slate-900 mb-4">Create Centre</h2>
-            <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <input
                 type="number"
                 placeholder="EAC No"
@@ -254,14 +334,6 @@ export default function CenterManagementPage() {
                 placeholder="Village Name"
                 value={createForm.village_name}
                 onChange={e => setCreateForm({ ...createForm, village_name: e.target.value })}
-                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-              <input
-                type="text"
-                placeholder="Centre ID"
-                value={createForm.centre_id}
-                onChange={e => setCreateForm({ ...createForm, centre_id: e.target.value })}
                 className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               />
@@ -297,10 +369,115 @@ export default function CenterManagementPage() {
                 className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               />
+              <input
+                type="date"
+                placeholder="Start Date"
+                value={createForm.start_date}
+                onChange={e => setCreateForm({ ...createForm, start_date: e.target.value })}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="date"
+                placeholder="End Date"
+                value={createForm.end_date}
+                onChange={e => setCreateForm({ ...createForm, end_date: e.target.value })}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="text"
+                placeholder="CBV Name"
+                value={createForm.cbv_name}
+                onChange={e => setCreateForm({ ...createForm, cbv_name: e.target.value })}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="text"
+                placeholder="In Charge"
+                value={createForm.in_charge}
+                onChange={e => setCreateForm({ ...createForm, in_charge: e.target.value })}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="text"
+                placeholder="Panchayat Member"
+                value={createForm.panchayat_member}
+                onChange={e => setCreateForm({ ...createForm, panchayat_member: e.target.value })}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="text"
+                placeholder="Head Master"
+                value={createForm.head_master}
+                onChange={e => setCreateForm({ ...createForm, head_master: e.target.value })}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="text"
+                placeholder="Anganvadi"
+                value={createForm.anganvadi}
+                onChange={e => setCreateForm({ ...createForm, anganvadi: e.target.value })}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="text"
+                placeholder="ASHA Worker"
+                value={createForm.asha_worker}
+                onChange={e => setCreateForm({ ...createForm, asha_worker: e.target.value })}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="text"
+                placeholder="Head Master Mobile"
+                value={createForm.head_master_mobile}
+                onChange={e => setCreateForm({ ...createForm, head_master_mobile: e.target.value })}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="text"
+                placeholder="In Charge Mobile"
+                value={createForm.in_charge_mobile}
+                onChange={e => setCreateForm({ ...createForm, in_charge_mobile: e.target.value })}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="text"
+                placeholder="CBV Mobile"
+                value={createForm.cbv_mobile}
+                onChange={e => setCreateForm({ ...createForm, cbv_mobile: e.target.value })}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="text"
+                placeholder="Panchayat Member Mobile"
+                value={createForm.panchayat_member_mobile}
+                onChange={e => setCreateForm({ ...createForm, panchayat_member_mobile: e.target.value })}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="text"
+                placeholder="Anganvadi Mobile"
+                value={createForm.anganvadi_mobile}
+                onChange={e => setCreateForm({ ...createForm, anganvadi_mobile: e.target.value })}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="text"
+                placeholder="ASHA Worker Mobile"
+                value={createForm.asha_worker_mobile}
+                onChange={e => setCreateForm({ ...createForm, asha_worker_mobile: e.target.value })}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="email"
+                placeholder="CBV Email"
+                value={createForm.cbv_email}
+                onChange={e => setCreateForm({ ...createForm, cbv_email: e.target.value })}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
               <button
                 type="submit"
                 disabled={actionLoading}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 md:col-span-3"
               >
                 {actionLoading ? 'Creating…' : 'Create Centre'}
               </button>
@@ -315,30 +492,32 @@ export default function CenterManagementPage() {
             ) : centres.length === 0 ? (
               <div className="p-12 text-center text-slate-500">No centres found</div>
             ) : (
-              <div className="overflow-auto max-h-[520px]">
-                <table className="w-full text-sm">
+              <div className="overflow-x-auto overflow-y-auto max-h-[520px]">
+                <table className="min-w-[2600px] w-full text-sm">
                   <thead className="bg-slate-50 border-b border-slate-200">
                     <tr>
-                      <th className="px-6 py-3 text-left font-semibold text-slate-900">EAC No</th>
-                      <th className="px-6 py-3 text-left font-semibold text-slate-900">Village Name</th>
-                      <th className="px-6 py-3 text-left font-semibold text-slate-900">Centre ID</th>
-                      <th className="px-6 py-3 text-left font-semibold text-slate-900">District</th>
-                      <th className="px-6 py-3 text-left font-semibold text-slate-900">Taluk</th>
-                      <th className="px-6 py-3 text-left font-semibold text-slate-900">Panchayat</th>
-                      <th className="px-6 py-3 text-left font-semibold text-slate-900">Village</th>
+                      {tableColumns.map((column) => (
+                        <th key={column.key} className="px-6 py-3 text-left font-semibold text-slate-900 whitespace-nowrap">
+                          {column.label}
+                        </th>
+                      ))}
                       <th className="px-6 py-3 text-left font-semibold text-slate-900">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {centres.map((centre) => (
                       <tr key={centre.id} className="border-b border-slate-200 hover:bg-slate-50">
-                        <td className="px-6 py-4 text-slate-900 font-medium">{centre.eac_no}</td>
-                        <td className="px-6 py-4 text-slate-700">{centre.village_name}</td>
-                        <td className="px-6 py-4 text-slate-700">{centre.centre_id}</td>
-                        <td className="px-6 py-4 text-slate-700">{centre.district}</td>
-                        <td className="px-6 py-4 text-slate-700">{centre.taluk}</td>
-                        <td className="px-6 py-4 text-slate-700">{centre.panchayat}</td>
-                        <td className="px-6 py-4 text-slate-700">{centre.village}</td>
+                        {tableColumns.map((column) => {
+                          const value = centre[column.key as keyof CentreRecord]
+                          return (
+                            <td
+                              key={`${centre.id}-${column.key}`}
+                              className={`px-6 py-4 whitespace-nowrap ${column.key === 'eac_no' ? 'text-slate-900 font-medium' : 'text-slate-700'}`}
+                            >
+                              {value || '-'}
+                            </td>
+                          )
+                        })}
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             <button
@@ -369,7 +548,7 @@ export default function CenterManagementPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full p-6 space-y-4">
             <h3 className="text-lg font-semibold text-slate-900">Edit Centre</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[70vh] overflow-y-auto pr-1">
               <input
                 type="number"
                 placeholder="EAC No"
@@ -383,14 +562,6 @@ export default function CenterManagementPage() {
                 placeholder="Village Name"
                 value={editForm.village_name}
                 onChange={e => setEditForm({ ...editForm, village_name: e.target.value })}
-                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-              <input
-                type="text"
-                placeholder="Centre ID"
-                value={editForm.centre_id}
-                onChange={e => setEditForm({ ...editForm, centre_id: e.target.value })}
                 className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               />
@@ -425,6 +596,111 @@ export default function CenterManagementPage() {
                 onChange={e => setEditForm({ ...editForm, village: e.target.value })}
                 className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 md:col-span-2"
                 required
+              />
+              <input
+                type="date"
+                placeholder="Start Date"
+                value={editForm.start_date}
+                onChange={e => setEditForm({ ...editForm, start_date: e.target.value })}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="date"
+                placeholder="End Date"
+                value={editForm.end_date}
+                onChange={e => setEditForm({ ...editForm, end_date: e.target.value })}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="text"
+                placeholder="CBV Name"
+                value={editForm.cbv_name}
+                onChange={e => setEditForm({ ...editForm, cbv_name: e.target.value })}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="text"
+                placeholder="In Charge"
+                value={editForm.in_charge}
+                onChange={e => setEditForm({ ...editForm, in_charge: e.target.value })}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="text"
+                placeholder="Panchayat Member"
+                value={editForm.panchayat_member}
+                onChange={e => setEditForm({ ...editForm, panchayat_member: e.target.value })}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="text"
+                placeholder="Head Master"
+                value={editForm.head_master}
+                onChange={e => setEditForm({ ...editForm, head_master: e.target.value })}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="text"
+                placeholder="Anganvadi"
+                value={editForm.anganvadi}
+                onChange={e => setEditForm({ ...editForm, anganvadi: e.target.value })}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="text"
+                placeholder="ASHA Worker"
+                value={editForm.asha_worker}
+                onChange={e => setEditForm({ ...editForm, asha_worker: e.target.value })}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="text"
+                placeholder="Head Master Mobile"
+                value={editForm.head_master_mobile}
+                onChange={e => setEditForm({ ...editForm, head_master_mobile: e.target.value })}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="text"
+                placeholder="In Charge Mobile"
+                value={editForm.in_charge_mobile}
+                onChange={e => setEditForm({ ...editForm, in_charge_mobile: e.target.value })}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="text"
+                placeholder="CBV Mobile"
+                value={editForm.cbv_mobile}
+                onChange={e => setEditForm({ ...editForm, cbv_mobile: e.target.value })}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="text"
+                placeholder="Panchayat Member Mobile"
+                value={editForm.panchayat_member_mobile}
+                onChange={e => setEditForm({ ...editForm, panchayat_member_mobile: e.target.value })}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="text"
+                placeholder="Anganvadi Mobile"
+                value={editForm.anganvadi_mobile}
+                onChange={e => setEditForm({ ...editForm, anganvadi_mobile: e.target.value })}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="text"
+                placeholder="ASHA Worker Mobile"
+                value={editForm.asha_worker_mobile}
+                onChange={e => setEditForm({ ...editForm, asha_worker_mobile: e.target.value })}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="email"
+                placeholder="CBV Email"
+                value={editForm.cbv_email}
+                onChange={e => setEditForm({ ...editForm, cbv_email: e.target.value })}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 md:col-span-2"
               />
             </div>
             <div className="flex gap-3 pt-2">

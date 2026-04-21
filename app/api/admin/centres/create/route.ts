@@ -34,13 +34,27 @@ export async function POST(req: Request) {
         const body = await req.json()
         const eac_no = String(body?.eac_no || '').trim()
         const village_name = String(body?.village_name || '').trim()
-        const centre_id = String(body?.centre_id || '').trim()
-        const district = String(body?.district || '').trim()
-        const taluk = String(body?.taluk || '').trim()
-        const panchayat = String(body?.panchayat || '').trim()
-        const village = String(body?.village || '').trim()
+        const district = String(body?.district || '').trim() || null
+        const taluk = String(body?.taluk || '').trim() || null
+        const panchayat = String(body?.panchayat || '').trim() || null
+        const village = String(body?.village || '').trim() || null
+        const start_date = String(body?.start_date || '').trim() || null
+        const end_date = String(body?.end_date || '').trim() || null
+        const cbv_name = String(body?.cbv_name || '').trim() || null
+        const in_charge = String(body?.in_charge || '').trim() || null
+        const panchayat_member = String(body?.panchayat_member || '').trim() || null
+        const head_master = String(body?.head_master || '').trim() || null
+        const anganvadi = String(body?.anganvadi || '').trim() || null
+        const asha_worker = String(body?.asha_worker || '').trim() || null
+        const head_master_mobile = String(body?.head_master_mobile || '').trim() || null
+        const in_charge_mobile = String(body?.in_charge_mobile || '').trim() || null
+        const cbv_mobile = String(body?.cbv_mobile || '').trim() || null
+        const panchayat_member_mobile = String(body?.panchayat_member_mobile || '').trim() || null
+        const anganvadi_mobile = String(body?.anganvadi_mobile || '').trim() || null
+        const asha_worker_mobile = String(body?.asha_worker_mobile || '').trim() || null
+        const cbv_email = String(body?.cbv_email || '').trim() || null
 
-        if (!eac_no || !village_name || !centre_id || !district || !taluk || !panchayat || !village) {
+        if (!eac_no || !village_name) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
         }
 
@@ -61,11 +75,25 @@ export async function POST(req: Request) {
         const { error } = await supabase.from('centre_data').insert({
             eac_no,
             village_name,
-            centre_id,
             district,
             taluk,
             panchayat,
             village,
+            start_date,
+            end_date,
+            cbv_name,
+            in_charge,
+            panchayat_member,
+            head_master,
+            anganvadi,
+            asha_worker,
+            head_master_mobile,
+            in_charge_mobile,
+            cbv_mobile,
+            panchayat_member_mobile,
+            anganvadi_mobile,
+            asha_worker_mobile,
+            cbv_email,
         })
 
         if (error) {
