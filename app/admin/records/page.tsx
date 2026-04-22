@@ -11,6 +11,7 @@ import { ROLE_CONFIG } from '../../../lib/types'
 type EntityType = 'child_data' | 'childfmly' | 'childsibling' | 'childuniform' | 'childleaving' | 'vocational_course' | 'computer_course'
 type StatusFilter = 'all' | 'Pending' | 'Verified' | 'Approved' | 'Rejected'
 type SearchBy = 'name' | 'reg_no'
+type SortDirection = 'asc' | 'desc'
 
 interface DataRecord {
   record_id: number
@@ -57,6 +58,10 @@ const NON_EDITABLE_FIELDS = new Set([
 ])
 
 const HIDDEN_TABLE_METADATA_FIELDS = new Set([
+  'record_id',
+  'centre_id',
+  'class_std',
+  'class_std_text',
   'submitted_by',
   'verified_by',
   'verified_at',
@@ -116,6 +121,8 @@ export default function AdminRecordsPage() {
   const [deletingRecord, setDeletingRecord] = useState<DataRecord | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [sortColumn, setSortColumn] = useState<string>('created_at')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
 
   const getEntityIdentity = (record: DataRecord) => {
     const keys = ENTITY_ID_CANDIDATES[activeTab]
@@ -137,7 +144,7 @@ export default function AdminRecordsPage() {
       return true
     })
 
-    const columnsToReposition = ['dateofbirth', 'religion', 'class_std_text'].filter((column) =>
+    const columnsToReposition = ['dateofbirth', 'religion'].filter((column) =>
       filteredColumns.includes(column)
     )
 
@@ -155,7 +162,57 @@ export default function AdminRecordsPage() {
       ...columnsToReposition,
       ...baseColumns.slice(lastNameIndex + 1)
     ]
-  }, [records])
+  }, [records, activeTab])
+
+  const sortedRecords = useMemo(() => {
+    const rows = [...records]
+
+    rows.sort((a, b) => {
+      const aRaw = a[sortColumn]
+      const bRaw = b[sortColumn]
+
+      if (aRaw === null || aRaw === undefined || aRaw === '') return 1
+      if (bRaw === null || bRaw === undefined || bRaw === '') return -1
+
+      const aNumber = Number(aRaw)
+      const bNumber = Number(bRaw)
+      const bothNumeric = !Number.isNaN(aNumber) && !Number.isNaN(bNumber)
+
+      let compare = 0
+      if (bothNumeric) {
+        compare = aNumber - bNumber
+      } else {
+        const aDate = Date.parse(String(aRaw))
+        const bDate = Date.parse(String(bRaw))
+        const bothDates = !Number.isNaN(aDate) && !Number.isNaN(bDate)
+
+        if (bothDates) {
+          compare = aDate - bDate
+        } else {
+          compare = String(aRaw).localeCompare(String(bRaw), undefined, { sensitivity: 'base' })
+        }
+      }
+
+      return sortDirection === 'asc' ? compare : -compare
+    })
+
+    return rows
+  }, [records, sortColumn, sortDirection])
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+      return
+    }
+
+    setSortColumn(column)
+    setSortDirection('asc')
+  }
+
+  const getColumnLabel = (field: string) => {
+    if (field === 'village_name') return 'EAC VILLAGE'
+    return field.replace(/_/g, ' ')
+  }
 
   useEffect(() => {
     const init = async () => {
@@ -592,13 +649,22 @@ export default function AdminRecordsPage() {
                         <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap">Actions</th>
                         {visibleColumns.map((field: string) => (
                           <th key={field} className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap">
-                            {field.replace(/_/g, ' ')}
+                            <div className="flex items-center gap-2">
+                              <span>{getColumnLabel(field)}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleSort(field)}
+                                className="rounded border border-slate-300 px-1.5 py-0.5 text-[10px] font-medium text-slate-700 hover:bg-slate-100"
+                              >
+                                {sortColumn === field ? (sortDirection === 'asc' ? 'ASC' : 'DESC') : 'SORT'}
+                              </button>
+                            </div>
                           </th>
                         ))}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200">
-                      {records.map((record) => (
+                      {sortedRecords.map((record) => (
                         <tr key={String(getEntityIdentity(record)?.value ?? record.record_id)} className="hover:bg-slate-50">
                           <td className="px-4 py-3 text-left">
                             <div className="flex items-center gap-2">
