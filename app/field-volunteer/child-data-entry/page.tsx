@@ -614,6 +614,8 @@ const vocationalCourseOptions = ['Tailoring', 'Beautician', 'Kuchi/Embroidery', 
 export default function ChildForm() {
   const router = useRouter()
   const finalSubmitArmedRef = useRef(false)
+  const siblingTableCandidates = ['childsibling'] as const
+  const resolvedSiblingTableRef = useRef<string>(siblingTableCandidates[0])
   const [activeTab, setActiveTab] = useState<TabType>('child')
   const [wizardStep, setWizardStep] = useState(0)
   const [eacOptions, setEacOptions] = useState<CentreOption[]>([])
@@ -1084,6 +1086,47 @@ export default function ChildForm() {
     )
   }
 
+  const hasMissingRelationError = (error: any) => {
+    const code = String(error?.code ?? '')
+    const message = `${error?.message ?? ''} ${error?.details ?? ''} ${error?.hint ?? ''}`.toLowerCase()
+    return (
+      code === 'PGRST205' ||
+      message.includes('could not find') ||
+      (message.includes('relation') && message.includes('does not exist')) ||
+      message.includes('schema cache')
+    )
+  }
+
+  const insertSiblingRecord = async (payload: Record<string, unknown>) => {
+    const orderedCandidates = [
+      resolvedSiblingTableRef.current,
+      ...siblingTableCandidates.filter((candidate) => candidate !== resolvedSiblingTableRef.current),
+    ]
+
+    let lastError: any = null
+
+    for (const tableName of orderedCandidates) {
+      const { data, error } = await supabase
+        .from(tableName)
+        .insert([payload])
+        .select()
+        .single()
+
+      if (!error) {
+        resolvedSiblingTableRef.current = tableName
+        return { data, error: null as any, tableName }
+      }
+
+      if (!hasMissingRelationError(error)) {
+        return { data: null, error, tableName }
+      }
+
+      lastError = error
+    }
+
+    return { data: null, error: lastError, tableName: resolvedSiblingTableRef.current }
+  }
+
   const wizardSteps: { id: WizardStepType; label: string }[] = [
     { id: 'child', label: 'Child Data' },
     { id: 'family', label: 'Child Family' },
@@ -1270,6 +1313,7 @@ export default function ChildForm() {
       const familyPayload = {
         village_name: toNullableString(formData.village_name),
         eac_no: toNullableString(formData.eac_no),
+        reg_no: childRow.reg_no ?? null,
         f_name: toNullableString(familyData.f_name),
         f_occup: toNullableString(familyData.f_occup),
         f_inc: toNullableNumber(familyData.f_inc),
@@ -1318,6 +1362,7 @@ export default function ChildForm() {
       const siblingPayload = {
         village_name: toNullableString(formData.village_name),
         eac_no: toNullableString(formData.eac_no),
+        reg_no: childRow.reg_no ?? null,
         names_1: toNullableString(siblingData.names_1),
         ages_1: toNullableNumber(siblingData.ages_1),
         genders_1: toNullableString(siblingData.genders_1),
@@ -1341,13 +1386,10 @@ export default function ChildForm() {
         sibling_remarks: toNullableString(siblingData.sibling_remarks),
       }
 
-      const { data: siblingRow, error: siblingError } = await supabase
-        .from('childsibling')
-        .insert([siblingPayload])
-        .select()
-        .single()
+      const siblingInsertResult = await insertSiblingRecord(siblingPayload)
 
-      if (siblingError) throw siblingError
+      if (siblingInsertResult.error) throw siblingInsertResult.error
+      const siblingRow = siblingInsertResult.data
 
       const { error: siblingApprovalError } = await supabase
         .from('child_approvals')
@@ -1362,6 +1404,7 @@ export default function ChildForm() {
       const uniformPayload = {
         village_name: toNullableString(formData.village_name),
         eac_no: toNullableString(formData.eac_no),
+        reg_no: childRow.reg_no ?? null,
         shirtsize: toNullableString(uniformData.shirtsize),
         knickersize: toNullableString(uniformData.knickersize),
         pant_skirtsize: toNullableString(uniformData.pant_skirtsize),
@@ -1688,6 +1731,7 @@ export default function ChildForm() {
       const payload = {
         village_name: toNullableString(familyData.village_name),
         eac_no: toNullableString(familyData.eac_no),
+        reg_no: toNullableNumber(familyData.reg_no),
         f_name: toNullableString(familyData.f_name),
         f_occup: toNullableString(familyData.f_occup),
         f_inc: toNullableNumber(familyData.f_inc),
@@ -1766,6 +1810,7 @@ export default function ChildForm() {
       const payload = {
         village_name: toNullableString(siblingData.village_name),
         eac_no: toNullableString(siblingData.eac_no),
+        reg_no: toNullableNumber(siblingData.reg_no),
         names_1: toNullableString(siblingData.names_1),
         ages_1: toNullableNumber(siblingData.ages_1),
         genders_1: toNullableString(siblingData.genders_1),
@@ -1789,13 +1834,10 @@ export default function ChildForm() {
         sibling_remarks: toNullableString(siblingData.sibling_remarks),
       }
 
-      const { data, error } = await supabase
-        .from('childsibling')
-        .insert([payload])
-        .select()
-        .single()
+      const siblingInsertResult = await insertSiblingRecord(payload)
 
-      if (error) throw error
+      if (siblingInsertResult.error) throw siblingInsertResult.error
+      const data = siblingInsertResult.data
 
       const { data: userData } = await supabase.auth.getUser()
       const userId = userData.user?.id
@@ -1831,10 +1873,16 @@ export default function ChildForm() {
 
     try {
       const toNullableString = (value: string) => (value.trim() === '' ? null : value)
+      const toNullableNumber = (value: string) => {
+        if (value.trim() === '') return null
+        const parsed = Number(value)
+        return Number.isNaN(parsed) ? null : parsed
+      }
 
       const payload = {
         village_name: toNullableString(uniformData.village_name),
         eac_no: toNullableString(uniformData.eac_no),
+        reg_no: toNullableNumber(uniformData.reg_no),
         shirtsize: toNullableString(uniformData.shirtsize),
         knickersize: toNullableString(uniformData.knickersize),
         pant_skirtsize: toNullableString(uniformData.pant_skirtsize),
@@ -2123,7 +2171,7 @@ export default function ChildForm() {
         consent_pickup_drop: computerData.consent_pickup_drop === 'true' ? true : computerData.consent_pickup_drop === 'false' ? false : null,
         consent_date: toNullableString(computerData.consent_date),
         guardian_signature_name: toNullableString(computerData.guardian_signature_name),
-        verified_by: toNullableString(computerData.verified_by),
+        verification_done_by: toNullableString(computerData.verified_by),
         verified_date: toNullableString(computerData.verified_date),
         course_name: toNullableString(computerData.course_name),
         completion_date: toNullableString(computerData.completion_date),
@@ -2342,7 +2390,7 @@ export default function ChildForm() {
         updatePayload = {
           village_name: toNullableString(updatePayload.village_name),
           eac_no: toNullableString(updatePayload.eac_no),
-          reg_no: toNullableString(updatePayload.reg_no),
+          reg_no: toNullableNumber(updatePayload.reg_no),
           f_name: toNullableString(updatePayload.f_name),
           f_occup: toNullableString(updatePayload.f_occup),
           f_inc: toNullableNumber(updatePayload.f_inc),
@@ -2363,7 +2411,7 @@ export default function ChildForm() {
         updatePayload = {
           village_name: toNullableString(updatePayload.village_name),
           eac_no: toNullableString(updatePayload.eac_no),
-          reg_no: toNullableString(updatePayload.reg_no),
+          reg_no: toNullableNumber(updatePayload.reg_no),
           names_1: toNullableString(updatePayload.names_1),
           ages_1: toNullableNumber(updatePayload.ages_1),
           genders_1: toNullableString(updatePayload.genders_1),
@@ -2390,7 +2438,7 @@ export default function ChildForm() {
         updatePayload = {
           village_name: toNullableString(updatePayload.village_name),
           eac_no: toNullableString(updatePayload.eac_no),
-          reg_no: toNullableString(updatePayload.reg_no),
+          reg_no: toNullableNumber(updatePayload.reg_no),
           shirtsize: toNullableString(updatePayload.shirtsize),
           knickersize: toNullableString(updatePayload.knickersize),
           pant_skirtsize: toNullableString(updatePayload.pant_skirtsize),
