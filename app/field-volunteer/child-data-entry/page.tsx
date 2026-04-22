@@ -614,8 +614,6 @@ const vocationalCourseOptions = ['Tailoring', 'Beautician', 'Kuchi/Embroidery', 
 export default function ChildForm() {
   const router = useRouter()
   const finalSubmitArmedRef = useRef(false)
-  const siblingTableCandidates = ['childsibling'] as const
-  const resolvedSiblingTableRef = useRef<string>(siblingTableCandidates[0])
   const [activeTab, setActiveTab] = useState<TabType>('child')
   const [wizardStep, setWizardStep] = useState(0)
   const [eacOptions, setEacOptions] = useState<CentreOption[]>([])
@@ -1055,7 +1053,6 @@ export default function ChildForm() {
       ...prev,
       eac_no: selectedEac,
       village_name: eacData.village_name ?? '',
-      centre_id: eacData.centre_id ?? '',
       district: eacData.district ?? '',
       taluk: eacData.taluk ?? '',
       panchayat: eacData.panchayat ?? '',
@@ -1086,45 +1083,35 @@ export default function ChildForm() {
     )
   }
 
-  const hasMissingRelationError = (error: any) => {
-    const code = String(error?.code ?? '')
-    const message = `${error?.message ?? ''} ${error?.details ?? ''} ${error?.hint ?? ''}`.toLowerCase()
-    return (
-      code === 'PGRST205' ||
-      message.includes('could not find') ||
-      (message.includes('relation') && message.includes('does not exist')) ||
-      message.includes('schema cache')
-    )
-  }
-
   const insertSiblingRecord = async (payload: Record<string, unknown>) => {
-    const orderedCandidates = [
-      resolvedSiblingTableRef.current,
-      ...siblingTableCandidates.filter((candidate) => candidate !== resolvedSiblingTableRef.current),
-    ]
-
-    let lastError: any = null
-
-    for (const tableName of orderedCandidates) {
-      const { data, error } = await supabase
-        .from(tableName)
-        .insert([payload])
-        .select()
-        .single()
-
-      if (!error) {
-        resolvedSiblingTableRef.current = tableName
-        return { data, error: null as any, tableName }
-      }
-
-      if (!hasMissingRelationError(error)) {
-        return { data: null, error, tableName }
-      }
-
-      lastError = error
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+    if (sessionError) {
+      return { data: null, error: sessionError }
     }
 
-    return { data: null, error: lastError, tableName: resolvedSiblingTableRef.current }
+    const accessToken = sessionData.session?.access_token
+    if (!accessToken) {
+      return { data: null, error: new Error('User session not found. Please sign in again.') }
+    }
+
+    const response = await fetch('/api/field-volunteer/childsibling/create', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ payload }),
+    })
+
+    const result = await response.json().catch(() => ({}))
+    if (!response.ok) {
+      return {
+        data: null,
+        error: new Error(result?.error || 'Sibling insert failed via API endpoint.'),
+      }
+    }
+
+    return { data: result?.data ?? null, error: null as any }
   }
 
   const wizardSteps: { id: WizardStepType; label: string }[] = [
@@ -1230,7 +1217,6 @@ export default function ChildForm() {
       const childPayload = {
         eac_no: eacNumber,
         village_name: toNullableString(formData.village_name),
-        centre_id: toNullableString(formData.centre_id),
         district: toNullableString(formData.district),
         taluk: toNullableString(formData.taluk),
         panchayat: toNullableString(formData.panchayat),
@@ -1611,7 +1597,6 @@ export default function ChildForm() {
       const payload = {
         eac_no: eacNumber,
         village_name: toNullableString(formData.village_name),
-        centre_id: toNullableString(formData.centre_id),
         district: toNullableString(formData.district),
         taluk: toNullableString(formData.taluk),
         panchayat: toNullableString(formData.panchayat),
@@ -2769,7 +2754,6 @@ export default function ChildForm() {
                             </select>
                           </div>
                           <ReadOnlyInput label="Village Name" value={formData.village_name} />
-                          <ReadOnlyInput label="Centre ID" value={formData.centre_id} />
                           <ReadOnlyInput label="District" value={formData.district} />
                           <ReadOnlyInput label="Taluk" value={formData.taluk} />
                           <ReadOnlyInput label="Panchayat" value={formData.panchayat} />
