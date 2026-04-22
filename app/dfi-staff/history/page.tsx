@@ -4,9 +4,11 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useRequireRole } from '../../../lib/hooks'
 import { supabase } from '../../../lib/supabase'
+import { getStandardColumnLabel } from '../../../lib/columnLabels'
 import { LoadingSpinner, Alert } from '../../components/UI'
 import { Navbar, Sidebar, PageContainer } from '../../components/Navbar'
 import { ROLE_CONFIG } from '../../../lib/types'
+import { ArrowLeft } from 'lucide-react'
 
 type EntityType =
     | 'child_data'
@@ -54,12 +56,6 @@ const HIDDEN_META_COLUMNS = new Set([
     '_decision_status',
     '_entity_id'
 ])
-
-const toTitle = (value: string) =>
-    value
-        .split('_')
-        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ')
 
 const formatDateTime = (value: any) => {
     if (!value) return '-'
@@ -333,9 +329,9 @@ export default function DFIStaffPersonalActivityPage() {
                         </div>
                         <button
                             onClick={() => router.push('/dfi-staff')}
-                            className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
+                            className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors inline-flex items-center gap-2"
                         >
-                            ← Dashboard
+                            <ArrowLeft className="w-4 h-4" /> Dashboard
                         </button>
                     </div>
 
@@ -425,8 +421,9 @@ export default function DFIStaffPersonalActivityPage() {
                                                 <th
                                                     key={column}
                                                     className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap"
+                                                    title={column}
                                                 >
-                                                    {toTitle(column)}
+                                                    {getStandardColumnLabel(column)}
                                                 </th>
                                             ))}
                                         </tr>

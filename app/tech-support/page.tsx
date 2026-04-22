@@ -4,7 +4,7 @@ import { useRequireRole } from '../../lib/hooks'
 import { LoadingSpinner } from '../components/UI'
 import { Navbar, Sidebar, PageContainer } from '../components/Navbar'
 import { ROLE_CONFIG, getRoleCapabilities } from '../../lib/types'
-import { Zap, Settings, BarChart, Database, RefreshCw, Ticket, Lock, Users, Building } from 'lucide-react'
+import { Zap, Settings, BarChart, Database, RefreshCw, Ticket, Lock, Users, Building, AlertTriangle, Check } from 'lucide-react'
 
 export default function TechSupportPage() {
   const { profile, loading, isAuthorized } = useRequireRole(['tech_support'])
@@ -50,7 +50,9 @@ export default function TechSupportPage() {
 
           {/* SECTION 1: System Health */}
           <div className="mb-12">
-            <h3 className="text-xl font-bold text-slate-900 mb-4">🚨 System Health & Monitoring</h3>
+            <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-red-600" /> System Health & Monitoring
+            </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
                 <p className="text-slate-600 text-sm font-medium mb-2">Active Alerts</p>
@@ -131,7 +133,7 @@ export default function TechSupportPage() {
               {capabilities.map((capability, i) => (
                 <li key={i} className="flex items-start gap-3">
                   <span className="w-5 h-5 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-sm flex-shrink-0 mt-0.5 font-bold">
-                    ✓
+                    <Check className="w-3 h-3" />
                   </span>
                   <span className="text-slate-700">{capability}</span>
                 </li>

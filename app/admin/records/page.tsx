@@ -7,6 +7,19 @@ import { supabase } from '../../../lib/supabase'
 import { LoadingSpinner, Alert } from '../../components/UI'
 import { Navbar, Sidebar, PageContainer } from '../../components/Navbar'
 import { ROLE_CONFIG } from '../../../lib/types'
+import {
+  ArrowLeft,
+  Search as SearchIcon,
+  RotateCcw,
+  Inbox,
+  Pencil,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Save,
+  Download,
+} from 'lucide-react'
 
 type EntityType = 'child_data' | 'childfmly' | 'childsibling' | 'childuniform' | 'childleaving' | 'vocational_course' | 'computer_course'
 type StatusFilter = 'all' | 'Pending' | 'Verified' | 'Approved' | 'Rejected'
@@ -60,8 +73,6 @@ const NON_EDITABLE_FIELDS = new Set([
 const HIDDEN_TABLE_METADATA_FIELDS = new Set([
   'record_id',
   'centre_id',
-  'class_std',
-  'class_std_text',
   'submitted_by',
   'verified_by',
   'verified_at',
@@ -70,6 +81,118 @@ const HIDDEN_TABLE_METADATA_FIELDS = new Set([
   'submitter',
   'approver'
 ])
+
+const COLUMN_PRIORITY_BY_ENTITY: Record<EntityType, string[]> = {
+  child_data: [
+    'first_name',
+    'last_name',
+    'reg_no',
+    'eac_no',
+    'village_name',
+    'gender',
+    'class_std_text',
+    'adm_date',
+    'status',
+    'photo_link',
+    'created_at',
+    'updated_at'
+  ],
+  childfmly: [
+    'f_name',
+    'm_name',
+    'guardian_name',
+    'reg_no',
+    'eac_no',
+    'village_name',
+    'f_mobile',
+    'm_mobile',
+    'status',
+    'created_at',
+    'updated_at'
+  ],
+  childsibling: [
+    's_name',
+    'sibling_name',
+    'name',
+    'reg_no',
+    'eac_no',
+    'gender',
+    'class_std_text',
+    'age',
+    'status',
+    'created_at',
+    'updated_at'
+  ],
+  childuniform: [
+    'reg_no',
+    'eac_no',
+    'uniform_size',
+    'shoe_size',
+    'status',
+    'created_at',
+    'updated_at'
+  ],
+  childleaving: [
+    'reg_no',
+    'eac_no',
+    'reason',
+    'leaving_reason',
+    'leave_date',
+    'status',
+    'created_at',
+    'updated_at'
+  ],
+  vocational_course: [
+    'trainee_name',
+    'reg_no',
+    'eac_no',
+    'course_name',
+    'institution_name',
+    'status',
+    'created_at',
+    'updated_at'
+  ],
+  computer_course: [
+    'child_name',
+    'reg_no',
+    'eac_no',
+    'course_name',
+    'institution_name',
+    'status',
+    'created_at',
+    'updated_at'
+  ]
+}
+
+const DEFAULT_PRIORITY_COLUMNS = [
+  'first_name',
+  'last_name',
+  'child_name',
+  'trainee_name',
+  'f_name',
+  'm_name',
+  's_name',
+  'sibling_name',
+  'name',
+  'reg_no',
+  'eac_no',
+  'village_name',
+  'gender',
+  'class_std_text',
+  'status',
+  'created_at',
+  'updated_at'
+]
+
+const DEFAULT_SORT_COLUMN_BY_ENTITY: Record<EntityType, string> = {
+  child_data: 'first_name',
+  childfmly: 'f_name',
+  childsibling: 's_name',
+  childuniform: 'reg_no',
+  childleaving: 'reg_no',
+  vocational_course: 'trainee_name',
+  computer_course: 'child_name'
+}
 
 const ENTITY_ID_CANDIDATES: Record<EntityType, string[]> = {
   child_data: ['record_id', 'id'],
@@ -144,25 +267,22 @@ export default function AdminRecordsPage() {
       return true
     })
 
-    const columnsToReposition = ['dateofbirth', 'religion'].filter((column) =>
-      filteredColumns.includes(column)
+    const tabPriority = COLUMN_PRIORITY_BY_ENTITY[activeTab] || []
+    const prioritized = [...tabPriority, ...DEFAULT_PRIORITY_COLUMNS].filter(
+      (column, index, arr) => arr.indexOf(column) === index && filteredColumns.includes(column)
     )
 
-    if (columnsToReposition.length === 0) return filteredColumns
+    const remaining = filteredColumns
+      .filter((column) => !prioritized.includes(column))
+      .sort((a, b) => a.localeCompare(b))
 
-    const baseColumns = filteredColumns.filter((column) => !columnsToReposition.includes(column))
-    const lastNameIndex = baseColumns.indexOf('last_name')
-
-    if (lastNameIndex === -1) {
-      return [...baseColumns, ...columnsToReposition]
-    }
-
-    return [
-      ...baseColumns.slice(0, lastNameIndex + 1),
-      ...columnsToReposition,
-      ...baseColumns.slice(lastNameIndex + 1)
-    ]
+    return [...prioritized, ...remaining]
   }, [records, activeTab])
+
+  useEffect(() => {
+    setSortColumn(DEFAULT_SORT_COLUMN_BY_ENTITY[activeTab])
+    setSortDirection('desc')
+  }, [activeTab])
 
   const sortedRecords = useMemo(() => {
     const rows = [...records]
@@ -212,6 +332,13 @@ export default function AdminRecordsPage() {
   const getColumnLabel = (field: string) => {
     if (field === 'village_name') return 'EAC VILLAGE'
     return field.replace(/_/g, ' ')
+  }
+
+  const getStatusBadgeClass = (status: string) => {
+    if (status === 'Pending') return 'bg-yellow-100 text-yellow-800'
+    if (status === 'Approved') return 'bg-green-100 text-green-800'
+    if (status === 'Verified') return 'bg-blue-100 text-blue-800'
+    return 'bg-red-100 text-red-800'
   }
 
   useEffect(() => {
@@ -530,17 +657,41 @@ export default function AdminRecordsPage() {
                 <button
                   onClick={handleExportCSV}
                   disabled={exporting}
-                  className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50"
+                  className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 flex items-center gap-2"
                 >
+                  <Download className="w-4 h-4" />
                   {exporting ? 'Exporting...' : 'Export as CSV'}
                 </button>
               )}
               <button
                 onClick={() => router.push('/admin')}
-                className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
+                className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors flex items-center gap-2"
               >
-                ← Back to Dashboard
+                <ArrowLeft className="w-4 h-4" /> Back to Dashboard
               </button>
+            </div>
+          </div>
+
+          <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-white rounded-lg border border-slate-200 p-4">
+              <p className="text-xs text-slate-500 uppercase tracking-wide">Active Entity</p>
+              <p className="text-lg font-semibold text-slate-900 mt-1">{ENTITY_LABELS[activeTab]}</p>
+            </div>
+            <div className="bg-white rounded-lg border border-slate-200 p-4">
+              <p className="text-xs text-slate-500 uppercase tracking-wide">Total Records</p>
+              <p className="text-lg font-semibold text-slate-900 mt-1">{totalRecords}</p>
+            </div>
+            <div className="bg-white rounded-lg border border-slate-200 p-4">
+              <p className="text-xs text-slate-500 uppercase tracking-wide">Sort</p>
+              <p className="text-lg font-semibold text-slate-900 mt-1">
+                {sortColumn.replace(/_/g, ' ')} ({sortDirection.toUpperCase()})
+              </p>
+            </div>
+            <div className="bg-white rounded-lg border border-slate-200 p-4">
+              <p className="text-xs text-slate-500 uppercase tracking-wide">Current View</p>
+              <p className="text-lg font-semibold text-slate-900 mt-1">
+                Table
+              </p>
             </div>
           </div>
 
@@ -592,16 +743,16 @@ export default function AdminRecordsPage() {
               <div className="md:col-span-4 flex gap-3">
                 <button
                   type="submit"
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
                 >
-                  🔍 Search
+                  <SearchIcon className="w-4 h-4" /> Search
                 </button>
                 <button
                   type="button"
                   onClick={handleRefreshFilters}
-                  className="px-6 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
+                  className="px-6 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors flex items-center gap-2"
                 >
-                  ↻ Refresh
+                  <RotateCcw className="w-4 h-4" /> Refresh
                 </button>
               </div>
             </form>
@@ -637,7 +788,7 @@ export default function AdminRecordsPage() {
               </div>
             ) : records.length === 0 ? (
               <div className="p-12 text-center">
-                <p className="text-4xl mb-4">📭</p>
+                <Inbox className="w-14 h-14 text-slate-300 mx-auto mb-4" />
                 <p className="text-slate-600 font-medium">No records found</p>
               </div>
             ) : (
@@ -670,15 +821,15 @@ export default function AdminRecordsPage() {
                             <div className="flex items-center gap-2">
                               <button
                                 onClick={() => handleEdit(record)}
-                                className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded transition-colors inline-flex items-center gap-1"
                               >
-                                ✏️ Edit
+                                <Pencil className="w-4 h-4" /> Edit
                               </button>
                               <button
                                 onClick={() => setDeletingRecord(record)}
-                                className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded transition-colors"
+                                className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded transition-colors inline-flex items-center gap-1"
                               >
-                                🗑️ Delete
+                                <Trash2 className="w-4 h-4" /> Delete
                               </button>
                             </div>
                           </td>
@@ -694,11 +845,7 @@ export default function AdminRecordsPage() {
                                   </button>
                                 ) : '-'
                               ) : field === 'status' ? (
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${record.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
-                                  record.status === 'Approved' ? 'bg-green-100 text-green-800' :
-                                    record.status === 'Verified' ? 'bg-blue-100 text-blue-800' :
-                                      'bg-red-100 text-red-800'
-                                  }`}>
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(record.status)}`}>
                                   {String(record[field] ?? '-')}
                                 </span>
                               ) : (
@@ -721,9 +868,9 @@ export default function AdminRecordsPage() {
                     <button
                       onClick={() => setPage(p => Math.max(1, p - 1))}
                       disabled={page === 1}
-                      className="px-3 py-1 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-3 py-1 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1"
                     >
-                      ← Prev
+                      <ChevronLeft className="w-4 h-4" /> Prev
                     </button>
                     <span className="px-3 py-1 text-slate-600">
                       Page {page} of {totalPages || 1}
@@ -731,9 +878,9 @@ export default function AdminRecordsPage() {
                     <button
                       onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                       disabled={page >= totalPages}
-                      className="px-3 py-1 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-3 py-1 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1"
                     >
-                      Next →
+                      Next <ChevronRight className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
@@ -748,14 +895,12 @@ export default function AdminRecordsPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
           <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full my-8 max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
-              <h3 className="text-xl font-bold text-slate-900">
-                Edit {ENTITY_LABELS[activeTab]} - #{String(getEntityIdentity(editingRecord)?.value ?? '-')}
-              </h3>
+              <h3 className="text-xl font-bold text-slate-900">Edit {ENTITY_LABELS[activeTab]}</h3>
               <button
                 onClick={() => setEditingRecord(null)}
                 className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
               >
-                ✕
+                <X className="w-5 h-5" />
               </button>
             </div>
             <div className="p-6">
@@ -809,9 +954,10 @@ export default function AdminRecordsPage() {
                 <button
                   onClick={handleSaveEdit}
                   disabled={saving || uploadingPhoto}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
                 >
-                  {uploadingPhoto ? 'Uploading Photo...' : saving ? 'Saving...' : '💾 Save Changes'}
+                  <Save className="w-4 h-4" />
+                  {uploadingPhoto ? 'Uploading Photo...' : saving ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
             </div>
@@ -828,7 +974,7 @@ export default function AdminRecordsPage() {
                 onClick={() => setPhotoPreviewModal({ isOpen: false, url: '' })}
                 className="text-slate-600 hover:text-slate-900"
               >
-                ✕
+                <X className="w-5 h-5" />
               </button>
             </div>
             <div className="p-4 flex justify-center bg-slate-50">
@@ -847,7 +993,7 @@ export default function AdminRecordsPage() {
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
             <h3 className="text-xl font-bold text-slate-900 mb-3">Delete Record</h3>
             <p className="text-slate-600 mb-5">
-              Are you sure you want to delete record <span className="font-semibold">#{String(getEntityIdentity(deletingRecord)?.value ?? '-')}</span> from {ENTITY_LABELS[activeTab]}?
+              Are you sure you want to delete this {ENTITY_LABELS[activeTab]} entry?
             </p>
             <div className="flex gap-3">
               <button

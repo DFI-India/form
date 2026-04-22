@@ -4,10 +4,11 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useRequireRole } from '../../../lib/hooks'
 import { supabase } from '../../../lib/supabase'
+import { getStandardColumnLabel } from '../../../lib/columnLabels'
 import { LoadingSpinner, Alert } from '../../components/UI'
 import { Navbar, Sidebar, PageContainer } from '../../components/Navbar'
 import { ROLE_CONFIG } from '../../../lib/types'
-import { Search, Pencil, RefreshCw } from 'lucide-react'
+import { Search, Pencil, RefreshCw, ArrowLeft, X } from 'lucide-react'
 
 type EntityType =
     | 'child_data'
@@ -390,9 +391,9 @@ export default function DFIStaffAllRecordsPage() {
                         </div>
                         <button
                             onClick={() => router.push('/dfi-staff')}
-                            className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
+                            className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors inline-flex items-center gap-2"
                         >
-                            ← Back to Dashboard
+                            <ArrowLeft className="w-4 h-4" /> Back to Dashboard
                         </button>
                     </div>
 
@@ -483,7 +484,7 @@ export default function DFIStaffAllRecordsPage() {
                                             <th className="px-4 py-3 text-left font-semibold">Action</th>
                                             {visibleColumns.map((column) => (
                                                 <th key={column} className="px-4 py-3 text-left font-semibold whitespace-nowrap">
-                                                    {column}
+                                                        <span title={column}>{getStandardColumnLabel(column)}</span>
                                                 </th>
                                             ))}
                                         </tr>
@@ -579,7 +580,7 @@ export default function DFIStaffAllRecordsPage() {
                                 Edit {ENTITY_LABELS[activeTab]} record #{String(getEntityIdentity(activeTab, editingRecord)?.value ?? 'N/A')}
                             </h3>
                             <button onClick={closeEditModal} className="text-slate-600 hover:text-slate-900">
-                                ✕
+                                <X className="w-5 h-5" />
                             </button>
                         </div>
 
@@ -589,7 +590,7 @@ export default function DFIStaffAllRecordsPage() {
                                     .filter(([key]) => !NON_EDITABLE_FIELDS.has(key))
                                     .map(([key, value]) => (
                                         <div key={key}>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">{key}</label>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1" title={key}>{getStandardColumnLabel(key)}</label>
                                             {key === 'photo_link' ? (
                                                 <div className="space-y-2">
                                                     <input
@@ -660,7 +661,7 @@ export default function DFIStaffAllRecordsPage() {
                                 onClick={() => setPhotoPreviewModal({ isOpen: false, url: '' })}
                                 className="text-slate-600 hover:text-slate-900"
                             >
-                                ✕
+                                <X className="w-5 h-5" />
                             </button>
                         </div>
                         <div className="p-6 flex justify-center bg-slate-50">

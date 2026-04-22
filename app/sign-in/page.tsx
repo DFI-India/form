@@ -21,7 +21,7 @@ export default function SignInPage() {
     [username]
   )
 
-  // 🔁 Redirect user based on role
+  // Redirect user based on role
   const redirectByRole = async (routerInstance: any) => {
     try {
       console.log('redirectByRole called')
@@ -69,7 +69,7 @@ export default function SignInPage() {
     }
   }
 
-  // ✅ Handle existing session
+  // Handle existing session
   useEffect(() => {
     let isMounted = true
     const checkSession = async () => {
@@ -86,7 +86,7 @@ export default function SignInPage() {
           return
         }
 
-        // No session → allow sign-in page to render
+        // No session: allow sign-in page to render
         console.log('No session found, showing sign-in page')
         setCheckingAuth(false)
       } catch (err: any) {
@@ -111,7 +111,7 @@ export default function SignInPage() {
     )
   }
 
-  // 🔐 Handle login
+  // Handle login
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
 

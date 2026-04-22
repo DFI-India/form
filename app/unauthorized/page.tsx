@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useSignOut } from '../../lib/hooks'
+import { Lock } from 'lucide-react'
 
 export default function UnauthorizedPage() {
   const router = useRouter()
@@ -11,7 +12,7 @@ export default function UnauthorizedPage() {
     <main className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-8 text-center space-y-4">
         <div className="w-16 h-16 mx-auto bg-red-100 rounded-full flex items-center justify-center text-3xl">
-          🔒
+          <Lock className="w-8 h-8 text-red-600" />
         </div>
         <h1 className="text-2xl font-bold text-slate-900">Access Denied</h1>
         <p className="text-slate-600">

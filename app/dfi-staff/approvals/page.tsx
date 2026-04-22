@@ -4,9 +4,23 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useRequireRole } from '../../../lib/hooks'
 import { supabase } from '../../../lib/supabase'
+import { getStandardColumnLabel } from '../../../lib/columnLabels'
 import { LoadingSpinner, Alert } from '../../components/UI'
 import { Navbar, Sidebar, PageContainer } from '../../components/Navbar'
 import { ROLE_CONFIG } from '../../../lib/types'
+import {
+  Baby,
+  Users,
+  UserPlus,
+  Shirt,
+  DoorOpen,
+  GraduationCap,
+  Monitor,
+  Search,
+  ArrowLeft,
+  CheckCircle,
+  XCircle,
+} from 'lucide-react'
 
 type EntityType = 'child_data' | 'childfmly' | 'childsibling' | 'childuniform' | 'childleaving' | 'vocational_course' | 'computer_course'
 
@@ -36,14 +50,17 @@ const ENTITY_LABELS: Record<EntityType, string> = {
   computer_course: 'Computer'
 }
 
-const ENTITY_ICONS: Record<EntityType, string> = {
-  child_data: '👶',
-  childfmly: '👨‍👩‍👧',
-  childsibling: '👧‍👦',
-  childuniform: '👕',
-  childleaving: '🚪',
-  vocational_course: '🎓',
-  computer_course: '💻'
+const getEntityIcon = (type: EntityType, className = 'w-4 h-4') => {
+  const iconProps = { className }
+  switch (type) {
+    case 'child_data': return <Baby {...iconProps} />
+    case 'childfmly': return <Users {...iconProps} />
+    case 'childsibling': return <UserPlus {...iconProps} />
+    case 'childuniform': return <Shirt {...iconProps} />
+    case 'childleaving': return <DoorOpen {...iconProps} />
+    case 'vocational_course': return <GraduationCap {...iconProps} />
+    case 'computer_course': return <Monitor {...iconProps} />
+  }
 }
 
 const HIDDEN_METADATA_COLUMNS = new Set([
@@ -267,7 +284,7 @@ export default function DFIStaffApprovalsPage() {
     if (record.trainee_name) return record.trainee_name
     if (record.child_name) return record.child_name
     if (record.f_name) return `Father: ${record.f_name}`
-    return `Record #${getEntityId(record) || 'Unknown'}`
+    return 'Unnamed Record'
   }
 
   const formatDate = (dateStr: string) => {
@@ -288,10 +305,7 @@ export default function DFIStaffApprovalsPage() {
 
   const isPhotoLinkColumn = (columnKey: string) => columnKey.trim().toLowerCase() === 'photo_link'
 
-  const formatColumnLabel = (columnKey: string) =>
-    columnKey
-      .replace(/_/g, ' ')
-      .replace(/\b\w/g, (letter) => letter.toUpperCase())
+  const formatColumnLabel = (columnKey: string) => getStandardColumnLabel(columnKey)
 
   const formatCellValue = (record: ApprovalRecord, columnKey: string): string => {
     const value = record[columnKey]
@@ -373,15 +387,15 @@ export default function DFIStaffApprovalsPage() {
             <div className="flex gap-3">
               <button
                 onClick={() => router.push('/dfi-staff/review-queue')}
-                className="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors"
+                className="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors inline-flex items-center gap-2"
               >
-                🔍 Review Queue
+                <Search className="w-4 h-4" /> Review Queue
               </button>
               <button
                 onClick={() => router.push('/dfi-staff')}
-                className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
+                className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors inline-flex items-center gap-2"
               >
-                ← Dashboard
+                <ArrowLeft className="w-4 h-4" /> Dashboard
               </button>
             </div>
           </div>
@@ -406,9 +420,9 @@ export default function DFIStaffApprovalsPage() {
                 <button
                   onClick={handleBulkApprove}
                   disabled={actionLoading}
-                  className="px-4 py-1 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+                  className="px-4 py-1 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 inline-flex items-center gap-2"
                 >
-                  ✅ Approve All Selected
+                  <CheckCircle className="w-4 h-4" /> Approve All Selected
                 </button>
               </div>
             </div>
@@ -429,7 +443,7 @@ export default function DFIStaffApprovalsPage() {
                     : 'border-transparent text-slate-600 hover:bg-slate-50'
                     }`}
                 >
-                  <span className="mr-2">{ENTITY_ICONS[type]}</span>
+                  <span className="mr-2 inline-flex">{getEntityIcon(type, 'w-4 h-4')}</span>
                   {ENTITY_LABELS[type]}
                   <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${counts[type] > 0 ? 'bg-yellow-100 text-yellow-800' : 'bg-slate-100 text-slate-600'
                     }`}>
@@ -449,7 +463,7 @@ export default function DFIStaffApprovalsPage() {
               </div>
             ) : currentTabData.length === 0 ? (
               <div className="p-12 text-center">
-                <p className="text-4xl mb-4">✅</p>
+                <CheckCircle className="w-14 h-14 text-green-500 mx-auto mb-4" />
                 <p className="text-slate-600 font-medium">No verified {ENTITY_LABELS[activeTab]} records</p>
               </div>
             ) : (
@@ -470,6 +484,7 @@ export default function DFIStaffApprovalsPage() {
                         <th
                           key={columnKey}
                           className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap"
+                          title={columnKey}
                         >
                           {formatColumnLabel(columnKey)}
                         </th>
@@ -520,9 +535,9 @@ export default function DFIStaffApprovalsPage() {
                               <button
                                 onClick={() => handleApprove(record)}
                                 disabled={actionLoading || !selectable}
-                                className="px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 disabled:opacity-50 text-sm font-medium"
+                                className="px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 disabled:opacity-50 text-sm font-medium inline-flex items-center gap-1"
                               >
-                                ✅ Approve
+                                <CheckCircle className="w-4 h-4" /> Approve
                               </button>
                               <button
                                 onClick={() => {
@@ -530,9 +545,9 @@ export default function DFIStaffApprovalsPage() {
                                   setShowRejectModal(true)
                                 }}
                                 disabled={actionLoading || !selectable}
-                                className="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 disabled:opacity-50 text-sm font-medium"
+                                className="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 disabled:opacity-50 text-sm font-medium inline-flex items-center gap-1"
                               >
-                                ❌ Reject
+                                <XCircle className="w-4 h-4" /> Reject
                               </button>
                             </div>
                           </td>
@@ -553,7 +568,7 @@ export default function DFIStaffApprovalsPage() {
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
             <h3 className="text-xl font-bold text-slate-900 mb-4">Reject Record</h3>
             <p className="text-slate-600 mb-4">
-              Rejecting: <strong>{getRecordName(rejectingRecord)}</strong> (#{getEntityId(rejectingRecord) || '-'})
+              Rejecting: <strong>{getRecordName(rejectingRecord)}</strong>
             </p>
             <textarea
               value={rejectReason}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '../../../lib/supabase'
+import { getStandardColumnLabel } from '../../../lib/columnLabels'
 import { Navbar, Sidebar, PageContainer } from '../../components/Navbar'
 import { LoadingSpinner } from '../../components/UI'
 import { ROLE_CONFIG } from '../../../lib/types'
@@ -365,8 +366,9 @@ export default function FieldStaffHistoryPage() {
                                                     <th
                                                         key={key}
                                                         className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap"
+                                                        title={key}
                                                     >
-                                                        {key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}
+                                                        {getStandardColumnLabel(key)}
                                                     </th>
                                                 ))}
                                         </tr>

@@ -47,7 +47,7 @@ type RejectedChildRecord = {
   health: string
   caste: string
   mother_tongue: string
-  class_std: number
+  class_std_text: string
   school_name: string
   school_category: string
   sats_no: number
@@ -4761,7 +4761,7 @@ function EditModal({
             onClick={onClose}
             className="text-slate-500 hover:text-slate-700"
           >
-            ✕
+            <X className="w-5 h-5" />
           </button>
         </div>
 

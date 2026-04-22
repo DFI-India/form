@@ -1,5 +1,7 @@
 'use client'
 
+import { X } from 'lucide-react'
+
 interface AlertProps {
   type: 'error' | 'success' | 'info' | 'warning'
   message: string
@@ -20,7 +22,7 @@ export function Alert({ type, message, onDismiss, className = '' }: AlertProps) 
       <span>{message}</span>
       {onDismiss && (
         <button onClick={onDismiss} className="ml-4 hover:opacity-70">
-          ✕
+          <X className="w-4 h-4" />
         </button>
       )}
     </div>
