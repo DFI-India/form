@@ -38,7 +38,6 @@ export async function PUT(req: Request) {
         const district = String(body?.district || '').trim() || null
         const taluk = String(body?.taluk || '').trim() || null
         const panchayat = String(body?.panchayat || '').trim() || null
-        const village = String(body?.village || '').trim() || null
         const start_date = String(body?.start_date || '').trim() || null
         const end_date = String(body?.end_date || '').trim() || null
         const cbv_name = String(body?.cbv_name || '').trim() || null
@@ -86,7 +85,6 @@ export async function PUT(req: Request) {
                 district,
                 taluk,
                 panchayat,
-                village,
                 start_date,
                 end_date,
                 cbv_name,

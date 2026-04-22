@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useRequireRole } from '../../../lib/hooks'
 import { supabase } from '../../../lib/supabase'
@@ -15,7 +15,6 @@ type CentreRecord = {
   district: string | null
   taluk: string | null
   panchayat: string | null
-  village: string | null
   start_date: string | null
   end_date: string | null
   cbv_name: string | null
@@ -39,7 +38,6 @@ type CentreFormState = {
   district: string
   taluk: string
   panchayat: string
-  village: string
   start_date: string
   end_date: string
   cbv_name: string
@@ -63,7 +61,6 @@ const emptyForm: CentreFormState = {
   district: '',
   taluk: '',
   panchayat: '',
-  village: '',
   start_date: '',
   end_date: '',
   cbv_name: '',
@@ -81,13 +78,12 @@ const emptyForm: CentreFormState = {
   cbv_email: '',
 }
 
-const tableColumns: Array<{ key: keyof CentreFormState | 'eac_no' | 'village_name'; label: string }> = [
+const tableColumns: Array<{ key: keyof CentreFormState; label: string }> = [
   { key: 'eac_no', label: 'EAC No' },
   { key: 'village_name', label: 'Village Name' },
   { key: 'district', label: 'District' },
   { key: 'taluk', label: 'Taluk' },
   { key: 'panchayat', label: 'Panchayat' },
-  { key: 'village', label: 'Village' },
   { key: 'start_date', label: 'Start Date' },
   { key: 'end_date', label: 'End Date' },
   { key: 'cbv_name', label: 'CBV Name' },
@@ -105,6 +101,19 @@ const tableColumns: Array<{ key: keyof CentreFormState | 'eac_no' | 'village_nam
   { key: 'cbv_email', label: 'CBV Email' },
 ]
 
+type SortDirection = 'asc' | 'desc'
+type SortableColumn = keyof CentreFormState
+
+const nonSortableColumns = new Set<SortableColumn>([
+  'head_master_mobile',
+  'in_charge_mobile',
+  'cbv_mobile',
+  'panchayat_member_mobile',
+  'anganvadi_mobile',
+  'asha_worker_mobile',
+  'cbv_email',
+])
+
 export default function CenterManagementPage() {
   const router = useRouter()
   const { profile, loading: authLoading, isAuthorized } = useRequireRole(['admin'])
@@ -120,6 +129,48 @@ export default function CenterManagementPage() {
   const [editCentre, setEditCentre] = useState<CentreRecord | null>(null)
   const [editForm, setEditForm] = useState<CentreFormState>(emptyForm)
   const [deleteCentre, setDeleteCentre] = useState<CentreRecord | null>(null)
+  const [sortColumn, setSortColumn] = useState<SortableColumn>('eac_no')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
+
+  const sortedCentres = useMemo(() => {
+    const rows = [...centres]
+
+    rows.sort((a, b) => {
+      const aValue = a[sortColumn as keyof CentreRecord]
+      const bValue = b[sortColumn as keyof CentreRecord]
+
+      if (aValue === null || aValue === undefined || aValue === '') return 1
+      if (bValue === null || bValue === undefined || bValue === '') return -1
+
+      if (sortColumn === 'eac_no') {
+        const left = Number(aValue)
+        const right = Number(bValue)
+        if (left < right) return sortDirection === 'asc' ? -1 : 1
+        if (left > right) return sortDirection === 'asc' ? 1 : -1
+        return 0
+      }
+
+      const left = String(aValue).toLowerCase()
+      const right = String(bValue).toLowerCase()
+      if (left < right) return sortDirection === 'asc' ? -1 : 1
+      if (left > right) return sortDirection === 'asc' ? 1 : -1
+      return 0
+    })
+
+    return rows
+  }, [centres, sortColumn, sortDirection])
+
+  const toggleSort = (column: SortableColumn) => {
+    if (nonSortableColumns.has(column)) return
+
+    if (sortColumn === column) {
+      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+      return
+    }
+
+    setSortColumn(column)
+    setSortDirection('asc')
+  }
 
   useEffect(() => {
     const init = async () => {
@@ -194,7 +245,6 @@ export default function CenterManagementPage() {
       district: centre.district || '',
       taluk: centre.taluk || '',
       panchayat: centre.panchayat || '',
-      village: centre.village || '',
       start_date: centre.start_date || '',
       end_date: centre.end_date || '',
       cbv_name: centre.cbv_name || '',
@@ -362,14 +412,6 @@ export default function CenterManagementPage() {
                 required
               />
               <input
-                type="text"
-                placeholder="Village"
-                value={createForm.village}
-                onChange={e => setCreateForm({ ...createForm, village: e.target.value })}
-                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-              <input
                 type="date"
                 placeholder="Start Date"
                 value={createForm.start_date}
@@ -498,14 +540,25 @@ export default function CenterManagementPage() {
                     <tr>
                       {tableColumns.map((column) => (
                         <th key={column.key} className="px-6 py-3 text-left font-semibold text-slate-900 whitespace-nowrap">
-                          {column.label}
+                          <div className="flex items-center gap-2">
+                            <span>{column.label}</span>
+                            {!nonSortableColumns.has(column.key) && (
+                              <button
+                                type="button"
+                                onClick={() => toggleSort(column.key)}
+                                className="rounded border border-slate-300 px-2 py-0.5 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                              >
+                                {sortColumn === column.key ? (sortDirection === 'asc' ? 'ASC' : 'DESC') : 'Sort'}
+                              </button>
+                            )}
+                          </div>
                         </th>
                       ))}
                       <th className="px-6 py-3 text-left font-semibold text-slate-900">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {centres.map((centre) => (
+                    {sortedCentres.map((centre) => (
                       <tr key={centre.id} className="border-b border-slate-200 hover:bg-slate-50">
                         {tableColumns.map((column) => {
                           const value = centre[column.key as keyof CentreRecord]
@@ -587,14 +640,6 @@ export default function CenterManagementPage() {
                 value={editForm.panchayat}
                 onChange={e => setEditForm({ ...editForm, panchayat: e.target.value })}
                 className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-              <input
-                type="text"
-                placeholder="Village"
-                value={editForm.village}
-                onChange={e => setEditForm({ ...editForm, village: e.target.value })}
-                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 md:col-span-2"
                 required
               />
               <input
