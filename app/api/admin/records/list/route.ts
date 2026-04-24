@@ -44,6 +44,8 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status') || 'all'
     const search = searchParams.get('search') || ''
     const searchBy = searchParams.get('searchBy') || 'name'
+    const sortColumn = searchParams.get('sortColumn') || 'created_at'
+    const sortDirection = searchParams.get('sortDirection') === 'asc' ? 'asc' : 'desc'
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '20')
     const offset = (page - 1) * limit
@@ -57,11 +59,48 @@ export async function GET(request: NextRequest) {
       .from(tableName)
       .select('*', { count: 'exact' })
 
-    // Apply status filter
-    if (status === 'reviewable') {
-      query = query.in('status', ['Verified', 'Approved'])
-    } else if (status !== 'all') {
-      query = query.eq('status', status)
+    // Apply enrollment filter (Child Left) across entities.
+    if (status === 'ENROLLED' || status === 'LEFT') {
+      const childLeftValue = status === 'LEFT'
+
+      if (entityType === 'child_data') {
+        query = query.eq('child_left', childLeftValue)
+      } else {
+        let childStatusQuery = supabaseAdmin
+          .from('Child_Data')
+          .select('reg_no')
+          .eq('child_left', childLeftValue)
+
+        if (profile.role === 'dfi_field_staff' && profile.centre_eac_no) {
+          childStatusQuery = childStatusQuery.eq('eac_no', profile.centre_eac_no)
+        }
+
+        const { data: childStatusMatches, error: childStatusError } = await childStatusQuery
+
+        if (childStatusError) {
+          console.error('Child enrollment filter error:', childStatusError)
+          return NextResponse.json({ error: 'Failed to filter records' }, { status: 500 })
+        }
+
+        const matchingRegNos = (childStatusMatches || [])
+          .map((row: any) => row.reg_no)
+          .filter((regNo: any) => regNo !== null && regNo !== undefined)
+
+        if (matchingRegNos.length === 0) {
+          return NextResponse.json({
+            success: true,
+            data: [],
+            total: 0,
+            pagination: {
+              page,
+              limit,
+              totalPages: 0
+            }
+          })
+        }
+
+        query = query.in('reg_no', matchingRegNos)
+      }
     }
 
     // Apply centre filter only for DFI field staff
@@ -122,9 +161,22 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Apply pagination and ordering
+    const sortableColumnsByEntity: Record<string, string[]> = {
+      child_data: ['created_at', 'first_name', 'last_name', 'reg_no', 'eac_no', 'village_name', 'class_std_text'],
+      childfmly: ['created_at', 'reg_no', 'eac_no'],
+      childsibling: ['created_at', 'reg_no', 'eac_no'],
+      childuniform: ['created_at', 'reg_no', 'eac_no'],
+      childleaving: ['created_at', 'reg_no', 'eac_no'],
+      vocational_course: ['created_at', 'reg_no', 'eac_no'],
+      computer_course: ['created_at', 'reg_no', 'eac_no']
+    }
+
+    const allowedSortColumns = sortableColumnsByEntity[entityType] || ['created_at']
+    const safeSortColumn = allowedSortColumns.includes(sortColumn) ? sortColumn : 'created_at'
+
+    // Apply sorting before pagination so ordering is global across the dataset.
     query = query
-      .order('created_at', { ascending: false })
+      .order(safeSortColumn, { ascending: sortDirection === 'asc' })
       .range(offset, offset + limit - 1)
 
     const { data, count, error } = await query

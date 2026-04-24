@@ -9,7 +9,7 @@ import { Navbar, Sidebar, PageContainer } from '../../components/Navbar'
 import { ROLE_CONFIG } from '../../../lib/types'
 
 type EntityType = 'child_data' | 'childfmly' | 'childsibling' | 'childuniform' | 'childleaving' | 'vocational_course' | 'computer_course'
-type StatusFilter = 'all' | 'Pending' | 'Verified' | 'Approved' | 'Rejected'
+type StatusFilter = 'all' | 'ENROLLED' | 'LEFT'
 type SearchBy = 'name' | 'reg_no'
 type SortDirection = 'asc' | 'desc'
 
@@ -61,7 +61,6 @@ const HIDDEN_TABLE_METADATA_FIELDS = new Set([
   'record_id',
   'centre_id',
   'class_std',
-  'class_std_text',
   'submitted_by',
   'verified_by',
   'verified_at',
@@ -124,6 +123,8 @@ export default function AdminRecordsPage() {
   const [sortColumn, setSortColumn] = useState<string>('created_at')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
 
+  const SORTABLE_COLUMNS = new Set(['first_name', 'last_name', 'reg_no', 'eac_no', 'village_name', 'class_std_text'])
+
   const getEntityIdentity = (record: DataRecord) => {
     const keys = ENTITY_ID_CANDIDATES[activeTab]
     for (const key of keys) {
@@ -164,49 +165,20 @@ export default function AdminRecordsPage() {
     ]
   }, [records, activeTab])
 
-  const sortedRecords = useMemo(() => {
-    const rows = [...records]
-
-    rows.sort((a, b) => {
-      const aRaw = a[sortColumn]
-      const bRaw = b[sortColumn]
-
-      if (aRaw === null || aRaw === undefined || aRaw === '') return 1
-      if (bRaw === null || bRaw === undefined || bRaw === '') return -1
-
-      const aNumber = Number(aRaw)
-      const bNumber = Number(bRaw)
-      const bothNumeric = !Number.isNaN(aNumber) && !Number.isNaN(bNumber)
-
-      let compare = 0
-      if (bothNumeric) {
-        compare = aNumber - bNumber
-      } else {
-        const aDate = Date.parse(String(aRaw))
-        const bDate = Date.parse(String(bRaw))
-        const bothDates = !Number.isNaN(aDate) && !Number.isNaN(bDate)
-
-        if (bothDates) {
-          compare = aDate - bDate
-        } else {
-          compare = String(aRaw).localeCompare(String(bRaw), undefined, { sensitivity: 'base' })
-        }
-      }
-
-      return sortDirection === 'asc' ? compare : -compare
-    })
-
-    return rows
-  }, [records, sortColumn, sortDirection])
+  const isSortableColumn = (column: string) => activeTab === 'child_data' && SORTABLE_COLUMNS.has(column)
 
   const handleSort = (column: string) => {
+    if (!isSortableColumn(column)) return
+
     if (sortColumn === column) {
       setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+      setPage(1)
       return
     }
 
     setSortColumn(column)
     setSortDirection('asc')
+    setPage(1)
   }
 
   const getColumnLabel = (field: string) => {
@@ -232,7 +204,7 @@ export default function AdminRecordsPage() {
     if (sessionToken) {
       fetchRecords(sessionToken)
     }
-  }, [activeTab, statusFilter, page])
+  }, [activeTab, statusFilter, page, sortColumn, sortDirection])
 
   const fetchRecords = async (token: string) => {
     setLoading(true)
@@ -243,6 +215,8 @@ export default function AdminRecordsPage() {
         status: statusFilter,
         search: searchQuery,
         searchBy,
+        sortColumn,
+        sortDirection,
         page: String(page),
         limit: '20'
       })
@@ -272,6 +246,8 @@ export default function AdminRecordsPage() {
     setSearchQuery('')
     setSearchBy('name')
     setStatusFilter('all')
+    setSortColumn('created_at')
+    setSortDirection('desc')
     setPage(1)
     if (sessionToken) {
       const params = new URLSearchParams({
@@ -279,6 +255,8 @@ export default function AdminRecordsPage() {
         status: 'all',
         search: '',
         searchBy: 'name',
+        sortColumn: 'created_at',
+        sortDirection: 'desc',
         page: '1',
         limit: '20'
       })
@@ -582,10 +560,8 @@ export default function AdminRecordsPage() {
                   className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="all">All Status</option>
-                  <option value="Pending">Pending</option>
-                  <option value="Verified">Verified</option>
-                  <option value="Approved">Approved</option>
-                  <option value="Rejected">Rejected</option>
+                  <option value="ENROLLED">ENROLLED</option>
+                  <option value="LEFT">LEFT</option>
                 </select>
               </div>
 
@@ -651,20 +627,22 @@ export default function AdminRecordsPage() {
                           <th key={field} className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap">
                             <div className="flex items-center gap-2">
                               <span>{getColumnLabel(field)}</span>
-                              <button
-                                type="button"
-                                onClick={() => handleSort(field)}
-                                className="rounded border border-slate-300 px-1.5 py-0.5 text-[10px] font-medium text-slate-700 hover:bg-slate-100"
-                              >
-                                {sortColumn === field ? (sortDirection === 'asc' ? 'ASC' : 'DESC') : 'SORT'}
-                              </button>
+                              {isSortableColumn(field) && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleSort(field)}
+                                  className="rounded border border-slate-300 px-1.5 py-0.5 text-[10px] font-medium text-slate-700 hover:bg-slate-100"
+                                >
+                                  {sortColumn === field ? (sortDirection === 'asc' ? 'ASC' : 'DESC') : 'SORT'}
+                                </button>
+                              )}
                             </div>
                           </th>
                         ))}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200">
-                      {sortedRecords.map((record) => (
+                      {records.map((record) => (
                         <tr key={String(getEntityIdentity(record)?.value ?? record.record_id)} className="hover:bg-slate-50">
                           <td className="px-4 py-3 text-left">
                             <div className="flex items-center gap-2">
@@ -701,6 +679,8 @@ export default function AdminRecordsPage() {
                                   }`}>
                                   {String(record[field] ?? '-')}
                                 </span>
+                              ) : field === 'child_left' ? (
+                                record[field] === true || String(record[field]).toLowerCase() === 'true' ? 'LEFT' : 'ENROLLED'
                               ) : (
                                 String(record[field] ?? '-')
                               )}
