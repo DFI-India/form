@@ -422,19 +422,8 @@ export default function AdminRecordsPage() {
   }, [isAuthorized])
 
   useEffect(() => {
-    const allowedSortColumns = SORTABLE_COLUMNS_BY_ENTITY[activeTab]
-    const defaultSort = DEFAULT_SORT_COLUMN_BY_ENTITY[activeTab]
-    const normalizedSortColumn = allowedSortColumns.has(sortColumn) ? sortColumn : defaultSort
-
-    if (normalizedSortColumn !== sortColumn) {
-      setSortColumn(normalizedSortColumn)
-      return
-    }
-
     if (sessionToken) {
-      fetchRecords(sessionToken, {
-        sortColumn: normalizedSortColumn,
-      })
+      fetchRecords(sessionToken)
     }
   }, [activeTab, statusFilter, page, sortColumn, sortDirection, sessionToken])
 
@@ -453,19 +442,12 @@ export default function AdminRecordsPage() {
     setLoading(true)
     setError('')
     try {
-      const entityType = overrides?.entityType || activeTab
-      const allowedSortColumns = SORTABLE_COLUMNS_BY_ENTITY[entityType]
-      const requestedSortColumn = overrides?.sortColumn || sortColumn
-      const effectiveSortColumn = allowedSortColumns.has(requestedSortColumn)
-        ? requestedSortColumn
-        : DEFAULT_SORT_COLUMN_BY_ENTITY[entityType]
-
       const params = new URLSearchParams({
-        entityType: activeTab,
-        status: statusFilter,
-        search: searchQuery,
-        searchBy,
-        sortColumn: overrides?.sortColumn || effectiveSortColumn,
+        entityType: overrides?.entityType || activeTab,
+        status: overrides?.status || statusFilter,
+        search: overrides?.search ?? searchQuery,
+        searchBy: overrides?.searchBy || searchBy,
+        sortColumn: overrides?.sortColumn || sortColumn,
         sortDirection: overrides?.sortDirection || sortDirection,
         page: String(overrides?.page || page),
         limit: '20'

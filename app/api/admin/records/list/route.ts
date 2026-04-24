@@ -270,7 +270,7 @@ export async function GET(request: NextRequest) {
     }
 
     const allowedSortColumns = sortableColumnsByEntity[entityType] || ['created_at']
-    const finalSortColumn = sortableColumns.has(rawSortColumn)
+    const finalSortColumn = allowedSortColumns.includes(rawSortColumn)
       ? rawSortColumn
       : (DEFAULT_SORT_COLUMN_BY_ENTITY[entityType] || 'created_at')
 
