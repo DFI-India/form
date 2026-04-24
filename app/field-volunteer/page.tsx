@@ -7,7 +7,7 @@ import { LoadingSpinner } from '../components/UI'
 import { Navbar, Sidebar, PageContainer } from '../components/Navbar'
 import { ROLE_CONFIG } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
-import { ClipboardList, FileEdit } from 'lucide-react'
+import { ClipboardList, FileEdit, Check } from 'lucide-react'
 
 export default function FieldVolunteerPage() {
   const { profile, loading, isAuthorized } = useRequireRole(['field_volunteer'])
@@ -111,7 +111,7 @@ export default function FieldVolunteerPage() {
               {capabilities.map((capability, i) => (
                 <li key={i} className="flex items-start gap-3">
                   <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm flex-shrink-0 mt-0.5 font-bold">
-                    ✓
+                    <Check className="w-3 h-3" />
                   </span>
                   <span className="text-slate-700">{capability}</span>
                 </li>

@@ -6,6 +6,7 @@ import { LoadingSpinner } from '../components/UI'
 import { Navbar, Sidebar, PageContainer } from '../components/Navbar'
 import { ROLE_CONFIG, getRoleCapabilities } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
+import { BarChart3, Search, Check } from 'lucide-react'
 
 interface DashboardAnalytics {
   summary: {
@@ -160,7 +161,9 @@ export default function DFIStaffPage() {
 
           {/* SECTION 1: Data Review Stats */}
           <div className="mb-12">
-            <h3 className="text-xl font-bold text-slate-900 mb-4">📊 Overview</h3>
+            <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+              <BarChart3 className="w-5 h-5" /> Overview
+            </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
                 <p className="text-slate-600 text-sm font-medium mb-2">Total EACs</p>
@@ -216,7 +219,9 @@ export default function DFIStaffPage() {
 
           {/* SECTION 2: Data Review Actions */}
           <div className="mb-12">
-            <h3 className="text-lg font-bold text-slate-900 mb-4">🔍 Data Verification</h3>
+            <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+              <Search className="w-5 h-5" /> Data Verification
+            </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <a href="/dfi-staff/approvals" className="bg-white border border-slate-200 text-slate-900 px-6 py-4 rounded-lg hover:bg-slate-50 transition-colors font-medium text-center">
                 Approve Data
@@ -237,7 +242,7 @@ export default function DFIStaffPage() {
               {visibleCapabilities.map((capability, i) => (
                 <li key={i} className="flex items-start gap-3">
                   <span className="w-5 h-5 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-sm flex-shrink-0 mt-0.5 font-bold">
-                    ✓
+                    <Check className="w-3 h-3" />
                   </span>
                   <span className="text-slate-700">{capability}</span>
                 </li>

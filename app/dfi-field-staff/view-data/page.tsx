@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '../../../lib/supabase'
+import { getStandardColumnLabel } from '../../../lib/columnLabels'
 import { Navbar, Sidebar, PageContainer } from '../../components/Navbar'
 import { LoadingSpinner } from '../../components/UI'
 import { ROLE_CONFIG } from '../../../lib/types'
 import { useRequireRole } from '../../../lib/hooks'
+import { X } from 'lucide-react'
 
 type ViewSubTabType = 'child' | 'family' | 'sibling' | 'uniform' | 'leaving' | 'vocational' | 'computer'
 type SearchByType = 'name' | 'reg_no'
@@ -317,8 +319,9 @@ export default function FieldStaffViewDataPage() {
                                                     <th
                                                         key={key}
                                                         className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap"
+                                                        title={key}
                                                     >
-                                                        {key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}
+                                                        {getStandardColumnLabel(key)}
                                                     </th>
                                                 ))}
                                         </tr>
@@ -371,7 +374,7 @@ export default function FieldStaffViewDataPage() {
                                     onClick={() => setViewPhotoModal({ isOpen: false, url: '' })}
                                     className="text-slate-500 hover:text-slate-700"
                                 >
-                                    ✕
+                                    <X className="w-5 h-5" />
                                 </button>
                             </div>
                             <div className="flex-1 flex items-center justify-center overflow-auto">

@@ -477,7 +477,7 @@ export default function ActivityHistoryPage() {
                                 <td className="px-4 py-3 text-slate-700">{row.health}</td>
                                 <td className="px-4 py-3 text-slate-700">{row.caste}</td>
                                 <td className="px-4 py-3 text-slate-700">{row.mother_tongue}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.class_std_text ?? row.class_std ?? ''}</td>
+                                <td className="px-4 py-3 text-slate-700">{row.class_std_text}</td>
                                 <td className="px-4 py-3 text-slate-700">{row.school_name}</td>
                                 <td className="px-4 py-3 text-slate-700">{row.school_category}</td>
                                 <td className="px-4 py-3 text-slate-700">{row.life_ambition}</td>

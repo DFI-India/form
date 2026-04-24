@@ -7,6 +7,7 @@ import { supabase } from '../../lib/supabase'
 import { LoadingSpinner } from '../components/UI'
 import { Navbar, Sidebar, PageContainer } from '../components/Navbar'
 import { ROLE_CONFIG, getRoleCapabilities } from '../../lib/types'
+import { Check, Search, BarChart3 } from 'lucide-react'
 
 export default function DFIFieldStaffPage() {
   const { profile, loading, isAuthorized } = useRequireRole(['dfi_field_staff'])
@@ -140,7 +141,7 @@ export default function DFIFieldStaffPage() {
               {capabilities.map((capability, i) => (
                 <li key={i} className="flex items-start gap-3">
                   <span className="w-5 h-5 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-sm flex-shrink-0 mt-0.5 font-bold">
-                    ✓
+                    <Check className="w-3 h-3" />
                   </span>
                   <span className="text-slate-700">{capability}</span>
                 </li>
@@ -151,15 +152,15 @@ export default function DFIFieldStaffPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Link
               href="/dfi-field-staff/approve-data"
-              className="bg-green-600 text-white px-6 py-4 rounded-lg hover:bg-green-700 transition-colors font-medium text-lg text-center"
+              className="bg-green-600 text-white px-6 py-4 rounded-lg hover:bg-green-700 transition-colors font-medium text-lg text-center inline-flex items-center justify-center gap-2"
             >
-              🔍 Review Submitted Data
+              <Search className="w-5 h-5" /> Review Submitted Data
             </Link>
             <Link
               href="/dfi-field-staff/history"
-              className="bg-blue-600 text-white px-6 py-4 rounded-lg hover:bg-blue-700 transition-colors font-medium text-lg text-center"
+              className="bg-blue-600 text-white px-6 py-4 rounded-lg hover:bg-blue-700 transition-colors font-medium text-lg text-center inline-flex items-center justify-center gap-2"
             >
-              📊 View Activity History
+              <BarChart3 className="w-5 h-5" /> View Activity History
             </Link>
           </div>
         </div>

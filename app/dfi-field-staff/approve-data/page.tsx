@@ -9,10 +9,12 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import DFILogo from '../../../public/DFI.png'
 import { supabase } from '../../../lib/supabase'
+import { getStandardColumnLabel } from '../../../lib/columnLabels'
 import { useRequireRole } from '../../../lib/hooks'
 import { LoadingSpinner } from '../../components/UI'
 import { Navbar, Sidebar, PageContainer } from '../../components/Navbar'
 import { ROLE_CONFIG, getRoleCapabilities } from '../../../lib/types'
+import { X } from 'lucide-react'
 
 type VerifySubTabType = 'child' | 'family' | 'sibling' | 'uniform' | 'leaving' | 'vocational' | 'computer'
 
@@ -516,10 +518,10 @@ export default function ApproveDataPage() {
                                 <table className="w-full text-sm">
                                     <thead className="sticky top-0 bg-slate-50 border-b border-slate-200">
                                         <tr>
-                                            <th className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap">Record ID</th>
+                                            <th className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap" title="record_id">Record ID</th>
                                             {visibleKeys.length > 0 && visibleKeys.map((key) => (
-                                                <th key={key} className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap">
-                                                    {key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}
+                                                <th key={key} className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap" title={key}>
+                                                    {getStandardColumnLabel(key)}
                                                 </th>
                                             ))}
                                             <th className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap sticky right-0 top-0 bg-white z-20 w-[170px]">Actions</th>
@@ -588,7 +590,9 @@ export default function ApproveDataPage() {
                             <div key={t.id} className={`rounded-lg px-4 py-2 text-sm font-medium shadow-lg ${t.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
                                 <div className="flex items-start gap-3">
                                     <div className="flex-1">{t.text}</div>
-                                    <button onClick={() => removeToast(t.id)} className="text-sm font-semibold text-slate-500 hover:text-slate-700">✕</button>
+                                    <button onClick={() => removeToast(t.id)} className="text-sm font-semibold text-slate-500 hover:text-slate-700">
+                                      <X className="w-4 h-4" />
+                                    </button>
                                 </div>
                             </div>
                         ))}
@@ -729,7 +733,7 @@ function VerifyDataRow({ record, isLoading, onApprove, onReject, displayKeys }: 
                                 onClick={() => setPhotoModal({ isOpen: false, url: '' })}
                                 className="text-slate-500 hover:text-slate-700"
                             >
-                                ✕
+                                <X className="w-5 h-5" />
                             </button>
                         </div>
                         <div className="flex-1 flex items-center justify-center overflow-auto">

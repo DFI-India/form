@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRequireRole } from '../../../lib/hooks'
 import { supabase } from '../../../lib/supabase'
 import { LoadingSpinner, Alert } from '../../components/UI'
@@ -14,6 +14,8 @@ interface ReportRow {
   group: string
   total_children: number
 }
+
+const uniqueSorted = (items: string[]) => Array.from(new Set(items.filter(Boolean))).sort((a, b) => a.localeCompare(b))
 
 const REPORT_COLUMNS_BY_TAB: Record<ReportTab, { key: ReportColumn; label: string }[]> = {
   child_data: [
@@ -84,6 +86,27 @@ export default function AdminAnalyticsPage() {
   const [reportOptionsLoading, setReportOptionsLoading] = useState(false)
   const [reportError, setReportError] = useState('')
 
+  const activeReportFiltersCount = useMemo(() => {
+    return Object.values(reportFilters[reportTab] || {}).filter((value) => Boolean(String(value || '').trim())).length
+  }, [reportFilters, reportTab])
+
+  const reportTotalStudents = useMemo(() => {
+    return reportRows.reduce((sum, row) => sum + Number(row.total_children || 0), 0)
+  }, [reportRows])
+
+  const analyticsRates = useMemo(() => {
+    if (!analytics || analytics.summary.totalChildren === 0) {
+      return { pendingRate: 0, approvedRate: 0, rejectedRate: 0 }
+    }
+
+    const total = analytics.summary.totalChildren
+    return {
+      pendingRate: Math.round((analytics.summary.totalPending / total) * 100),
+      approvedRate: Math.round((analytics.summary.totalApproved / total) * 100),
+      rejectedRate: Math.round((analytics.summary.totalRejected / total) * 100),
+    }
+  }, [analytics])
+
   useEffect(() => {
     const init = async () => {
       const { data } = await supabase.auth.getSession()
@@ -149,7 +172,11 @@ export default function AdminAnalyticsPage() {
           }
 
           const json = (await res.json()) as ReportRow[]
-          nextOptions[key] = json.map((row) => row.group).filter((value) => value !== 'Not Specified')
+          nextOptions[key] = uniqueSorted(
+            json
+              .map((row) => row.group)
+              .filter((value) => value !== 'Not Specified' && Boolean(String(value || '').trim()))
+          )
         })
       )
 
@@ -244,6 +271,13 @@ export default function AdminAnalyticsPage() {
     URL.revokeObjectURL(url)
   }
 
+  const handleResetReportFilters = () => {
+    setReportFilters((prev) => ({ ...prev, [reportTab]: {} }))
+    setReportGroupBy((prev) => ({ ...prev, [reportTab]: '' }))
+    setReportRows([])
+    setReportError('')
+  }
+
   useEffect(() => {
     if (sessionToken) {
       setReportRows([])
@@ -315,8 +349,8 @@ export default function AdminAnalyticsPage() {
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4 items-end">
+                <div className="lg:col-span-2">
                   <label className="block text-sm font-medium text-slate-700 mb-1">Group By *</label>
                   <select
                     value={reportGroupBy[reportTab]}
@@ -330,6 +364,24 @@ export default function AdminAnalyticsPage() {
                   </select>
                 </div>
 
+                <button
+                  onClick={handleGenerateReport}
+                  disabled={reportLoading || reportOptionsLoading}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {reportLoading ? 'Generating...' : 'Generate Report'}
+                </button>
+
+                <button
+                  onClick={handleResetReportFilters}
+                  disabled={reportLoading || reportOptionsLoading}
+                  className="px-6 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 disabled:opacity-50"
+                >
+                  Reset
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
                 {REPORT_COLUMNS_BY_TAB[reportTab].map((column) => (
                   <div key={`${reportTab}-${column.key}`}>
                     <label className="block text-sm font-medium text-slate-700 mb-1">{column.label}</label>
@@ -354,23 +406,23 @@ export default function AdminAnalyticsPage() {
                 ))}
               </div>
 
-              <div className="mb-6">
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={handleGenerateReport}
-                    disabled={reportLoading || reportOptionsLoading}
-                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                  >
-                    {reportLoading ? 'Generating...' : 'Generate Report'}
-                  </button>
-                  <button
-                    onClick={handleExportCsv}
-                    disabled={reportLoading || reportRows.length === 0}
-                    className="px-6 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Export as CSV
-                  </button>
-                </div>
+              <div className="mb-6 flex flex-wrap items-center gap-3">
+                <button
+                  onClick={handleExportCsv}
+                  disabled={reportLoading || reportRows.length === 0}
+                  className="px-6 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Export as CSV
+                </button>
+                <span className="text-sm text-slate-500">
+                  Active filters: {activeReportFiltersCount}
+                </span>
+                <span className="text-sm text-slate-500">
+                  Rows: {reportRows.length}
+                </span>
+                <span className="text-sm text-slate-500">
+                  Total students: {reportTotalStudents}
+                </span>
               </div>
 
               {reportError && (
@@ -393,13 +445,17 @@ export default function AdminAnalyticsPage() {
                         <tr>
                           <th className="px-4 py-3 text-left font-semibold text-slate-700">Group</th>
                           <th className="px-4 py-3 text-left font-semibold text-slate-700">Total Students</th>
+                          <th className="px-4 py-3 text-left font-semibold text-slate-700">Share</th>
                         </tr>
                       </thead>
                       <tbody>
                         {reportRows.map((row, index) => (
                           <tr key={`${row.group}-${index}`} className="border-b border-slate-100">
                             <td className="px-4 py-3 text-slate-800">{row.group === 'Not Specified' || !String(row.group || '').trim() ? '-' : row.group}</td>
-                            <td className="px-4 py-3 text-slate-800 font-medium">{row.total_children > 0 ? row.total_children : '-'}</td>
+                            <td className="px-4 py-3 text-slate-800 font-medium">{row.total_children}</td>
+                            <td className="px-4 py-3 text-slate-600">
+                              {reportTotalStudents > 0 ? `${((row.total_children / reportTotalStudents) * 100).toFixed(1)}%` : '0.0%'}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -430,18 +486,21 @@ export default function AdminAnalyticsPage() {
                     <p className="text-3xl font-bold text-yellow-600 mt-2">
                       {analytics.summary.totalPending}
                     </p>
+                    <p className="text-xs text-slate-500 mt-1">{analyticsRates.pendingRate}% of total</p>
                   </div>
                   <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
                     <p className="text-sm text-slate-600 font-medium">Approved</p>
                     <p className="text-3xl font-bold text-green-600 mt-2">
                       {analytics.summary.totalApproved}
                     </p>
+                    <p className="text-xs text-slate-500 mt-1">{analyticsRates.approvedRate}% of total</p>
                   </div>
                   <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
                     <p className="text-sm text-slate-600 font-medium">Rejected</p>
                     <p className="text-3xl font-bold text-red-600 mt-2">
                       {analytics.summary.totalRejected}
                     </p>
+                    <p className="text-xs text-slate-500 mt-1">{analyticsRates.rejectedRate}% of total</p>
                   </div>
                 </div>
 
