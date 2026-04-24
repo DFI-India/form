@@ -400,6 +400,16 @@ export default function AdminRecordsPage() {
     return field.replace(/_/g, ' ')
   }
 
+  const getSortSummaryLabel = () => {
+    const label = getColumnLabel(sortColumn)
+    const prettyLabel =
+      label === label.toUpperCase()
+        ? label
+        : label.replace(/\b\w/g, (char) => char.toUpperCase())
+    const prettyDirection = sortDirection === 'asc' ? 'Asc' : 'Desc'
+    return `${prettyLabel} (${prettyDirection})`
+  }
+
   const getStatusBadgeClass = (status: string) => {
     if (status === 'Pending') return 'bg-yellow-100 text-yellow-800'
     if (status === 'Approved') return 'bg-green-100 text-green-800'
@@ -745,7 +755,7 @@ export default function AdminRecordsPage() {
             </div>
           </div>
 
-          <div className="mb-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
+          <div className="mb-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4">
             <div className="bg-white rounded-lg border border-slate-200 p-4">
               <p className="text-xs text-slate-500 uppercase tracking-wide">Active Entity</p>
               <p className="text-lg font-semibold text-slate-900 mt-1">{ENTITY_LABELS[activeTab]}</p>
@@ -765,6 +775,10 @@ export default function AdminRecordsPage() {
             <div className="bg-white rounded-lg border border-slate-200 p-4">
               <p className="text-xs text-slate-500 uppercase tracking-wide">Approved</p>
               <p className="text-lg font-semibold text-emerald-700 mt-1">{statusSummary.Approved}</p>
+            </div>
+            <div className="bg-white rounded-lg border border-slate-200 p-4">
+              <p className="text-xs text-slate-500 uppercase tracking-wide">Current Sort</p>
+              <p className="text-lg font-semibold text-indigo-700 mt-1">{getSortSummaryLabel()}</p>
             </div>
           </div>
 
