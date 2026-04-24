@@ -22,9 +22,9 @@ export default function FieldVolunteerPage() {
         setStatsLoading(true)
 
         const [{ count: totalCount }, { count: girls }, { count: boys }] = await Promise.all([
-          supabase.from('Child_Data').select('*', { count: 'exact', head: true }),
-          supabase.from('Child_Data').select('*', { count: 'exact', head: true }).eq('gender', 'Female'),
-          supabase.from('Child_Data').select('*', { count: 'exact', head: true }).eq('gender', 'Male'),
+          supabase.from('Child_Data').select('*', { count: 'exact', head: true }).eq('child_left', false),
+          supabase.from('Child_Data').select('*', { count: 'exact', head: true }).eq('child_left', false).eq('gender', 'Female'),
+          supabase.from('Child_Data').select('*', { count: 'exact', head: true }).eq('child_left', false).eq('gender', 'Male'),
         ])
 
         setChildrenEnrolled(totalCount ?? 0)
@@ -90,17 +90,17 @@ export default function FieldVolunteerPage() {
             <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
               <p className="text-slate-600 text-sm font-medium mb-2">Children Enrolled</p>
               <p className="text-4xl font-bold text-blue-600">{statsLoading ? '...' : childrenEnrolled}</p>
-              <p className="text-xs text-slate-500 mt-2">Total records in Child_Data</p>
+              <p className="text-xs text-slate-500 mt-2">Child_Data where Child Left = false</p>
             </div>
             <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
               <p className="text-slate-600 text-sm font-medium mb-2">Number of Girls</p>
               <p className="text-4xl font-bold text-pink-600">{statsLoading ? '...' : girlsCount}</p>
-              <p className="text-xs text-slate-500 mt-2">Gender = Female in Child_Data</p>
+              <p className="text-xs text-slate-500 mt-2">Gender = Female and Child Left = false</p>
             </div>
             <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
               <p className="text-slate-600 text-sm font-medium mb-2">Number of Boys</p>
               <p className="text-4xl font-bold text-emerald-600">{statsLoading ? '...' : boysCount}</p>
-              <p className="text-xs text-slate-500 mt-2">Gender = Male in Child_Data</p>
+              <p className="text-xs text-slate-500 mt-2">Gender = Male and Child Left = false</p>
             </div>
           </div>
 

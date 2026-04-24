@@ -610,6 +610,18 @@ const classStandardOptions = [
   'Other',
 ]
 const vocationalCourseOptions = ['Tailoring', 'Beautician', 'Kuchi/Embroidery', 'Driving']
+
+const uniqueTextValues = (rows: any[], key: string): string[] => {
+  const values = (rows || [])
+    .map((row) => row?.[key])
+    .filter((value) => typeof value === 'string' && value.trim() !== '')
+    .map((value) => value.trim())
+
+  return Array.from(new Set(values)).sort((a, b) => a.localeCompare(b))
+}
+
+const todayIsoDate = new Date().toISOString().split('T')[0]
+
 const CHILD_DRAFT_STORAGE_PREFIX = 'fv-child-entry-draft-v1'
 const CHILD_DRAFT_LATEST_REG_KEY = 'fv-child-entry-draft-latest-reg'
 
@@ -640,6 +652,7 @@ export default function ChildForm() {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<MessageState>(null)
   const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [photoPreview, setPhotoPreview] = useState<string>('')
   const [photoInputKey, setPhotoInputKey] = useState(() => Date.now())
 
   // Family form state
@@ -701,6 +714,7 @@ export default function ChildForm() {
   const [editFormData, setEditFormData] = useState<any>(null)
   const [editLoading, setEditLoading] = useState(false)
   const [editPhotoFile, setEditPhotoFile] = useState<File | null>(null)
+  const [editPhotoPreview, setEditPhotoPreview] = useState<string>('')
   const [editPhotoInputKey, setEditPhotoInputKey] = useState(() => Date.now())
 
   // Personal history state
@@ -745,6 +759,10 @@ export default function ChildForm() {
 
   const [checkedAuth, setCheckedAuth] = useState(false)
   const [authorized, setAuthorized] = useState(false)
+  const [mediumOfStudyOptions, setMediumOfStudyOptions] = useState<string[]>([])
+  const [lifeAmbitionOptions, setLifeAmbitionOptions] = useState<string[]>([])
+  const [favSubjectOptions, setFavSubjectOptions] = useState<string[]>([])
+  const [fatherOccupationOptions, setFatherOccupationOptions] = useState<string[]>([])
 
   useEffect(() => {
     let isMounted = true
@@ -785,6 +803,7 @@ export default function ChildForm() {
   useEffect(() => {
     if (!authorized) return
     fetchEacData()
+    fetchChildFormOptions()
   }, [authorized])
 
   const fetchEacData = async () => {
@@ -799,6 +818,29 @@ export default function ChildForm() {
     } catch (error) {
       console.error('Error fetching EAC data:', error)
       setMessage({ type: 'error', text: 'Unable to load centre details. Please refresh.' })
+    }
+  }
+
+  const fetchChildFormOptions = async () => {
+    try {
+      const [{ data: childData, error: childError }, { data: familyDataRows, error: familyError }] = await Promise.all([
+        supabase
+          .from('Child_Data')
+          .select('medium_of_study, life_ambition, fav_subject'),
+        supabase
+          .from('childfmly')
+          .select('f_occup')
+      ])
+
+      if (childError) throw childError
+      if (familyError) throw familyError
+
+      setMediumOfStudyOptions(uniqueTextValues(childData || [], 'medium_of_study'))
+      setLifeAmbitionOptions(uniqueTextValues(childData || [], 'life_ambition'))
+      setFavSubjectOptions(uniqueTextValues(childData || [], 'fav_subject'))
+      setFatherOccupationOptions(uniqueTextValues(familyDataRows || [], 'f_occup'))
+    } catch (error) {
+      console.error('Error fetching child form dropdown options:', error)
     }
   }
 
@@ -1086,6 +1128,11 @@ export default function ChildForm() {
     }))
   }
 
+  const childGenderNormalized = formData.gender.trim().toUpperCase()
+  const showPantSkirtSize = childGenderNormalized !== 'MALE'
+  const showChudidharSize = childGenderNormalized !== 'MALE'
+  const showTopPantSize = childGenderNormalized !== 'FEMALE'
+
   const getDraftStorageKey = (registrationNo: string) => `${CHILD_DRAFT_STORAGE_PREFIX}:${registrationNo.trim()}`
 
   const getAllChildDraftSummaries = (): ChildDraftSummary[] => {
@@ -1212,6 +1259,7 @@ export default function ChildForm() {
     setSiblingData(createEmptySiblingForm())
     setUniformData(createEmptyUniformForm())
     setPhotoFile(null)
+    setPhotoPreview('')
     setPhotoInputKey(Date.now())
     setWizardStep(0)
     setDraftExistsForRegNo(false)
@@ -1318,6 +1366,48 @@ export default function ChildForm() {
       if (!formData.eac_no.trim()) return 'EAC number is required.'
       if (!formData.reg_no.trim()) return 'Registration number is required.'
       if (!formData.first_name.trim()) return 'First name is required.'
+      if (!formData.gender.trim()) return 'Gender is required.'
+      if (!formData.birth_place.trim()) return 'Birth place is required.'
+      if (!formData.blood_group.trim()) return 'Blood group is required.'
+      if (!formData.health.trim()) return 'Health status is required.'
+      if (!formData.caste.trim()) return 'Caste is required.'
+      if (!formData.school_name.trim()) return 'School name is required.'
+      if (!formData.school_category.trim()) return 'School category is required.'
+
+      if (formData.dateofbirth) {
+        const birthDate = new Date(formData.dateofbirth)
+        const today = new Date(todayIsoDate)
+        if (birthDate > today) return 'Date of birth cannot be in the future.'
+      }
+
+      return null
+    }
+
+    if (step === 1) {
+      if (familyData.f_name.trim() && !familyData.f_occup.trim()) {
+        return "Father's occupation is required when father's name is entered."
+      }
+
+      return null
+    }
+
+    if (step === 3) {
+      if (!uniformData.shirtsize.trim()) return 'Shirt size is required.'
+      if (!uniformData.knickersize.trim()) return 'Knicker size is required.'
+      if (!uniformData.footwearsize.trim()) return 'Footwear size is required.'
+
+      if (showPantSkirtSize && !uniformData.pant_skirtsize.trim()) {
+        return 'Pant/Skirt size is required.'
+      }
+
+      if (showChudidharSize && !uniformData.chudidharsize.trim()) {
+        return 'Chudidhar size is required.'
+      }
+
+      if (showTopPantSize && !uniformData.top_pantsize.trim()) {
+        return 'Top/Pant size is required.'
+      }
+
       return null
     }
 
@@ -1608,6 +1698,7 @@ export default function ChildForm() {
       setSiblingData(createEmptySiblingForm())
       setUniformData(createEmptyUniformForm())
       setPhotoFile(null)
+      setPhotoPreview('')
       setPhotoInputKey(Date.now())
       setWizardStep(0)
       setDraftExistsForRegNo(false)
@@ -1743,6 +1834,7 @@ export default function ChildForm() {
       setMessage({ type: 'error', text: 'Image must be 5MB or smaller.' })
       event.target.value = ''
       setPhotoFile(null)
+      setPhotoPreview('')
       setFormData((prev) => ({ ...prev, photo_link: '' }))
       setPhotoInputKey(Date.now())
       return
@@ -1750,6 +1842,17 @@ export default function ChildForm() {
 
     setPhotoFile(file)
     setFormData((prev) => ({ ...prev, photo_link: file ? file.name : '' }))
+
+    if (!file) {
+      setPhotoPreview('')
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      setPhotoPreview((e.target?.result as string) || '')
+    }
+    reader.readAsDataURL(file)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1872,6 +1975,7 @@ export default function ChildForm() {
       setMessage({ type: 'success', text: 'Child data submitted for approval.' })
       setFormData(createEmptyForm())
       setPhotoFile(null)
+      setPhotoPreview('')
       setPhotoInputKey(Date.now())
     } catch (error: unknown) {
       const fallback = error instanceof Error ? error.message : 'Unexpected error occurred.'
@@ -2392,6 +2496,7 @@ export default function ChildForm() {
     setEditingRecord(record)
     setEditModalType(type)
     setEditFormData({ ...record })
+    setEditPhotoPreview(typeof record.photo_link === 'string' ? record.photo_link : '')
     setEditModalOpen(true)
   }
 
@@ -2400,6 +2505,7 @@ export default function ChildForm() {
     setEditingRecord(null)
     setEditFormData(null)
     setEditPhotoFile(null)
+    setEditPhotoPreview('')
     setEditPhotoInputKey(Date.now())
   }
 
@@ -2417,6 +2523,7 @@ export default function ChildForm() {
       setRejectedMessage({ type: 'error', text: 'Image must be 5MB or smaller.' })
       event.target.value = ''
       setEditPhotoFile(null)
+      setEditPhotoPreview('')
       setEditFormData((prev: any) => ({ ...prev, photo_link: prev.photo_link }))
       setEditPhotoInputKey(Date.now())
       return
@@ -2424,6 +2531,17 @@ export default function ChildForm() {
 
     setEditPhotoFile(file)
     setEditFormData((prev: any) => ({ ...prev, photo_link: file ? file.name : prev.photo_link }))
+
+    if (!file) {
+      setEditPhotoPreview('')
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      setEditPhotoPreview((e.target?.result as string) || '')
+    }
+    reader.readAsDataURL(file)
   }
 
   const handleEditSubmit = async () => {
@@ -3025,7 +3143,7 @@ export default function ChildForm() {
                           <ReadOnlyInput label="Panchayat" value={formData.panchayat} />
                           <ReadOnlyInput label="Village" value={formData.village} />
                           <TextInput label="Admission Date" name="adm_date" value={formData.adm_date} onChange={handleChange} type="date" />
-                          <TextInput label="Date of Birth" name="dateofbirth" value={formData.dateofbirth} onChange={handleChange} type="date" />
+                          <TextInput label="Date of Birth" name="dateofbirth" value={formData.dateofbirth} onChange={handleChange} type="date" max={todayIsoDate} />
                           <TextInput label="First Name *" name="first_name" value={formData.first_name} onChange={handleChange} />
                           <TextInput label="Last Name" name="last_name" value={formData.last_name} onChange={handleChange} />
 
@@ -3035,6 +3153,7 @@ export default function ChildForm() {
                               name="gender"
                               value={formData.gender}
                               onChange={handleChange}
+                              required
                               className={baseInputClass}
                             >
                               <option value="">Select Gender</option>
@@ -3060,7 +3179,7 @@ export default function ChildForm() {
                           </div>
 
                           <NumberInput label="Aadhar No" name="aadhar_no" value={formData.aadhar_no} onChange={handleChange} />
-                          <TextInput label="Birth Place" name="birth_place" value={formData.birth_place} onChange={handleChange} />
+                          <TextInput label="Birth Place" name="birth_place" value={formData.birth_place} onChange={handleChange} required />
                           <NumberInput label="Height (cm)" name="height" value={formData.height} onChange={handleChange} />
                           <NumberInput label="Weight (kg)" name="weight" value={formData.weight} onChange={handleChange} />
 
@@ -3070,6 +3189,7 @@ export default function ChildForm() {
                               name="blood_group"
                               value={formData.blood_group}
                               onChange={handleChange}
+                              required
                               className={baseInputClass}
                             >
                               <option value="">Select Blood Group</option>
@@ -3079,8 +3199,8 @@ export default function ChildForm() {
                             </select>
                           </div>
 
-                          <TextInput label="Health Status" name="health" value={formData.health} onChange={handleChange} />
-                          <TextInput label="Caste" name="caste" value={formData.caste} onChange={handleChange} />
+                          <TextInput label="Health Status" name="health" value={formData.health} onChange={handleChange} required />
+                          <TextInput label="Caste" name="caste" value={formData.caste} onChange={handleChange} required />
                           <TextInput label="Mother Tongue" name="mother_tongue" value={formData.mother_tongue} onChange={handleChange} />
                           <div>
                             <label className="mb-1 block text-sm font-medium text-slate-700">Class/Standard</label>
@@ -3096,13 +3216,54 @@ export default function ChildForm() {
                               ))}
                             </select>
                           </div>
-                          <TextInput label="School Name" name="school_name" value={formData.school_name} onChange={handleChange} />
-                          <TextInput label="School Category" name="school_category" value={formData.school_category} onChange={handleChange} />
+                          <TextInput label="School Name" name="school_name" value={formData.school_name} onChange={handleChange} required />
+                          <TextInput label="School Category" name="school_category" value={formData.school_category} onChange={handleChange} required />
                           <NumberInput label="SATS No" name="sats_no" value={formData.sats_no} onChange={handleChange} />
                           <NumberInput label="PEN No" name="pen_no" value={formData.pen_no} onChange={handleChange} />
-                          <TextInput label="Medium of Study" name="medium_of_study" value={formData.medium_of_study} onChange={handleChange} />
-                          <TextInput label="Life Ambition" name="life_ambition" value={formData.life_ambition} onChange={handleChange} />
-                          <TextInput label="Favorite Subject" name="fav_subject" value={formData.fav_subject} onChange={handleChange} />
+                          <div>
+                            <label className="mb-1 block text-sm font-medium text-slate-700">Medium of Study</label>
+                            <select
+                              name="medium_of_study"
+                              value={formData.medium_of_study}
+                              onChange={handleChange}
+                              className={baseInputClass}
+                            >
+                              <option value="">Select Medium of Study</option>
+                              {mediumOfStudyOptions.map((option) => (
+                                <option key={option} value={option}>{option}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="mb-1 block text-sm font-medium text-slate-700">Life Ambition</label>
+                            <select
+                              name="life_ambition"
+                              value={formData.life_ambition}
+                              onChange={handleChange}
+                              className={baseInputClass}
+                            >
+                              <option value="">Select Life Ambition</option>
+                              {lifeAmbitionOptions.map((option) => (
+                                <option key={option} value={option}>{option}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="mb-1 block text-sm font-medium text-slate-700">Favorite Subject</label>
+                            <select
+                              name="fav_subject"
+                              value={formData.fav_subject}
+                              onChange={handleChange}
+                              className={baseInputClass}
+                            >
+                              <option value="">Select Favorite Subject</option>
+                              {favSubjectOptions.map((option) => (
+                                <option key={option} value={option}>{option}</option>
+                              ))}
+                            </select>
+                          </div>
 
                           <div>
                             <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="photoUploadWizard">
@@ -3118,6 +3279,13 @@ export default function ChildForm() {
                               className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition file:mr-3 file:rounded-md file:border-none file:bg-blue-600 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-blue-700 focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                             />
                             {photoFile && <p className="mt-1 text-xs text-slate-600">Selected: {photoFile.name}</p>}
+                            {photoPreview && (
+                              <img
+                                src={photoPreview}
+                                alt="Selected child preview"
+                                className="mt-3 h-28 w-28 rounded-lg border border-slate-200 object-cover"
+                              />
+                            )}
                           </div>
                         </div>
 
@@ -3137,7 +3305,21 @@ export default function ChildForm() {
                     {wizardStep === 1 && (
                       <div className="grid gap-4 md:grid-cols-2">
                         <TextInput label="Father's Name" name="f_name" value={familyData.f_name} onChange={(e) => setFamilyData({ ...familyData, f_name: e.target.value })} />
-                        <TextInput label="Father's Occupation" name="f_occup" value={familyData.f_occup} onChange={(e) => setFamilyData({ ...familyData, f_occup: e.target.value })} />
+                        <div>
+                          <label className="mb-1 block text-sm font-medium text-slate-700">Father's Occupation</label>
+                          <select
+                            name="f_occup"
+                            value={familyData.f_occup}
+                            onChange={(e) => setFamilyData({ ...familyData, f_occup: e.target.value })}
+                            required={Boolean(familyData.f_name.trim())}
+                            className={baseInputClass}
+                          >
+                            <option value="">Select Father's Occupation</option>
+                            {fatherOccupationOptions.map((option) => (
+                              <option key={option} value={option}>{option}</option>
+                            ))}
+                          </select>
+                        </div>
                         <TextInput label="Father's Income" name="f_inc" value={familyData.f_inc} onChange={(e) => setFamilyData({ ...familyData, f_inc: e.target.value })} type="number" />
                         <TextInput label="Father's Aadhar No" name="f_aadhar" value={familyData.f_aadhar} onChange={(e) => setFamilyData({ ...familyData, f_aadhar: e.target.value })} />
                         <TextInput label="Father's Mobile" name="f_mobile" value={familyData.f_mobile} onChange={(e) => setFamilyData({ ...familyData, f_mobile: e.target.value })} />
@@ -3224,13 +3406,19 @@ export default function ChildForm() {
 
                     {wizardStep === 3 && (
                       <div className="grid gap-4 md:grid-cols-2">
-                        <TextInput label="Shirt Size" name="shirtsize" value={uniformData.shirtsize} onChange={(e) => setUniformData({ ...uniformData, shirtsize: e.target.value })} />
-                        <TextInput label="Knicker Size" name="knickersize" value={uniformData.knickersize} onChange={(e) => setUniformData({ ...uniformData, knickersize: e.target.value })} />
-                        <TextInput label="Pant/Skirt Size" name="pant_skirtsize" value={uniformData.pant_skirtsize} onChange={(e) => setUniformData({ ...uniformData, pant_skirtsize: e.target.value })} />
-                        <TextInput label="Chudidhar Size" name="chudidharsize" value={uniformData.chudidharsize} onChange={(e) => setUniformData({ ...uniformData, chudidharsize: e.target.value })} />
-                        <TextInput label="Top/Pant Size" name="top_pantsize" value={uniformData.top_pantsize} onChange={(e) => setUniformData({ ...uniformData, top_pantsize: e.target.value })} />
-                        <TextInput label="Footwear Size *" name="footwearsize" value={uniformData.footwearsize} onChange={(e) => setUniformData({ ...uniformData, footwearsize: e.target.value })} />
-                        <TextInput label="Uniform Updated Date" name="uniform_updated" value={uniformData.uniform_updated} onChange={(e) => setUniformData({ ...uniformData, uniform_updated: e.target.value })} type="date" />
+                        <TextInput label="Shirt Size" name="shirtsize" value={uniformData.shirtsize} onChange={(e) => setUniformData({ ...uniformData, shirtsize: e.target.value })} required />
+                        <TextInput label="Knicker Size" name="knickersize" value={uniformData.knickersize} onChange={(e) => setUniformData({ ...uniformData, knickersize: e.target.value })} required />
+                        {showPantSkirtSize && (
+                          <TextInput label="Pant/Skirt Size" name="pant_skirtsize" value={uniformData.pant_skirtsize} onChange={(e) => setUniformData({ ...uniformData, pant_skirtsize: e.target.value })} required />
+                        )}
+                        {showChudidharSize && (
+                          <TextInput label="Chudidhar Size" name="chudidharsize" value={uniformData.chudidharsize} onChange={(e) => setUniformData({ ...uniformData, chudidharsize: e.target.value })} required />
+                        )}
+                        {showTopPantSize && (
+                          <TextInput label="Top/Pant Size" name="top_pantsize" value={uniformData.top_pantsize} onChange={(e) => setUniformData({ ...uniformData, top_pantsize: e.target.value })} required />
+                        )}
+                        <TextInput label="Footwear Size *" name="footwearsize" value={uniformData.footwearsize} onChange={(e) => setUniformData({ ...uniformData, footwearsize: e.target.value })} required />
+                        <TextInput label="Uniform Updated Date" name="uniform_updated" value={uniformData.uniform_updated} onChange={(e) => setUniformData({ ...uniformData, uniform_updated: e.target.value })} type="date" required />
                       </div>
                     )}
                   </section>
@@ -5009,8 +5197,13 @@ export default function ChildForm() {
                     onFormChange={handleEditFormChange}
                     onSubmit={handleEditSubmit}
                     onPhotoChange={handleEditPhotoChange}
+                    photoPreview={editPhotoPreview}
                     photoInputKey={editPhotoInputKey}
                     setPhotoInputKey={setEditPhotoInputKey}
+                    mediumOfStudyOptions={mediumOfStudyOptions}
+                    lifeAmbitionOptions={lifeAmbitionOptions}
+                    favSubjectOptions={favSubjectOptions}
+                    fatherOccupationOptions={fatherOccupationOptions}
                   />
                 )}
               </div>
@@ -5032,8 +5225,13 @@ interface EditModalProps {
   onFormChange: (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void
   onSubmit: () => void
   onPhotoChange: (e: ChangeEvent<HTMLInputElement>) => void
+  photoPreview: string
   photoInputKey: number
   setPhotoInputKey: (key: number) => void
+  mediumOfStudyOptions: string[]
+  lifeAmbitionOptions: string[]
+  favSubjectOptions: string[]
+  fatherOccupationOptions: string[]
 }
 
 function EditModal({
@@ -5046,10 +5244,22 @@ function EditModal({
   onFormChange,
   onSubmit,
   onPhotoChange,
+  photoPreview,
   photoInputKey,
   setPhotoInputKey,
+  mediumOfStudyOptions,
+  lifeAmbitionOptions,
+  favSubjectOptions,
+  fatherOccupationOptions,
 }: EditModalProps) {
   if (!isOpen) return null
+
+  const modalGenderNormalized = String(formData?.gender ?? '').trim().toUpperCase()
+  const modalIsMale = modalGenderNormalized === 'MALE'
+  const modalIsFemale = modalGenderNormalized === 'FEMALE'
+  const showModalPantSkirtSize = !modalIsMale
+  const showModalChudidharSize = !modalIsMale
+  const showModalTopPantSize = !modalIsFemale
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
@@ -5097,6 +5307,7 @@ function EditModal({
                   value={formData.dateofbirth}
                   onChange={onFormChange}
                   type="date"
+                  max={todayIsoDate}
                 />
                 <div>
                   <label className="mb-1 block text-sm font-medium text-slate-700">Religion</label>
@@ -5136,6 +5347,7 @@ function EditModal({
                     name="gender"
                     value={formData.gender || ''}
                     onChange={onFormChange}
+                    required
                     className={baseInputClass}
                   >
                     <option value="">Select Gender</option>
@@ -5159,6 +5371,7 @@ function EditModal({
                   name="birth_place"
                   value={formData.birth_place}
                   onChange={onFormChange}
+                  required
                 />
                 <NumberInput
                   label="Height (cm)"
@@ -5180,6 +5393,7 @@ function EditModal({
                     name="blood_group"
                     value={formData.blood_group || ''}
                     onChange={onFormChange}
+                    required
                     className={baseInputClass}
                   >
                     <option value="">Select Blood Group</option>
@@ -5197,12 +5411,14 @@ function EditModal({
                   name="health"
                   value={formData.health}
                   onChange={onFormChange}
+                  required
                 />
                 <TextInput
                   label="Caste"
                   name="caste"
                   value={formData.caste}
                   onChange={onFormChange}
+                  required
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -5235,12 +5451,14 @@ function EditModal({
                   name="school_name"
                   value={formData.school_name}
                   onChange={onFormChange}
+                  required
                 />
                 <TextInput
                   label="School Category"
                   name="school_category"
                   value={formData.school_category}
                   onChange={onFormChange}
+                  required
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -5258,26 +5476,56 @@ function EditModal({
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <TextInput
-                  label="Medium of Study"
-                  name="medium_of_study"
-                  value={formData.medium_of_study}
-                  onChange={onFormChange}
-                />
-                <TextInput
-                  label="Life Ambition"
-                  name="life_ambition"
-                  value={formData.life_ambition}
-                  onChange={onFormChange}
-                />
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Medium of Study</label>
+                  <select
+                    name="medium_of_study"
+                    value={formData.medium_of_study || ''}
+                    onChange={onFormChange}
+                    className={baseInputClass}
+                  >
+                    <option value="">Select Medium of Study</option>
+                    {mediumOfStudyOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Life Ambition</label>
+                  <select
+                    name="life_ambition"
+                    value={formData.life_ambition || ''}
+                    onChange={onFormChange}
+                    className={baseInputClass}
+                  >
+                    <option value="">Select Life Ambition</option>
+                    {lifeAmbitionOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <TextInput
-                  label="Favourite Subject"
-                  name="fav_subject"
-                  value={formData.fav_subject}
-                  onChange={onFormChange}
-                />
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Favourite Subject</label>
+                  <select
+                    name="fav_subject"
+                    value={formData.fav_subject || ''}
+                    onChange={onFormChange}
+                    className={baseInputClass}
+                  >
+                    <option value="">Select Favourite Subject</option>
+                    {favSubjectOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700">Other Information</label>
@@ -5300,6 +5548,13 @@ function EditModal({
                 />
                 {formData.photo_link && (
                   <p className="mt-2 text-sm text-slate-600">Current: {formData.photo_link}</p>
+                )}
+                {photoPreview && (
+                  <img
+                    src={photoPreview}
+                    alt="Selected child preview"
+                    className="mt-3 h-28 w-28 rounded-lg border border-slate-200 object-cover"
+                  />
                 )}
               </div>
             </>
@@ -5584,12 +5839,14 @@ type InputProps = {
   onChange: ChangeEventHandler<HTMLInputElement>
   type?: HTMLInputTypeAttribute
   step?: string
+  required?: boolean
+  max?: string
 }
 
 const baseInputClass =
   'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100'
 
-function TextInput({ label, name, value, onChange, type = 'text', step }: InputProps) {
+function TextInput({ label, name, value, onChange, type = 'text', step, required = false, max }: InputProps) {
   return (
     <div>
       <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor={name}>
@@ -5602,6 +5859,8 @@ function TextInput({ label, name, value, onChange, type = 'text', step }: InputP
         value={value}
         onChange={onChange}
         step={step}
+        required={required}
+        max={max}
         className={baseInputClass}
       />
     </div>

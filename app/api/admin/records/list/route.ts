@@ -300,6 +300,12 @@ export async function GET(request: NextRequest) {
         }
 
         statusQuery = statusQuery.eq('status', statusValue)
+
+        // Approved card should represent actively enrolled children for Child_Data.
+        if (entityType === 'child_data' && statusValue === 'Approved') {
+          statusQuery = statusQuery.eq('child_left', false)
+        }
+
         const { count: statusCount } = await statusQuery
         return [statusValue, statusCount || 0] as const
       })
