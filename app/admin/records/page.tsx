@@ -23,7 +23,7 @@ import {
 
 type EntityType = 'child_data' | 'childfmly' | 'childsibling' | 'childuniform' | 'childleaving' | 'vocational_course' | 'computer_course'
 type StatusFilter = 'all' | 'Pending' | 'Verified' | 'Approved' | 'Rejected'
-type SearchBy = 'name' | 'reg_no'
+type SearchBy = 'name' | 'reg_no' | 'eac_no'
 type SortDirection = 'asc' | 'desc'
 
 interface DataRecord {
@@ -41,6 +41,13 @@ interface DataRecord {
   child_name?: string
   f_name?: string
   [key: string]: any
+}
+
+interface StatusSummary {
+  Pending: number
+  Verified: number
+  Approved: number
+  Rejected: number
 }
 
 const ENTITY_LABELS: { [key in EntityType]: string } = {
@@ -82,44 +89,71 @@ const HIDDEN_TABLE_METADATA_FIELDS = new Set([
   'approver'
 ])
 
-const COLUMN_PRIORITY_BY_ENTITY: Record<EntityType, string[]> = {
+const COLUMN_GROUPS_BY_ENTITY: Record<EntityType, string[]> = {
   child_data: [
+    'reg_no',
     'first_name',
     'last_name',
-    'reg_no',
     'eac_no',
     'village_name',
     'gender',
+    'dob',
+    'age',
     'class_std_text',
     'adm_date',
-    'status',
+    'health_status',
+    'blood_group',
+    'height',
+    'weight',
     'photo_link',
+    'status',
+    'submitted_by',
+    'verified_by',
+    'approved_by',
+    'verified_at',
+    'approved_at',
     'created_at',
     'updated_at'
   ],
   childfmly: [
-    'f_name',
-    'm_name',
-    'guardian_name',
     'reg_no',
     'eac_no',
     'village_name',
+    'f_name',
+    'm_name',
+    'guardian_name',
     'f_mobile',
     'm_mobile',
+    'guardian_mobile',
+    'f_occupation',
+    'm_occupation',
+    'family_income',
     'status',
+    'submitted_by',
+    'verified_by',
+    'approved_by',
+    'verified_at',
+    'approved_at',
     'created_at',
     'updated_at'
   ],
   childsibling: [
+    'reg_no',
+    'eac_no',
+    'village_name',
     's_name',
     'sibling_name',
     'name',
-    'reg_no',
-    'eac_no',
     'gender',
+    'relation',
     'class_std_text',
     'age',
     'status',
+    'submitted_by',
+    'verified_by',
+    'approved_by',
+    'verified_at',
+    'approved_at',
     'created_at',
     'updated_at'
   ],
@@ -129,6 +163,11 @@ const COLUMN_PRIORITY_BY_ENTITY: Record<EntityType, string[]> = {
     'uniform_size',
     'shoe_size',
     'status',
+    'submitted_by',
+    'verified_by',
+    'approved_by',
+    'verified_at',
+    'approved_at',
     'created_at',
     'updated_at'
   ],
@@ -139,32 +178,53 @@ const COLUMN_PRIORITY_BY_ENTITY: Record<EntityType, string[]> = {
     'leaving_reason',
     'leave_date',
     'status',
+    'submitted_by',
+    'verified_by',
+    'approved_by',
+    'verified_at',
+    'approved_at',
     'created_at',
     'updated_at'
   ],
   vocational_course: [
-    'trainee_name',
     'reg_no',
     'eac_no',
+    'trainee_name',
     'course_name',
     'institution_name',
+    'start_date',
+    'end_date',
     'status',
+    'submitted_by',
+    'verified_by',
+    'approved_by',
+    'verified_at',
+    'approved_at',
     'created_at',
     'updated_at'
   ],
   computer_course: [
-    'child_name',
     'reg_no',
     'eac_no',
+    'child_name',
     'course_name',
     'institution_name',
+    'start_date',
+    'end_date',
     'status',
+    'submitted_by',
+    'verified_by',
+    'approved_by',
+    'verified_at',
+    'approved_at',
     'created_at',
     'updated_at'
   ]
 }
 
 const DEFAULT_PRIORITY_COLUMNS = [
+  'reg_no',
+  'eac_no',
   'first_name',
   'last_name',
   'child_name',
@@ -174,8 +234,6 @@ const DEFAULT_PRIORITY_COLUMNS = [
   's_name',
   'sibling_name',
   'name',
-  'reg_no',
-  'eac_no',
   'village_name',
   'gender',
   'class_std_text',
@@ -187,11 +245,35 @@ const DEFAULT_PRIORITY_COLUMNS = [
 const DEFAULT_SORT_COLUMN_BY_ENTITY: Record<EntityType, string> = {
   child_data: 'first_name',
   childfmly: 'f_name',
-  childsibling: 's_name',
+  childsibling: 'reg_no',
   childuniform: 'reg_no',
   childleaving: 'reg_no',
   vocational_course: 'trainee_name',
   computer_course: 'child_name'
+}
+
+const SORTABLE_COLUMNS_BY_ENTITY: Record<EntityType, Set<string>> = {
+  child_data: new Set([
+    'record_id', 'id', 'reg_no', 'eac_no', 'first_name', 'last_name', 'village_name', 'gender', 'class_std_text', 'adm_date', 'status', 'created_at', 'updated_at',
+  ]),
+  childfmly: new Set([
+    'record_id', 'id', 'reg_no', 'eac_no', 'f_name', 'm_name', 'guardian_name', 'village_name', 'f_mobile', 'm_mobile', 'status', 'created_at', 'updated_at',
+  ]),
+  childsibling: new Set([
+    'record_id', 'id', 'reg_no', 'eac_no', 'sibling_name', 'name', 'gender', 'class_std_text', 'age', 'status', 'created_at', 'updated_at',
+  ]),
+  childuniform: new Set([
+    'record_id', 'id', 'reg_no', 'eac_no', 'uniform_size', 'shoe_size', 'status', 'created_at', 'updated_at',
+  ]),
+  childleaving: new Set([
+    'record_id', 'id', 'reg_no', 'eac_no', 'reason', 'leaving_reason', 'leave_date', 'status', 'created_at', 'updated_at',
+  ]),
+  vocational_course: new Set([
+    'record_id', 'vocational_id', 'id', 'reg_no', 'eac_no', 'trainee_name', 'course_name', 'institution_name', 'status', 'created_at', 'updated_at',
+  ]),
+  computer_course: new Set([
+    'record_id', 'computer_id', 'id', 'reg_no', 'eac_no', 'child_name', 'course_name', 'institution_name', 'status', 'created_at', 'updated_at',
+  ]),
 }
 
 const ENTITY_ID_CANDIDATES: Record<EntityType, string[]> = {
@@ -231,6 +313,12 @@ export default function AdminRecordsPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [sessionToken, setSessionToken] = useState<string | null>(null)
+  const [statusSummary, setStatusSummary] = useState<StatusSummary>({
+    Pending: 0,
+    Verified: 0,
+    Approved: 0,
+    Rejected: 0,
+  })
 
   // Edit modal state
   const [editingRecord, setEditingRecord] = useState<DataRecord | null>(null)
@@ -267,7 +355,7 @@ export default function AdminRecordsPage() {
       return true
     })
 
-    const tabPriority = COLUMN_PRIORITY_BY_ENTITY[activeTab] || []
+    const tabPriority = COLUMN_GROUPS_BY_ENTITY[activeTab] || []
     const prioritized = [...tabPriority, ...DEFAULT_PRIORITY_COLUMNS].filter(
       (column, index, arr) => arr.indexOf(column) === index && filteredColumns.includes(column)
     )
@@ -281,43 +369,9 @@ export default function AdminRecordsPage() {
 
   useEffect(() => {
     setSortColumn(DEFAULT_SORT_COLUMN_BY_ENTITY[activeTab])
-    setSortDirection('desc')
+    setSortDirection('asc')
+    setPage(1)
   }, [activeTab])
-
-  const sortedRecords = useMemo(() => {
-    const rows = [...records]
-
-    rows.sort((a, b) => {
-      const aRaw = a[sortColumn]
-      const bRaw = b[sortColumn]
-
-      if (aRaw === null || aRaw === undefined || aRaw === '') return 1
-      if (bRaw === null || bRaw === undefined || bRaw === '') return -1
-
-      const aNumber = Number(aRaw)
-      const bNumber = Number(bRaw)
-      const bothNumeric = !Number.isNaN(aNumber) && !Number.isNaN(bNumber)
-
-      let compare = 0
-      if (bothNumeric) {
-        compare = aNumber - bNumber
-      } else {
-        const aDate = Date.parse(String(aRaw))
-        const bDate = Date.parse(String(bRaw))
-        const bothDates = !Number.isNaN(aDate) && !Number.isNaN(bDate)
-
-        if (bothDates) {
-          compare = aDate - bDate
-        } else {
-          compare = String(aRaw).localeCompare(String(bRaw), undefined, { sensitivity: 'base' })
-        }
-      }
-
-      return sortDirection === 'asc' ? compare : -compare
-    })
-
-    return rows
-  }, [records, sortColumn, sortDirection])
 
   const handleSort = (column: string) => {
     if (sortColumn === column) {
@@ -325,6 +379,7 @@ export default function AdminRecordsPage() {
       return
     }
 
+    setPage(1)
     setSortColumn(column)
     setSortDirection('asc')
   }
@@ -356,21 +411,52 @@ export default function AdminRecordsPage() {
   }, [isAuthorized])
 
   useEffect(() => {
-    if (sessionToken) {
-      fetchRecords(sessionToken)
-    }
-  }, [activeTab, statusFilter, page])
+    const allowedSortColumns = SORTABLE_COLUMNS_BY_ENTITY[activeTab]
+    const defaultSort = DEFAULT_SORT_COLUMN_BY_ENTITY[activeTab]
+    const normalizedSortColumn = allowedSortColumns.has(sortColumn) ? sortColumn : defaultSort
 
-  const fetchRecords = async (token: string) => {
+    if (normalizedSortColumn !== sortColumn) {
+      setSortColumn(normalizedSortColumn)
+      return
+    }
+
+    if (sessionToken) {
+      fetchRecords(sessionToken, {
+        sortColumn: normalizedSortColumn,
+      })
+    }
+  }, [activeTab, statusFilter, page, sortColumn, sortDirection, sessionToken])
+
+  const fetchRecords = async (
+    token: string,
+    overrides?: Partial<{
+      entityType: EntityType
+      status: StatusFilter
+      search: string
+      searchBy: SearchBy
+      sortColumn: string
+      sortDirection: SortDirection
+      page: number
+    }>
+  ) => {
     setLoading(true)
     setError('')
     try {
+      const entityType = overrides?.entityType || activeTab
+      const allowedSortColumns = SORTABLE_COLUMNS_BY_ENTITY[entityType]
+      const requestedSortColumn = overrides?.sortColumn || sortColumn
+      const effectiveSortColumn = allowedSortColumns.has(requestedSortColumn)
+        ? requestedSortColumn
+        : DEFAULT_SORT_COLUMN_BY_ENTITY[entityType]
+
       const params = new URLSearchParams({
-        entityType: activeTab,
-        status: statusFilter,
-        search: searchQuery,
-        searchBy,
-        page: String(page),
+        entityType,
+        status: overrides?.status || statusFilter,
+        search: overrides?.search ?? searchQuery,
+        searchBy: overrides?.searchBy || searchBy,
+        sortColumn: effectiveSortColumn,
+        sortDirection: overrides?.sortDirection || sortDirection,
+        page: String(overrides?.page || page),
         limit: '20'
       })
       const res = await fetch(`/api/admin/records/list?${params}`, {
@@ -380,6 +466,7 @@ export default function AdminRecordsPage() {
       if (!res.ok) throw new Error(json.error)
       setRecords(json.data || [])
       setTotalRecords(json.total || 0)
+      setStatusSummary(json.statusSummary || { Pending: 0, Verified: 0, Approved: 0, Rejected: 0 })
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -391,7 +478,11 @@ export default function AdminRecordsPage() {
     e.preventDefault()
     if (sessionToken) {
       setPage(1)
-      fetchRecords(sessionToken)
+      fetchRecords(sessionToken, {
+        page: 1,
+        search: searchQuery,
+        searchBy,
+      })
     }
   }
 
@@ -401,28 +492,39 @@ export default function AdminRecordsPage() {
     setStatusFilter('all')
     setPage(1)
     if (sessionToken) {
-      const params = new URLSearchParams({
-        entityType: activeTab,
+      fetchRecords(sessionToken, {
+        page: 1,
         status: 'all',
         search: '',
         searchBy: 'name',
-        page: '1',
-        limit: '20'
       })
-      fetch(`/api/admin/records/list?${params}`, {
-        headers: { Authorization: `Bearer ${sessionToken}` }
-      })
-        .then((res) => res.json())
-        .then((json) => {
-          if (!json?.error) {
-            setRecords(json.data || [])
-            setTotalRecords(json.total || 0)
-          }
-        })
-        .catch(() => {
-          // no-op: existing error state handled by normal fetch flow
-        })
     }
+  }
+
+  const getStickyHeaderClass = (field: string) => {
+    if (field === 'reg_no') {
+      return 'sticky left-24 z-20 bg-slate-50 min-w-[9rem] shadow-[2px_0_0_0_#e2e8f0]'
+    }
+
+    if (field === 'first_name') {
+      const leftClass = visibleColumns.includes('reg_no') ? 'left-[15rem]' : 'left-24'
+      return `sticky ${leftClass} z-20 bg-slate-50 min-w-[11rem] shadow-[2px_0_0_0_#e2e8f0]`
+    }
+
+    return ''
+  }
+
+  const getStickyCellClass = (field: string) => {
+    if (field === 'reg_no') {
+      return 'sticky left-24 z-10 min-w-[9rem] bg-white group-hover:bg-slate-50 shadow-[2px_0_0_0_#e2e8f0]'
+    }
+
+    if (field === 'first_name') {
+      const leftClass = visibleColumns.includes('reg_no') ? 'left-[15rem]' : 'left-24'
+      return `sticky ${leftClass} z-10 min-w-[11rem] bg-white group-hover:bg-slate-50 shadow-[2px_0_0_0_#e2e8f0]`
+    }
+
+    return ''
   }
 
   const handleEdit = (record: DataRecord) => {
@@ -672,26 +774,26 @@ export default function AdminRecordsPage() {
             </div>
           </div>
 
-          <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="mb-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
             <div className="bg-white rounded-lg border border-slate-200 p-4">
               <p className="text-xs text-slate-500 uppercase tracking-wide">Active Entity</p>
               <p className="text-lg font-semibold text-slate-900 mt-1">{ENTITY_LABELS[activeTab]}</p>
             </div>
             <div className="bg-white rounded-lg border border-slate-200 p-4">
-              <p className="text-xs text-slate-500 uppercase tracking-wide">Total Records</p>
+              <p className="text-xs text-slate-500 uppercase tracking-wide">Matching Results</p>
               <p className="text-lg font-semibold text-slate-900 mt-1">{totalRecords}</p>
             </div>
             <div className="bg-white rounded-lg border border-slate-200 p-4">
-              <p className="text-xs text-slate-500 uppercase tracking-wide">Sort</p>
-              <p className="text-lg font-semibold text-slate-900 mt-1">
-                {sortColumn.replace(/_/g, ' ')} ({sortDirection.toUpperCase()})
-              </p>
+              <p className="text-xs text-slate-500 uppercase tracking-wide">Pending</p>
+              <p className="text-lg font-semibold text-yellow-700 mt-1">{statusSummary.Pending}</p>
             </div>
             <div className="bg-white rounded-lg border border-slate-200 p-4">
-              <p className="text-xs text-slate-500 uppercase tracking-wide">Current View</p>
-              <p className="text-lg font-semibold text-slate-900 mt-1">
-                Table
-              </p>
+              <p className="text-xs text-slate-500 uppercase tracking-wide">Verified</p>
+              <p className="text-lg font-semibold text-blue-700 mt-1">{statusSummary.Verified}</p>
+            </div>
+            <div className="bg-white rounded-lg border border-slate-200 p-4">
+              <p className="text-xs text-slate-500 uppercase tracking-wide">Approved</p>
+              <p className="text-lg font-semibold text-emerald-700 mt-1">{statusSummary.Approved}</p>
             </div>
           </div>
 
@@ -708,7 +810,7 @@ export default function AdminRecordsPage() {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={searchBy === 'reg_no' ? 'Search by Reg No' : 'Search by Name'}
+                  placeholder={searchBy === 'reg_no' ? 'Search by Reg No' : searchBy === 'eac_no' ? 'Search by EAC No' : 'Search by Name'}
                   className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -722,6 +824,7 @@ export default function AdminRecordsPage() {
                 >
                   <option value="name">Name</option>
                   <option value="reg_no">Reg No</option>
+                  <option value="eac_no">EAC No</option>
                 </select>
               </div>
 
@@ -797,9 +900,9 @@ export default function AdminRecordsPage() {
                   <table className="w-full">
                     <thead className="bg-slate-50 border-b border-slate-200">
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap">Actions</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap sticky left-0 z-30 bg-slate-50 w-24 min-w-24 shadow-[2px_0_0_0_#e2e8f0]">Actions</th>
                         {visibleColumns.map((field: string) => (
-                          <th key={field} className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap">
+                          <th key={field} className={`px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap ${getStickyHeaderClass(field)}`}>
                             <div className="flex items-center gap-2">
                               <span>{getColumnLabel(field)}</span>
                               <button
@@ -815,26 +918,30 @@ export default function AdminRecordsPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200">
-                      {sortedRecords.map((record) => (
-                        <tr key={String(getEntityIdentity(record)?.value ?? record.record_id)} className="hover:bg-slate-50">
-                          <td className="px-4 py-3 text-left">
+                      {records.map((record) => (
+                        <tr key={String(getEntityIdentity(record)?.value ?? record.record_id)} className="group hover:bg-slate-50">
+                          <td className="px-4 py-3 text-left sticky left-0 z-20 bg-white group-hover:bg-slate-50 w-24 min-w-24 shadow-[2px_0_0_0_#e2e8f0]">
                             <div className="flex items-center gap-2">
                               <button
                                 onClick={() => handleEdit(record)}
-                                className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded transition-colors inline-flex items-center gap-1"
+                                aria-label="Edit record"
+                                title="Edit"
+                                className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors inline-flex items-center justify-center"
                               >
-                                <Pencil className="w-4 h-4" /> Edit
+                                <Pencil className="w-4 h-4" />
                               </button>
                               <button
                                 onClick={() => setDeletingRecord(record)}
-                                className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded transition-colors inline-flex items-center gap-1"
+                                aria-label="Delete record"
+                                title="Delete"
+                                className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors inline-flex items-center justify-center"
                               >
-                                <Trash2 className="w-4 h-4" /> Delete
+                                <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
                           </td>
                           {visibleColumns.map((field: string) => (
-                            <td key={`${String(getEntityIdentity(record)?.value ?? record.record_id)}-${field}`} className="px-4 py-3 text-sm text-slate-600 whitespace-nowrap align-top">
+                            <td key={`${String(getEntityIdentity(record)?.value ?? record.record_id)}-${field}`} className={`px-4 py-3 text-sm text-slate-600 whitespace-nowrap align-top ${getStickyCellClass(field)}`}>
                               {field === 'photo_link' ? (
                                 record[field] ? (
                                   <button

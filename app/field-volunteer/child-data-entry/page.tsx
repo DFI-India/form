@@ -610,11 +610,28 @@ const classStandardOptions = [
   'Other',
 ]
 const vocationalCourseOptions = ['Tailoring', 'Beautician', 'Kuchi/Embroidery', 'Driving']
+const CHILD_DRAFT_STORAGE_PREFIX = 'fv-child-entry-draft-v1'
+const CHILD_DRAFT_LATEST_REG_KEY = 'fv-child-entry-draft-latest-reg'
+
+type ChildEntryDraft = {
+  savedAt: string
+  wizardStep: number
+  formData: FormState
+  familyData: ChildFamilyState
+  siblingData: ChildSiblingState
+  uniformData: ChildUniformState
+}
+
+type ChildDraftSummary = {
+  regNo: string
+  savedAt: string
+}
 
 export default function ChildForm() {
   const router = useRouter()
   const finalSubmitArmedRef = useRef(false)
-  const [activeTab, setActiveTab] = useState<TabType>('child')
+  const [activeTab, setActiveTab] = useState<TabType | null>(null)
+  const [entryGate, setEntryGate] = useState<'idle' | 'chooser' | 'form'>('idle')
   const [wizardStep, setWizardStep] = useState(0)
   const [eacOptions, setEacOptions] = useState<CentreOption[]>([])
 
@@ -723,6 +740,8 @@ export default function ChildForm() {
   const [isSubmittingUniform, setIsSubmittingUniform] = useState(false)
   const [isSubmittingLeaving, setIsSubmittingLeaving] = useState(false)
   const [isSubmittingUnified, setIsSubmittingUnified] = useState(false)
+  const [draftExistsForRegNo, setDraftExistsForRegNo] = useState(false)
+  const [childDraftSummaries, setChildDraftSummaries] = useState<ChildDraftSummary[]>([])
 
   const [checkedAuth, setCheckedAuth] = useState(false)
   const [authorized, setAuthorized] = useState(false)
@@ -1067,6 +1086,158 @@ export default function ChildForm() {
     }))
   }
 
+  const getDraftStorageKey = (registrationNo: string) => `${CHILD_DRAFT_STORAGE_PREFIX}:${registrationNo.trim()}`
+
+  const getAllChildDraftSummaries = (): ChildDraftSummary[] => {
+    if (typeof window === 'undefined') return []
+
+    const summaries: ChildDraftSummary[] = []
+    for (let index = 0; index < window.localStorage.length; index += 1) {
+      const key = window.localStorage.key(index)
+      if (!key || !key.startsWith(`${CHILD_DRAFT_STORAGE_PREFIX}:`)) continue
+
+      const regNo = key.slice(`${CHILD_DRAFT_STORAGE_PREFIX}:`.length)
+      if (!regNo) continue
+
+      const raw = window.localStorage.getItem(key)
+      let savedAt = ''
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw) as ChildEntryDraft
+          savedAt = parsed.savedAt || ''
+        } catch {
+          savedAt = ''
+        }
+      }
+
+      summaries.push({ regNo, savedAt })
+    }
+
+    return summaries.sort((a, b) => {
+      const aTime = a.savedAt ? new Date(a.savedAt).getTime() : 0
+      const bTime = b.savedAt ? new Date(b.savedAt).getTime() : 0
+      return bTime - aTime
+    })
+  }
+
+  const refreshChildDraftSummaries = () => {
+    const summaries = getAllChildDraftSummaries()
+    setChildDraftSummaries(summaries)
+    return summaries
+  }
+
+  const hasDraftForRegistrationNo = (registrationNo: string) => {
+    if (typeof window === 'undefined') return false
+    const regNo = registrationNo.trim()
+    if (!regNo) return false
+    return Boolean(window.localStorage.getItem(getDraftStorageKey(regNo)))
+  }
+
+  const saveChildDraft = () => {
+    const regNo = formData.reg_no.trim()
+    if (!regNo) {
+      setMessage({ type: 'error', text: 'Please enter Registration Number before saving draft.' })
+      return
+    }
+
+    if (typeof window === 'undefined') return
+
+    const draftPayload: ChildEntryDraft = {
+      savedAt: new Date().toISOString(),
+      wizardStep,
+      formData,
+      familyData,
+      siblingData,
+      uniformData,
+    }
+
+    window.localStorage.setItem(getDraftStorageKey(regNo), JSON.stringify(draftPayload))
+    window.localStorage.setItem(CHILD_DRAFT_LATEST_REG_KEY, regNo)
+    setDraftExistsForRegNo(true)
+    refreshChildDraftSummaries()
+    setMessage({ type: 'success', text: `Draft saved for Registration No ${regNo}.` })
+  }
+
+  const loadChildDraftByRegistrationNo = (registrationNo: string) => {
+    const regNo = registrationNo.trim()
+    if (!regNo) {
+      setMessage({ type: 'error', text: 'Enter Registration Number to continue draft entry.' })
+      return
+    }
+
+    if (typeof window === 'undefined') return
+
+    const raw = window.localStorage.getItem(getDraftStorageKey(regNo))
+    if (!raw) {
+      setMessage({ type: 'error', text: `No draft found for Registration No ${regNo}.` })
+      return
+    }
+
+    try {
+      const parsed = JSON.parse(raw) as ChildEntryDraft
+      setFormData(parsed.formData)
+      setFamilyData(parsed.familyData)
+      setSiblingData(parsed.siblingData)
+      setUniformData(parsed.uniformData)
+      setWizardStep(Math.max(0, Math.min(parsed.wizardStep, wizardSteps.length - 1)))
+      setDraftExistsForRegNo(true)
+      setEntryGate('form')
+      setMessage({ type: 'success', text: `Draft loaded for Registration No ${regNo}. Please re-upload photo if needed.` })
+    } catch {
+      setMessage({ type: 'error', text: 'Saved draft is corrupted. Please start a new entry.' })
+    }
+  }
+
+  const loadChildDraft = () => {
+    loadChildDraftByRegistrationNo(formData.reg_no)
+  }
+
+  const clearChildDraft = (registrationNo?: string) => {
+    const regNo = (registrationNo ?? formData.reg_no).trim()
+    if (!regNo || typeof window === 'undefined') return
+
+    window.localStorage.removeItem(getDraftStorageKey(regNo))
+    const latestRegNo = window.localStorage.getItem(CHILD_DRAFT_LATEST_REG_KEY)?.trim() || ''
+    if (latestRegNo === regNo) {
+      window.localStorage.removeItem(CHILD_DRAFT_LATEST_REG_KEY)
+    }
+    refreshChildDraftSummaries()
+    setDraftExistsForRegNo(false)
+    setMessage({ type: 'success', text: `Draft removed for Registration No ${regNo}.` })
+  }
+
+  const startNewChildEntry = () => {
+    setFormData(createEmptyForm())
+    setFamilyData(createEmptyFamilyForm())
+    setSiblingData(createEmptySiblingForm())
+    setUniformData(createEmptyUniformForm())
+    setPhotoFile(null)
+    setPhotoInputKey(Date.now())
+    setWizardStep(0)
+    setDraftExistsForRegNo(false)
+    setEntryGate('form')
+    setMessage(null)
+  }
+
+  const handleTabSelection = (tab: TabType) => {
+    setActiveTab(tab)
+
+    if (tab === 'rejected') {
+      setEntryGate('form')
+      return
+    }
+
+    if (tab === 'child') {
+      const drafts = refreshChildDraftSummaries()
+      if (drafts.length > 0) {
+        setEntryGate('chooser')
+        return
+      }
+    }
+
+    setEntryGate('form')
+  }
+
   const hasFamilyIncomeColumnError = (error: any) => {
     const message = `${error?.message ?? ''} ${error?.details ?? ''} ${error?.hint ?? ''}`.toLowerCase()
     const hasMissingColumnSignal = message.includes('column') && (message.includes('does not exist') || message.includes('not found') || message.includes('schema cache'))
@@ -1126,22 +1297,26 @@ export default function ChildForm() {
       ...prev,
       village_name: formData.village_name,
       eac_no: formData.eac_no,
+      reg_no: formData.reg_no,
     }))
     setSiblingData((prev) => ({
       ...prev,
       village_name: formData.village_name,
       eac_no: formData.eac_no,
+      reg_no: formData.reg_no,
     }))
     setUniformData((prev) => ({
       ...prev,
       village_name: formData.village_name,
       eac_no: formData.eac_no,
+      reg_no: formData.reg_no,
     }))
   }
 
   const validateWizardStep = (step: number): string | null => {
     if (step === 0) {
       if (!formData.eac_no.trim()) return 'EAC number is required.'
+      if (!formData.reg_no.trim()) return 'Registration number is required.'
       if (!formData.first_name.trim()) return 'First name is required.'
       return null
     }
@@ -1419,6 +1594,15 @@ export default function ChildForm() {
       if (uniformApprovalError) throw uniformApprovalError
 
       setMessage({ type: 'success', text: 'Child profile form submitted successfully for approval.' })
+
+      if (typeof window !== 'undefined') {
+        const submittedRegNo = formData.reg_no.trim()
+        if (submittedRegNo) {
+          window.localStorage.removeItem(getDraftStorageKey(submittedRegNo))
+        }
+      }
+      refreshChildDraftSummaries()
+
       setFormData(createEmptyForm())
       setFamilyData(createEmptyFamilyForm())
       setSiblingData(createEmptySiblingForm())
@@ -1426,6 +1610,7 @@ export default function ChildForm() {
       setPhotoFile(null)
       setPhotoInputKey(Date.now())
       setWizardStep(0)
+      setDraftExistsForRegNo(false)
     } catch (error: unknown) {
       const fallback = error instanceof Error ? error.message : 'Unexpected error occurred.'
       setMessage({ type: 'error', text: `Unable to submit complete form: ${fallback}` })
@@ -2616,6 +2801,23 @@ export default function ChildForm() {
 
   const { profile, loading: authLoading, isAuthorized } = useRequireRole(['field_volunteer'])
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    refreshChildDraftSummaries()
+    const latestRegNo = window.localStorage.getItem(CHILD_DRAFT_LATEST_REG_KEY)?.trim() || ''
+    if (!latestRegNo) return
+    if (!window.localStorage.getItem(getDraftStorageKey(latestRegNo))) return
+
+    setFormData((prev) => {
+      if (prev.reg_no?.trim()) return prev
+      return { ...prev, reg_no: latestRegNo }
+    })
+  }, [])
+
+  useEffect(() => {
+    setDraftExistsForRegNo(hasDraftForRegistrationNo(formData.reg_no))
+  }, [formData.reg_no])
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -2681,7 +2883,7 @@ export default function ChildForm() {
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id as TabType)}
+                  onClick={() => handleTabSelection(tab.id as TabType)}
                   className={`flex-1 min-w-[140px] px-4 py-4 text-sm font-medium transition-colors border-b-2 ${activeTab === tab.id
                     ? 'border-blue-600 text-blue-600 bg-blue-50'
                     : 'border-transparent text-slate-600 hover:bg-slate-50'
@@ -2695,8 +2897,66 @@ export default function ChildForm() {
 
           {/* Tab Content - All forms display here */}
           <div>
+            {!activeTab && (
+              <section className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+                <h3 className="text-xl font-semibold text-slate-900">Select a data type to begin</h3>
+                <p className="mt-2 text-sm text-slate-600">
+                  Click Child Data, Child Leaving, Vocational Course, Computer Course, or Rejected Data to continue.
+                </p>
+              </section>
+            )}
+
+            {activeTab === 'child' && entryGate === 'chooser' && (
+              <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-900">Your Child Data Drafts</h3>
+                    <p className="mt-1 text-sm text-slate-600">Continue an unfinished draft or start a new entry.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={startNewChildEntry}
+                    className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+                  >
+                    New Entry
+                  </button>
+                </div>
+
+                <div className="mt-5 space-y-3">
+                  {childDraftSummaries.map((draft) => (
+                    <div key={draft.regNo} className="rounded-lg border border-slate-200 p-4">
+                      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">Registration No: {draft.regNo}</p>
+                          <p className="text-xs text-slate-500">
+                            Last saved: {draft.savedAt ? new Date(draft.savedAt).toLocaleString() : 'Unknown'}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => loadChildDraftByRegistrationNo(draft.regNo)}
+                            className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400"
+                          >
+                            Continue
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => clearChildDraft(draft.regNo)}
+                            className="inline-flex items-center justify-center rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-50"
+                          >
+                            Delete Draft
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
             {/* Child Data Tab */}
-            {activeTab === 'child' && (
+            {activeTab === 'child' && entryGate === 'form' && (
               <div className="space-y-8">
                 <form onSubmit={handleUnifiedSubmit} className="space-y-8">
                   <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -2753,6 +3013,12 @@ export default function ChildForm() {
                               ))}
                             </select>
                           </div>
+                          <TextInput
+                            label="Registration Number *"
+                            name="reg_no"
+                            value={formData.reg_no}
+                            onChange={handleChange}
+                          />
                           <ReadOnlyInput label="Village Name" value={formData.village_name} />
                           <ReadOnlyInput label="District" value={formData.district} />
                           <ReadOnlyInput label="Taluk" value={formData.taluk} />
@@ -2970,14 +3236,55 @@ export default function ChildForm() {
                   </section>
 
                   <div className="flex items-center justify-between gap-3 pt-2">
-                    <button
-                      type="button"
-                      onClick={handleWizardBack}
-                      disabled={wizardStep === 0 || loading}
-                      className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      Back
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {childDraftSummaries.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            refreshChildDraftSummaries()
+                            setEntryGate('chooser')
+                          }}
+                          disabled={loading || isSubmittingUnified}
+                          className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          Show My Drafts
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={handleWizardBack}
+                        disabled={wizardStep === 0 || loading}
+                        className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Back
+                      </button>
+                      <button
+                        type="button"
+                        onClick={saveChildDraft}
+                        disabled={loading || isSubmittingUnified}
+                        className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Save Draft
+                      </button>
+                      <button
+                        type="button"
+                        onClick={loadChildDraft}
+                        disabled={loading || isSubmittingUnified || !formData.reg_no.trim()}
+                        className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Continue Entry
+                      </button>
+                      {draftExistsForRegNo && (
+                        <button
+                          type="button"
+                          onClick={() => clearChildDraft()}
+                          disabled={loading || isSubmittingUnified}
+                          className="inline-flex items-center justify-center rounded-lg border border-red-200 px-5 py-3 text-sm font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          Clear Draft
+                        </button>
+                      )}
+                    </div>
 
                     {wizardStep < wizardSteps.length - 1 ? (
                       <button
@@ -3357,7 +3664,7 @@ export default function ChildForm() {
             )}
 
             {/* Child Leaving Tab */}
-            {activeTab === 'leaving' && (
+            {activeTab === 'leaving' && entryGate === 'form' && (
               <div className="space-y-8">
                 {leavingMessage && (
                   <div
@@ -3485,7 +3792,7 @@ export default function ChildForm() {
             )}
 
             {/* Vocational Course Tab */}
-            {activeTab === 'vocational' && (
+            {activeTab === 'vocational' && entryGate === 'form' && (
               <div className="space-y-8">
                 {vocationalMessage && (
                   <div
@@ -3985,7 +4292,7 @@ export default function ChildForm() {
             )}
 
             {/* Computer Course Tab */}
-            {activeTab === 'computer' && (
+            {activeTab === 'computer' && entryGate === 'form' && (
               <div className="space-y-8">
                 {computerMessage && (
                   <div

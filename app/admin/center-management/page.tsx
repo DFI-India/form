@@ -501,7 +501,17 @@ export default function CenterManagementPage() {
     }
   }
 
-  const handleCascadeTableRename = (row: CascadeManageRow) => {
+  const handleCascadeTableRename = (
+    row: CascadeManageRow,
+    scope?: { district: string; taluk?: string; panchayat?: string }
+  ) => {
+    if (scope) {
+      setCascadeScope({
+        district: scope.district,
+        taluk: scope.taluk ?? '',
+        panchayat: scope.panchayat ?? '',
+      })
+    }
     const label = row.level === 'village' ? 'Village' : row.level.charAt(0).toUpperCase() + row.level.slice(1)
     openTextDialog({
       title: `Rename ${label}`,
@@ -513,8 +523,30 @@ export default function CenterManagementPage() {
     })
   }
 
-  const handleCascadeTableDelete = (row: CascadeManageRow) => {
+  const handleCascadeTableDelete = (
+    row: CascadeManageRow,
+    scope?: { district: string; taluk?: string; panchayat?: string }
+  ) => {
+    if (scope) {
+      setCascadeScope({
+        district: scope.district,
+        taluk: scope.taluk ?? '',
+        panchayat: scope.panchayat ?? '',
+      })
+    }
     setCascadeDeleteDialog({ open: true, row })
+  }
+
+  const selectCascadeDistrict = (district: string) => {
+    setCascadeScope({ district, taluk: '', panchayat: '' })
+  }
+
+  const selectCascadeTaluk = (taluk: string) => {
+    setCascadeScope((prev) => ({ ...prev, taluk, panchayat: '' }))
+  }
+
+  const selectCascadePanchayat = (panchayat: string) => {
+    setCascadeScope((prev) => ({ ...prev, panchayat }))
   }
 
   const submitTextDialog = async () => {
@@ -667,6 +699,15 @@ export default function CenterManagementPage() {
     }
   }, [centres.length, hierarchy])
 
+  const nextEacNo = useMemo(() => {
+    const highestEac = centres.reduce((max, centre) => {
+      const parsed = Number(String(centre.eac_no ?? '').trim())
+      return Number.isFinite(parsed) && parsed > max ? parsed : max
+    }, 0)
+
+    return String(highestEac + 1)
+  }, [centres])
+
   const sortedCentres = useMemo(() => {
     const search = tableSearch.trim().toLowerCase()
     const rows = !search
@@ -763,6 +804,13 @@ export default function CenterManagementPage() {
     e.preventDefault()
     if (!sessionToken) return
 
+    const eacNo = createForm.eac_no.trim() || nextEacNo
+    const duplicateEac = centres.some((centre) => String(centre.eac_no).trim() === eacNo)
+    if (duplicateEac) {
+      setError('This EAC No already exists. Please choose a different number.')
+      return
+    }
+
     setActionLoading(true)
     setError('')
     setSuccess('')
@@ -773,7 +821,7 @@ export default function CenterManagementPage() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${sessionToken}`,
         },
-        body: JSON.stringify(createForm),
+        body: JSON.stringify({ ...createForm, eac_no: eacNo }),
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Failed to create centre')
@@ -943,7 +991,7 @@ export default function CenterManagementPage() {
             </div>
           </div>
 
-          <section className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+          <section className="space-y-4">
             <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
               <button
                 type="button"
@@ -969,11 +1017,14 @@ export default function CenterManagementPage() {
                       <span className="text-xs font-medium text-slate-600">EAC No</span>
                       <input
                         type="number"
-                        value={createForm.eac_no}
+                        value={createForm.eac_no || nextEacNo}
                         onChange={e => setCreateForm({ ...createForm, eac_no: e.target.value })}
+                        inputMode="numeric"
+                        min="1"
                         className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                         required
                       />
+                      <span className="text-xs text-slate-500">Suggested next EAC No: {nextEacNo}</span>
                     </label>
                     <label className="space-y-1">
                       <span className="text-xs font-medium text-slate-600">District</span>
@@ -1236,186 +1287,299 @@ export default function CenterManagementPage() {
 
               {showCascadeManager && (
                 <div className="border-t border-slate-200 p-4 md:p-5 space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <label className="space-y-1">
-                      <span className="text-xs font-medium text-slate-600">District</span>
-                      <select
-                        value={cascadeScope.district}
-                        onChange={(e) => setCascadeScope({ district: e.target.value, taluk: '', panchayat: '' })}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="">All Districts</option>
-                        {districtOptions.map((district) => (
-                          <option key={district} value={district}>
-                            {district}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label className="space-y-1">
-                      <span className="text-xs font-medium text-slate-600">Taluk</span>
-                      <select
-                        value={cascadeScope.taluk}
-                        onChange={(e) => setCascadeScope((prev) => ({ ...prev, taluk: e.target.value, panchayat: '' }))}
-                        disabled={!cascadeScope.district}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="">All Taluks</option>
-                        {cascadeTalukOptions.map((taluk) => (
-                          <option key={taluk} value={taluk}>
-                            {taluk}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label className="space-y-1">
-                      <span className="text-xs font-medium text-slate-600">Panchayat</span>
-                      <select
-                        value={cascadeScope.panchayat}
-                        onChange={(e) => setCascadeScope((prev) => ({ ...prev, panchayat: e.target.value }))}
-                        disabled={!cascadeScope.taluk}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="">All Panchayats</option>
-                        {cascadePanchayatOptions.map((panchayat) => (
-                          <option key={panchayat} value={panchayat}>
-                            {panchayat}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  </div>
-
-                  <div className="rounded-lg border border-slate-200 overflow-hidden">
-                    <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-3">
-                      <p className="text-sm font-medium text-slate-800">
-                        Managing <span className="capitalize">{cascadeManageLevel}</span> entries
-                      </p>
-                      <p className="text-xs text-slate-500">{cascadeManageRows.length} item(s)</p>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 md:p-4 space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">Drill down by location</p>
+                        <p className="text-xs text-slate-500">Click any row to drill down. Edit or delete directly from that row.</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-full bg-white px-3 py-1 text-xs text-slate-600 border border-slate-200">
+                          {cascadeScope.district || 'All Districts'}
+                        </span>
+                        {cascadeScope.taluk && (
+                          <span className="rounded-full bg-white px-3 py-1 text-xs text-slate-600 border border-slate-200">
+                            {cascadeScope.taluk}
+                          </span>
+                        )}
+                        {cascadeScope.panchayat && (
+                          <span className="rounded-full bg-white px-3 py-1 text-xs text-slate-600 border border-slate-200">
+                            {cascadeScope.panchayat}
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setCascadeScope({ district: '', taluk: '', panchayat: '' })}
+                          className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-600 border border-slate-200 hover:bg-slate-100"
+                        >
+                          Reset
+                        </button>
+                      </div>
                     </div>
-                    <div className="overflow-x-auto">
-                      <table className="w-full min-w-[760px] text-sm">
-                        <thead className="bg-slate-50 border-b border-slate-200">
-                          <tr>
-                            <th className="px-4 py-2.5 text-left font-semibold text-slate-900">Value</th>
-                            <th className="px-4 py-2.5 text-left font-semibold text-slate-900">Parent Scope</th>
-                            <th className="px-4 py-2.5 text-left font-semibold text-slate-900">Affected Records</th>
-                            <th className="px-4 py-2.5 text-left font-semibold text-slate-900">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {cascadeManageRows.length === 0 ? (
-                            <tr>
-                              <td colSpan={4} className="px-4 py-6 text-center text-slate-500">
-                                No entries available for this scope.
-                              </td>
-                            </tr>
-                          ) : (
-                            cascadeManageRows.map((row) => (
-                              <tr key={`${row.level}-${row.parent}-${row.value}`} className="border-b border-slate-100 last:border-b-0">
-                                <td className="px-4 py-3 text-slate-900 font-medium">{row.value}</td>
-                                <td className="px-4 py-3 text-slate-600">{row.parent}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.affected}</td>
-                                <td className="px-4 py-3">
-                                  <div className="flex items-center gap-3">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleCascadeTableRename(row)}
-                                      disabled={cascadeLoading}
-                                      className="text-blue-700 hover:text-blue-800 font-medium disabled:opacity-50"
-                                    >
-                                      Edit
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleCascadeTableDelete(row)}
-                                      disabled={cascadeLoading}
-                                      className="text-red-600 hover:text-red-700 font-medium disabled:opacity-50"
-                                    >
-                                      Delete
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
 
-                  <details className="rounded-lg border border-slate-200 bg-slate-50/60">
-                    <summary className="cursor-pointer select-none px-4 py-2.5 text-sm font-medium text-slate-800">
-                      Cascade Tree Preview
-                    </summary>
-                    <div className="px-4 pb-4 text-sm text-slate-700 space-y-2">
+                    <div className="space-y-2">
                       {districtOptions.length === 0 ? (
-                        <p className="text-slate-500">No cascade data available.</p>
+                        <p className="text-sm text-slate-500">No districts available.</p>
                       ) : (
                         districtOptions.map((district) => {
                           const districtTaluks = uniqueSorted([
                             ...Array.from(hierarchy.taluksByDistrict[district] ?? []),
                             ...(customTaluksByDistrict[district] ?? []),
                           ])
+                          const districtOpen = cascadeScope.district === district
+                          const districtAffected = centres.filter(
+                            (centre) => String(centre.district ?? '').trim() === district
+                          ).length
                           return (
-                            <details key={district} className="ml-0">
-                              <summary className="cursor-pointer font-medium">{district}</summary>
-                              <div className="ml-5 mt-1 space-y-1">
-                                {districtTaluks.length === 0 ? (
-                                  <p className="text-xs text-slate-500">No taluks</p>
-                                ) : (
-                                  districtTaluks.map((taluk) => {
-                                    const key = `${district}::${taluk}`
-                                    const talukPanchayats = uniqueSorted([
-                                      ...Array.from(hierarchy.panchayatsByTaluk[key] ?? []),
-                                      ...(customPanchayatsByTaluk[key] ?? []),
-                                    ])
-                                    return (
-                                      <details key={taluk} className="ml-3">
-                                        <summary className="cursor-pointer">{taluk}</summary>
-                                        <div className="ml-5 mt-1 space-y-1">
-                                          {talukPanchayats.length === 0 ? (
-                                            <p className="text-xs text-slate-500">No panchayats</p>
-                                          ) : (
-                                            talukPanchayats.map((panchayat) => {
-                                              const pKey = `${district}::${taluk}::${panchayat}`
-                                              const villages = uniqueSorted([
-                                                ...Array.from(hierarchy.villagesByPanchayat[pKey] ?? []),
-                                                ...(customVillagesByPanchayat[pKey] ?? []),
-                                              ])
-                                              return (
-                                                <details key={panchayat} className="ml-3">
-                                                  <summary className="cursor-pointer">{panchayat}</summary>
-                                                  <ul className="ml-5 mt-1 list-disc">
-                                                    {villages.length === 0 ? (
-                                                      <li className="text-xs text-slate-500">No villages</li>
-                                                    ) : (
-                                                      villages.map((village) => <li key={village}>{village}</li>)
-                                                    )}
-                                                  </ul>
-                                                </details>
-                                              )
-                                            })
+                            <div key={district} className="rounded-lg border border-slate-200 bg-white overflow-hidden">
+                              <div className="px-3 py-2.5 flex items-center justify-between gap-3">
+                                <button
+                                  type="button"
+                                  onClick={() => selectCascadeDistrict(district)}
+                                  className={`text-left min-w-0 ${districtOpen ? 'text-blue-700' : 'text-slate-900'} hover:text-blue-700`}
+                                >
+                                  <span className="font-medium">{district}</span>
+                                </button>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <span className="text-xs text-slate-500">{districtTaluks.length} taluk(s)</span>
+                                  <span className="text-xs text-slate-500">{districtAffected} records</span>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleCascadeTableRename(
+                                        { level: 'district', value: district, parent: '-', affected: districtAffected },
+                                        { district, taluk: '', panchayat: '' }
+                                      )
+                                    }
+                                    className="text-xs font-medium text-blue-700 hover:text-blue-800"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleCascadeTableDelete(
+                                        { level: 'district', value: district, parent: '-', affected: districtAffected },
+                                        { district, taluk: '', panchayat: '' }
+                                      )
+                                    }
+                                    className="text-xs font-medium text-red-600 hover:text-red-700"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              </div>
+                              {districtOpen && (
+                                <div className="border-t border-slate-200 px-3 py-2.5 bg-slate-50/70 space-y-2">
+                                  {districtTaluks.length === 0 ? (
+                                    <p className="text-sm text-slate-500">No taluks available.</p>
+                                  ) : (
+                                    districtTaluks.map((taluk) => {
+                                      const talukKey = `${district}::${taluk}`
+                                      const talukPanchayats = uniqueSorted([
+                                        ...Array.from(hierarchy.panchayatsByTaluk[talukKey] ?? []),
+                                        ...(customPanchayatsByTaluk[talukKey] ?? []),
+                                      ])
+                                      const talukOpen = districtOpen && cascadeScope.taluk === taluk
+                                      const talukAffected = centres.filter(
+                                        (centre) =>
+                                          String(centre.district ?? '').trim() === district &&
+                                          String(centre.taluk ?? '').trim() === taluk
+                                      ).length
+
+                                      return (
+                                        <div key={taluk} className="ml-4 border-l border-slate-300 pl-3">
+                                          <div className="py-2 flex items-center justify-between gap-3">
+                                            <button
+                                              type="button"
+                                              onClick={() => selectCascadeTaluk(taluk)}
+                                              className={`text-left min-w-0 ${talukOpen ? 'text-blue-700' : 'text-slate-900'} hover:text-blue-700`}
+                                            >
+                                              <span className="font-medium">{taluk}</span>
+                                            </button>
+                                            <div className="flex items-center gap-2 shrink-0">
+                                              <span className="text-xs text-slate-500">{talukPanchayats.length} panchayat(s)</span>
+                                              <span className="text-xs text-slate-500">{talukAffected} records</span>
+                                              <button
+                                                type="button"
+                                                onClick={() =>
+                                                  handleCascadeTableRename(
+                                                    { level: 'taluk', value: taluk, parent: district, affected: talukAffected },
+                                                    { district, taluk, panchayat: '' }
+                                                  )
+                                                }
+                                                className="text-xs font-medium text-blue-700 hover:text-blue-800"
+                                              >
+                                                Edit
+                                              </button>
+                                              <button
+                                                type="button"
+                                                onClick={() =>
+                                                  handleCascadeTableDelete(
+                                                    { level: 'taluk', value: taluk, parent: district, affected: talukAffected },
+                                                    { district, taluk, panchayat: '' }
+                                                  )
+                                                }
+                                                className="text-xs font-medium text-red-600 hover:text-red-700"
+                                              >
+                                                Delete
+                                              </button>
+                                            </div>
+                                          </div>
+                                          {talukOpen && (
+                                            <div className="ml-4 border-l border-slate-300 pl-3 space-y-2 pb-2">
+                                              {talukPanchayats.length === 0 ? (
+                                                <p className="text-sm text-slate-500">No panchayats available.</p>
+                                              ) : (
+                                                talukPanchayats.map((panchayat) => {
+                                                  const panchayatKey = `${district}::${taluk}::${panchayat}`
+                                                  const villages = uniqueSorted([
+                                                    ...Array.from(hierarchy.villagesByPanchayat[panchayatKey] ?? []),
+                                                    ...(customVillagesByPanchayat[panchayatKey] ?? []),
+                                                  ])
+                                                  const panchayatOpen = talukOpen && cascadeScope.panchayat === panchayat
+                                                  const panchayatAffected = centres.filter(
+                                                    (centre) =>
+                                                      String(centre.district ?? '').trim() === district &&
+                                                      String(centre.taluk ?? '').trim() === taluk &&
+                                                      String(centre.panchayat ?? '').trim() === panchayat
+                                                  ).length
+
+                                                  return (
+                                                    <div key={panchayat} className="py-2">
+                                                      <div className="flex items-center justify-between gap-3">
+                                                        <button
+                                                          type="button"
+                                                          onClick={() => selectCascadePanchayat(panchayat)}
+                                                          className={`text-left min-w-0 ${panchayatOpen ? 'text-blue-700' : 'text-slate-900'} hover:text-blue-700`}
+                                                        >
+                                                          <span className="font-medium">{panchayat}</span>
+                                                        </button>
+                                                        <div className="flex items-center gap-2 shrink-0">
+                                                          <span className="text-xs text-slate-500">{villages.length} village(s)</span>
+                                                          <span className="text-xs text-slate-500">{panchayatAffected} records</span>
+                                                          <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                              handleCascadeTableRename(
+                                                                {
+                                                                  level: 'panchayat',
+                                                                  value: panchayat,
+                                                                  parent: `${district} / ${taluk}`,
+                                                                  affected: panchayatAffected,
+                                                                },
+                                                                { district, taluk, panchayat }
+                                                              )
+                                                            }
+                                                            className="text-xs font-medium text-blue-700 hover:text-blue-800"
+                                                          >
+                                                            Edit
+                                                          </button>
+                                                          <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                              handleCascadeTableDelete(
+                                                                {
+                                                                  level: 'panchayat',
+                                                                  value: panchayat,
+                                                                  parent: `${district} / ${taluk}`,
+                                                                  affected: panchayatAffected,
+                                                                },
+                                                                { district, taluk, panchayat }
+                                                              )
+                                                            }
+                                                            className="text-xs font-medium text-red-600 hover:text-red-700"
+                                                          >
+                                                            Delete
+                                                          </button>
+                                                        </div>
+                                                      </div>
+                                                      {panchayatOpen && (
+                                                        <div className="ml-4 border-l border-slate-300 pl-3 mt-2 space-y-1">
+                                                          {villages.length === 0 ? (
+                                                            <p className="text-sm text-slate-500">No villages available.</p>
+                                                          ) : (
+                                                            <ul className="space-y-1">
+                                                              {villages.map((village) => (
+                                                                <li key={village} className="flex items-center justify-between gap-3 rounded-md bg-white px-3 py-2 border border-slate-200">
+                                                                  <span className="text-sm text-slate-700">{village}</span>
+                                                                  <div className="flex items-center gap-2">
+                                                                    <button
+                                                                      type="button"
+                                                                      onClick={() =>
+                                                                        handleCascadeTableRename(
+                                                                          {
+                                                                            level: 'village',
+                                                                            value: village,
+                                                                            parent: `${district} / ${taluk} / ${panchayat}`,
+                                                                            affected: centres.filter(
+                                                                              (centre) =>
+                                                                                String(centre.district ?? '').trim() === district &&
+                                                                                String(centre.taluk ?? '').trim() === taluk &&
+                                                                                String(centre.panchayat ?? '').trim() === panchayat &&
+                                                                                String(centre.village_name ?? '').trim() === village
+                                                                            ).length,
+                                                                          },
+                                                                          { district, taluk, panchayat }
+                                                                        )
+                                                                      }
+                                                                      className="text-xs font-medium text-blue-700 hover:text-blue-800"
+                                                                    >
+                                                                      Edit
+                                                                    </button>
+                                                                    <button
+                                                                      type="button"
+                                                                      onClick={() =>
+                                                                        handleCascadeTableDelete(
+                                                                          {
+                                                                            level: 'village',
+                                                                            value: village,
+                                                                            parent: `${district} / ${taluk} / ${panchayat}`,
+                                                                            affected: centres.filter(
+                                                                              (centre) =>
+                                                                                String(centre.district ?? '').trim() === district &&
+                                                                                String(centre.taluk ?? '').trim() === taluk &&
+                                                                                String(centre.panchayat ?? '').trim() === panchayat &&
+                                                                                String(centre.village_name ?? '').trim() === village
+                                                                            ).length,
+                                                                          },
+                                                                          { district, taluk, panchayat }
+                                                                        )
+                                                                      }
+                                                                      className="text-xs font-medium text-red-600 hover:text-red-700"
+                                                                    >
+                                                                      Delete
+                                                                    </button>
+                                                                  </div>
+                                                                </li>
+                                                              ))}
+                                                            </ul>
+                                                          )}
+                                                        </div>
+                                                      )}
+                                                    </div>
+                                                  )
+                                                })
+                                              )}
+                                            </div>
                                           )}
                                         </div>
-                                      </details>
-                                    )
-                                  })
-                                )}
-                              </div>
-                            </details>
+                                      )
+                                    })
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           )
                         })
                       )}
                     </div>
-                  </details>
+                  </div>
                 </div>
               )}
             </div>
 
-            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden xl:col-span-1">
+            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
               <button
                 type="button"
                 onClick={() => setShowCentreRecords((prev) => !prev)}
