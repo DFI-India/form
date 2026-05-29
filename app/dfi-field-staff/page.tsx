@@ -13,7 +13,6 @@ export default function DFIFieldStaffPage() {
   const { profile, loading, isAuthorized } = useRequireRole(['dfi_field_staff'])
   const [assignedEacNos, setAssignedEacNos] = useState<number[]>([])
   const [totalChildren, setTotalChildren] = useState(0)
-  const [totalVocationalStudents, setTotalVocationalStudents] = useState(0)
   const [statsLoading, setStatsLoading] = useState(false)
   const [statsError, setStatsError] = useState<string | null>(null)
 
@@ -40,26 +39,18 @@ export default function DFIFieldStaffPage() {
 
         if (eacNos.length === 0) {
           setTotalChildren(0)
-          setTotalVocationalStudents(0)
           return
         }
 
-        const [childCountRes, vocationalCountRes] = await Promise.all([
-          supabase
-            .from('Child_Data')
-            .select('*', { count: 'exact', head: true })
-            .in('eac_no', eacNos),
-          supabase
-            .from('vocational_course')
-            .select('*', { count: 'exact', head: true })
-            .in('eac_no', eacNos),
-        ])
+        const { count: childCount, error: childCountError } = await supabase
+          .from('Child_Data')
+          .select('*', { count: 'exact', head: true })
+          .in('eac_no', eacNos)
+          .eq('child_left', false)
 
-        if (childCountRes.error) throw childCountRes.error
-        if (vocationalCountRes.error) throw vocationalCountRes.error
+        if (childCountError) throw childCountError
 
-        setTotalChildren(childCountRes.count || 0)
-        setTotalVocationalStudents(vocationalCountRes.count || 0)
+        setTotalChildren(childCount || 0)
       } catch (error: any) {
         setStatsError(error.message || 'Failed to load dashboard stats')
       } finally {
@@ -109,7 +100,7 @@ export default function DFIFieldStaffPage() {
             <p className="text-slate-600 mt-2">{roleInfo.description}</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
             <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
               <p className="text-slate-600 text-sm font-medium mb-2">Assigned EACs</p>
               <p className="text-4xl font-bold text-green-600">{statsLoading ? '...' : assignedEacNos.length}</p>
@@ -120,12 +111,7 @@ export default function DFIFieldStaffPage() {
             <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
               <p className="text-slate-600 text-sm font-medium mb-2">Total Children</p>
               <p className="text-4xl font-bold text-blue-600">{statsLoading ? '...' : totalChildren}</p>
-              <p className="text-xs text-slate-500 mt-2">From Child_Data in assigned EACs</p>
-            </div>
-            <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
-              <p className="text-slate-600 text-sm font-medium mb-2">Vocational Students</p>
-              <p className="text-4xl font-bold text-orange-600">{statsLoading ? '...' : totalVocationalStudents}</p>
-              <p className="text-xs text-slate-500 mt-2">From vocational_course in assigned EACs</p>
+              <p className="text-xs text-slate-500 mt-2">Counted where child_left is false</p>
             </div>
           </div>
 

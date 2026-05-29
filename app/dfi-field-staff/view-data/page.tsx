@@ -9,11 +9,12 @@ import { ROLE_CONFIG } from '../../../lib/types'
 import { useRequireRole } from '../../../lib/hooks'
 import { X } from 'lucide-react'
 
-type ViewSubTabType = 'child' | 'family' | 'sibling' | 'uniform' | 'leaving' | 'vocational' | 'computer'
+type ViewSubTabType = 'child' | 'family' | 'sibling' | 'uniform' | 'leaving'
 type SearchByType = 'name' | 'reg_no'
+type ChildStatusFilter = 'all' | 'enrolled' | 'left'
 type MessageState = { type: 'success' | 'error'; text: string } | null
 
-const VIEW_HIDDEN_COLUMNS = ['status', 'submitted_by', 'verified_by', 'verified_at']
+const VIEW_HIDDEN_COLUMNS = ['status', 'submitted_by', 'verified_by', 'verified_at', 'centre_id']
 
 export default function FieldStaffViewDataPage() {
 
@@ -28,8 +29,6 @@ export default function FieldStaffViewDataPage() {
         sibling: [],
         uniform: [],
         leaving: [],
-        vocational: [],
-        computer: [],
     })
 
     const [viewLoading, setViewLoading] = useState<Record<ViewSubTabType, boolean>>({
@@ -38,8 +37,6 @@ export default function FieldStaffViewDataPage() {
         sibling: false,
         uniform: false,
         leaving: false,
-        vocational: false,
-        computer: false,
     })
 
     const [viewSearchQuery, setViewSearchQuery] = useState<Record<ViewSubTabType, string>>({
@@ -48,8 +45,6 @@ export default function FieldStaffViewDataPage() {
         sibling: '',
         uniform: '',
         leaving: '',
-        vocational: '',
-        computer: '',
     })
 
     const [viewSearchType, setViewSearchType] = useState<Record<ViewSubTabType, SearchByType>>({
@@ -58,9 +53,9 @@ export default function FieldStaffViewDataPage() {
         sibling: 'reg_no',
         uniform: 'reg_no',
         leaving: 'reg_no',
-        vocational: 'reg_no',
-        computer: 'reg_no',
     })
+
+    const [childStatusFilter, setChildStatusFilter] = useState<ChildStatusFilter>('all')
 
     const [viewPhotoModal, setViewPhotoModal] = useState<{ isOpen: boolean; url: string }>({
         isOpen: false,
@@ -73,8 +68,6 @@ export default function FieldStaffViewDataPage() {
         { id: 'sibling', label: 'Child Siblings' },
         { id: 'uniform', label: 'Child Uniform' },
         { id: 'leaving', label: 'Child Leaving' },
-        { id: 'vocational', label: 'Vocational Course' },
-        { id: 'computer', label: 'Computer Course' },
     ]
 
     useEffect(() => {
@@ -111,7 +104,7 @@ export default function FieldStaffViewDataPage() {
     useEffect(() => {
         if (!isAuthorized || !profile || userEacNos.length === 0) return
         fetchViewData(viewSubTab)
-    }, [isAuthorized, profile, viewSubTab, userEacNos, viewSearchQuery, viewSearchType])
+    }, [isAuthorized, profile, viewSubTab, userEacNos, viewSearchQuery, viewSearchType, childStatusFilter])
 
     const fetchViewData = async (tabType: ViewSubTabType) => {
         setViewLoading((prev) => ({ ...prev, [tabType]: true }))
@@ -122,8 +115,6 @@ export default function FieldStaffViewDataPage() {
                 sibling: 'childsibling',
                 uniform: 'childuniform',
                 leaving: 'childleaving',
-                vocational: 'vocational_course',
-                computer: 'computer_course',
             }
 
             const tableName = tableMap[tabType]
@@ -135,6 +126,18 @@ export default function FieldStaffViewDataPage() {
                 .select('*')
                 .in('eac_no', userEacNos)
                 .eq('status', 'Approved')
+                .order('eac_no', { ascending: true })
+                .order('reg_no', { ascending: true })
+
+            if (tabType === 'child') {
+                if (childStatusFilter === 'enrolled') {
+                    query = query.eq('child_left', false)
+                }
+
+                if (childStatusFilter === 'left') {
+                    query = query.eq('child_left', true)
+                }
+            }
 
             if (searchQuery.trim()) {
                 if (searchType === 'name') {
@@ -287,12 +290,31 @@ export default function FieldStaffViewDataPage() {
                                     )}
                                 </select>
                             </div>
+                            {viewSubTab === 'child' && (
+                                <div>
+                                    <label className="mb-2 block text-sm font-medium text-slate-700">
+                                        Child Status
+                                    </label>
+                                    <select
+                                        value={childStatusFilter}
+                                        onChange={(e) => setChildStatusFilter(e.target.value as ChildStatusFilter)}
+                                        className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                                    >
+                                        <option value="all">All</option>
+                                        <option value="enrolled">Enrolled</option>
+                                        <option value="left">Left</option>
+                                    </select>
+                                </div>
+                            )}
                             <button
                                 onClick={() => {
                                     setViewSearchQuery((prev) => ({
                                         ...prev,
                                         [viewSubTab]: '',
                                     }))
+                                    if (viewSubTab === 'child') {
+                                        setChildStatusFilter('all')
+                                    }
                                 }}
                                 className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
                             >
