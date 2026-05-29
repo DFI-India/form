@@ -152,7 +152,8 @@ const getRowSearchText = (tab: ReportTab, row: EnrichedChildRow | EnrichedFamily
     const parts = [row.child_name, row.reg_no, row.eac_no]
 
     if (tab === 'child') {
-        parts.push(row.school_name, row.school_category, row.class_std_text, row.gender)
+        const childRow = row as EnrichedChildRow
+        parts.push(childRow.school_name, childRow.school_category, childRow.class_std_text, childRow.gender)
     }
 
     if (tab === 'family') {
@@ -385,7 +386,7 @@ export default function FieldVolunteerReportsPage() {
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 bg-white">
-                    {visibleRows.map((row) => (
+                    {(visibleRows as EnrichedChildRow[]).map((row) => (
                         <tr key={String(row.record_id ?? row.reg_no)} className="hover:bg-slate-50">
                             <td className="px-4 py-3 font-medium text-slate-900">{row.child_name}</td>
                             <td className="px-4 py-3 text-slate-700">{normalizeDisplayValue(row.reg_no)}</td>
@@ -393,8 +394,8 @@ export default function FieldVolunteerReportsPage() {
                             <td className="px-4 py-3 text-slate-700">
                                 <span
                                     className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${row.child_status === 'Enrolled'
-                                            ? 'bg-emerald-100 text-emerald-800'
-                                            : 'bg-rose-100 text-rose-800'
+                                        ? 'bg-emerald-100 text-emerald-800'
+                                        : 'bg-rose-100 text-rose-800'
                                         }`}
                                 >
                                     {row.child_status}
@@ -426,7 +427,7 @@ export default function FieldVolunteerReportsPage() {
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 bg-white">
-                    {visibleRows.map((row) => (
+                    {(visibleRows as EnrichedFamilyRow[]).map((row) => (
                         <tr key={String(row.record_id ?? row.reg_no)} className="hover:bg-slate-50">
                             <td className="px-4 py-3 font-medium text-slate-900">{row.child_name}</td>
                             <td className="px-4 py-3 text-slate-700">{normalizeDisplayValue(row.reg_no)}</td>
@@ -459,7 +460,7 @@ export default function FieldVolunteerReportsPage() {
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 bg-white">
-                    {visibleRows.map((row) => {
+                    {(visibleRows as EnrichedSiblingRow[]).map((row) => {
                         const siblingDetails = [
                             row.names_1 ? `1. ${row.names_1}` : '',
                             row.names_2 ? `2. ${row.names_2}` : '',
@@ -501,7 +502,7 @@ export default function FieldVolunteerReportsPage() {
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 bg-white">
-                    {visibleRows.map((row) => (
+                    {(visibleRows as EnrichedUniformRow[]).map((row) => (
                         <tr key={String(row.record_id ?? row.reg_no)} className="hover:bg-slate-50">
                             <td className="px-4 py-3 font-medium text-slate-900">{row.child_name}</td>
                             <td className="px-4 py-3 text-slate-700">{normalizeDisplayValue(row.reg_no)}</td>
@@ -561,8 +562,8 @@ export default function FieldVolunteerReportsPage() {
                                                 key={tab.id}
                                                 onClick={() => setActiveTab(tab.id)}
                                                 className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${isActive
-                                                        ? 'border-slate-900 bg-slate-900 text-white'
-                                                        : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
+                                                    ? 'border-slate-900 bg-slate-900 text-white'
+                                                    : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
                                                     }`}
                                             >
                                                 <Icon className="h-4 w-4" />
