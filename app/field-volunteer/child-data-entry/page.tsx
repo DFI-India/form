@@ -1367,12 +1367,6 @@ export default function ChildForm() {
       if (!formData.reg_no.trim()) return 'Registration number is required.'
       if (!formData.first_name.trim()) return 'First name is required.'
       if (!formData.gender.trim()) return 'Gender is required.'
-      if (!formData.birth_place.trim()) return 'Birth place is required.'
-      if (!formData.blood_group.trim()) return 'Blood group is required.'
-      if (!formData.health.trim()) return 'Health status is required.'
-      if (!formData.caste.trim()) return 'Caste is required.'
-      if (!formData.school_name.trim()) return 'School name is required.'
-      if (!formData.school_category.trim()) return 'School category is required.'
 
       if (formData.dateofbirth) {
         const birthDate = new Date(formData.dateofbirth)
@@ -3132,10 +3126,11 @@ export default function ChildForm() {
                             </select>
                           </div>
                           <TextInput
-                            label="Registration Number *"
+                            label="Registration Number"
                             name="reg_no"
                             value={formData.reg_no}
                             onChange={handleChange}
+                            required
                           />
                           <ReadOnlyInput label="Village Name" value={formData.village_name} />
                           <ReadOnlyInput label="District" value={formData.district} />
@@ -3144,11 +3139,11 @@ export default function ChildForm() {
                           <ReadOnlyInput label="Village" value={formData.village} />
                           <TextInput label="Admission Date" name="adm_date" value={formData.adm_date} onChange={handleChange} type="date" />
                           <TextInput label="Date of Birth" name="dateofbirth" value={formData.dateofbirth} onChange={handleChange} type="date" max={todayIsoDate} />
-                          <TextInput label="First Name *" name="first_name" value={formData.first_name} onChange={handleChange} />
+                          <TextInput label="First Name" name="first_name" value={formData.first_name} onChange={handleChange} required />
                           <TextInput label="Last Name" name="last_name" value={formData.last_name} onChange={handleChange} />
 
                           <div>
-                            <label className="mb-1 block text-sm font-medium text-slate-700">Gender</label>
+                            <label className="mb-1 block text-sm font-medium text-slate-700">Gender *</label>
                             <select
                               name="gender"
                               value={formData.gender}
@@ -3179,7 +3174,7 @@ export default function ChildForm() {
                           </div>
 
                           <NumberInput label="Aadhar No" name="aadhar_no" value={formData.aadhar_no} onChange={handleChange} />
-                          <TextInput label="Birth Place" name="birth_place" value={formData.birth_place} onChange={handleChange} required />
+                          <TextInput label="Birth Place" name="birth_place" value={formData.birth_place} onChange={handleChange} />
                           <NumberInput label="Height (cm)" name="height" value={formData.height} onChange={handleChange} />
                           <NumberInput label="Weight (kg)" name="weight" value={formData.weight} onChange={handleChange} />
 
@@ -3189,7 +3184,6 @@ export default function ChildForm() {
                               name="blood_group"
                               value={formData.blood_group}
                               onChange={handleChange}
-                              required
                               className={baseInputClass}
                             >
                               <option value="">Select Blood Group</option>
@@ -3199,8 +3193,8 @@ export default function ChildForm() {
                             </select>
                           </div>
 
-                          <TextInput label="Health Status" name="health" value={formData.health} onChange={handleChange} required />
-                          <TextInput label="Caste" name="caste" value={formData.caste} onChange={handleChange} required />
+                          <TextInput label="Health Status" name="health" value={formData.health} onChange={handleChange} />
+                          <TextInput label="Caste" name="caste" value={formData.caste} onChange={handleChange} />
                           <TextInput label="Mother Tongue" name="mother_tongue" value={formData.mother_tongue} onChange={handleChange} />
                           <div>
                             <label className="mb-1 block text-sm font-medium text-slate-700">Class/Standard</label>
@@ -3216,8 +3210,8 @@ export default function ChildForm() {
                               ))}
                             </select>
                           </div>
-                          <TextInput label="School Name" name="school_name" value={formData.school_name} onChange={handleChange} required />
-                          <TextInput label="School Category" name="school_category" value={formData.school_category} onChange={handleChange} required />
+                          <TextInput label="School Name" name="school_name" value={formData.school_name} onChange={handleChange} />
+                          <TextInput label="School Category" name="school_category" value={formData.school_category} onChange={handleChange} />
                           <NumberInput label="SATS No" name="sats_no" value={formData.sats_no} onChange={handleChange} />
                           <NumberInput label="PEN No" name="pen_no" value={formData.pen_no} onChange={handleChange} />
                           <div>
@@ -5847,10 +5841,12 @@ const baseInputClass =
   'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100'
 
 function TextInput({ label, name, value, onChange, type = 'text', step, required = false, max }: InputProps) {
+  const displayLabel = required && !label.includes('*') ? `${label} *` : label
+
   return (
     <div>
       <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor={name}>
-        {label}
+        {displayLabel}
       </label>
       <input
         id={name}

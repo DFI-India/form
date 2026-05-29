@@ -71,6 +71,7 @@ export function Sidebar({ role }: SidebarProps) {
       { label: 'Dashboard', href: '/field-volunteer', icon: LayoutDashboard },
       { label: 'Child Data Entry', href: '/field-volunteer/child-data-entry', icon: UserPlus },
       { label: 'Activity History', href: '/field-volunteer/history', icon: ScrollText },
+      { label: 'Reports', href: '/field-volunteer/reports', icon: Download },
     ],
     dfi_field_staff: [
       { label: 'Dashboard', href: '/dfi-field-staff', icon: LayoutDashboard },
