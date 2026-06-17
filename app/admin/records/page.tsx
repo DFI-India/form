@@ -26,6 +26,11 @@ type StatusFilter = 'all' | 'ENROLLED' | 'LEFT'
 type SearchBy = 'name' | 'reg_no' | 'eac_no'
 type SortDirection = 'asc' | 'desc'
 
+interface ChildDataFilterOptions {
+  eacNos: string[]
+  villagesByEacNo: Record<string, string[]>
+}
+
 interface DataRecord {
   record_id: number
   eac_no: string | number
@@ -289,6 +294,41 @@ const ENTITY_ID_CANDIDATES: Record<EntityType, string[]> = {
 
 const EXPORTABLE_ENTITY_TYPES: EntityType[] = ['child_data', 'childfmly', 'childsibling', 'childuniform', 'childleaving']
 
+const CHILD_DATA_VISIBLE_COLUMNS = [
+  'eac_no',
+  'reg_no',
+  'first_name',
+  'last_name',
+  'gender',
+  'dateofbirth',
+  'class_std_text',
+  'blood_group',
+  'height',
+  'weight',
+  'photo_link',
+  'aadhar_no',
+  'birth_place',
+  'caste',
+  'child_left',
+  'child_other_info',
+  'district',
+  'fav_subject',
+  'health',
+  'life_ambition',
+  'medium_of_study',
+  'mother_tongue',
+  'panchayat',
+  'pen_no',
+  'religion',
+  'sats_no',
+  'school_category',
+  'school_name',
+  'taluk',
+  'village_name'
+]
+
+const CHILD_DATA_SORT_COLUMNS = new Set(['eac_no', 'reg_no'])
+
 const TABLE_NAME_BY_ENTITY: Record<EntityType, string> = {
   child_data: 'Child_Data',
   childfmly: 'childfmly',
@@ -314,6 +354,12 @@ export default function AdminRecordsPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [sessionToken, setSessionToken] = useState<string | null>(null)
+  const [eacNoFilter, setEacNoFilter] = useState('')
+  const [villageFilter, setVillageFilter] = useState('')
+  const [childDataFilterOptions, setChildDataFilterOptions] = useState<ChildDataFilterOptions>({
+    eacNos: [],
+    villagesByEacNo: {}
+  })
   const [statusSummary, setStatusSummary] = useState<StatusSummary>({
     Pending: 0,
     Verified: 0,
@@ -341,6 +387,8 @@ export default function AdminRecordsPage() {
     return sortableColumns.has(column)
   }
 
+  const isChildDataTab = activeTab === 'child_data'
+
   const getStickyHeaderClass = (field: string) => {
     return ''
   }
@@ -361,6 +409,7 @@ export default function AdminRecordsPage() {
   }
 
   const visibleColumns = useMemo(() => {
+    if (isChildDataTab) return CHILD_DATA_VISIBLE_COLUMNS
     if (records.length === 0) return []
     const allColumns = Array.from(new Set(records.flatMap((record) => Object.keys(record))))
     const filteredColumns = allColumns.filter((column) => {
@@ -379,7 +428,7 @@ export default function AdminRecordsPage() {
       .sort((a, b) => a.localeCompare(b))
 
     return [...prioritized, ...remaining]
-  }, [records, activeTab])
+  }, [records, activeTab, isChildDataTab])
 
   const handleSort = (column: string) => {
     if (!isSortableColumn(column)) return
@@ -396,8 +445,74 @@ export default function AdminRecordsPage() {
   }
 
   const getColumnLabel = (field: string) => {
-    if (field === 'village_name') return 'EAC VILLAGE'
+    const labelMap: Record<string, string> = {
+      eac_no: 'EAC No',
+      reg_no: 'REG No',
+      first_name: 'First Name',
+      last_name: 'Last Name',
+      gender: 'Gender',
+      dateofbirth: 'Date of Birth',
+      class_std_text: 'Class Std Text',
+      blood_group: 'Blood Group',
+      height: 'Height',
+      weight: 'Weight',
+      photo_link: 'Photo Link',
+      aadhar_no: 'Aadhar No',
+      birth_place: 'Birth Place',
+      caste: 'Caste',
+      child_left: 'Child Left',
+      child_other_info: 'Child Other Info',
+      district: 'District',
+      fav_subject: 'Fav Subject',
+      health: 'Health',
+      life_ambition: 'Life Ambition',
+      medium_of_study: 'Medium of Study',
+      mother_tongue: 'Mother Tongue',
+      panchayat: 'Panchayat',
+      pen_no: 'PEN No',
+      religion: 'Religion',
+      sats_no: 'SATS No',
+      school_category: 'School Category',
+      school_name: 'School Name',
+      taluk: 'Taluk',
+      village_name: isChildDataTab ? 'Village' : 'EAC Village'
+    }
+
+    if (labelMap[field]) return labelMap[field]
     return field.replace(/_/g, ' ')
+  }
+
+  const getChildDataVillageOptions = () => {
+    if (!eacNoFilter) return []
+    return childDataFilterOptions.villagesByEacNo[eacNoFilter] || []
+  }
+
+  const loadChildDataFilterOptions = async (token: string) => {
+    if (!isChildDataTab) return
+
+    try {
+      const params = new URLSearchParams({
+        entityType: 'child_data',
+        status: 'all',
+        search: '',
+        searchBy: 'name',
+        sortColumn: 'eac_no',
+        sortDirection: 'asc',
+        page: '1',
+        limit: '1',
+        includeFilterOptions: '1'
+      })
+
+      const res = await fetch(`/api/admin/records/list?${params}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error)
+
+      setChildDataFilterOptions(json.filterOptions || { eacNos: [], villagesByEacNo: {} })
+    } catch (err: any) {
+      setError(err.message || 'Failed to load EAC filters')
+    }
   }
 
   const getSortSummaryLabel = () => {
@@ -423,6 +538,7 @@ export default function AdminRecordsPage() {
       const token = session.session?.access_token || null
       if (token) {
         setSessionToken(token)
+        await loadChildDataFilterOptions(token)
         await fetchRecords(token)
       }
     }
@@ -435,7 +551,24 @@ export default function AdminRecordsPage() {
     if (sessionToken) {
       fetchRecords(sessionToken)
     }
-  }, [activeTab, statusFilter, page, sortColumn, sortDirection, sessionToken])
+  }, [activeTab, statusFilter, page, sortColumn, sortDirection, sessionToken, eacNoFilter, villageFilter])
+
+  useEffect(() => {
+    if (!isChildDataTab) {
+      setEacNoFilter('')
+      setVillageFilter('')
+      return
+    }
+
+    if (eacNoFilter && !childDataFilterOptions.eacNos.includes(eacNoFilter)) {
+      setEacNoFilter('')
+      setVillageFilter('')
+    }
+
+    if (villageFilter && !getChildDataVillageOptions().includes(villageFilter)) {
+      setVillageFilter('')
+    }
+  }, [activeTab, childDataFilterOptions.eacNos, eacNoFilter, isChildDataTab, villageFilter])
 
   const fetchRecords = async (
     token: string,
@@ -452,8 +585,9 @@ export default function AdminRecordsPage() {
     setLoading(true)
     setError('')
     try {
+      const requestEntityType = overrides?.entityType || activeTab
       const params = new URLSearchParams({
-        entityType: overrides?.entityType || activeTab,
+        entityType: requestEntityType,
         status: overrides?.status || statusFilter,
         search: overrides?.search ?? searchQuery,
         searchBy: overrides?.searchBy || searchBy,
@@ -462,6 +596,12 @@ export default function AdminRecordsPage() {
         page: String(overrides?.page || page),
         limit: '20'
       })
+
+      if (requestEntityType === 'child_data') {
+        if (eacNoFilter) params.set('eacNoFilter', eacNoFilter)
+        if (villageFilter) params.set('villageFilter', villageFilter)
+      }
+
       const res = await fetch(`/api/admin/records/list?${params}`, {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -493,8 +633,10 @@ export default function AdminRecordsPage() {
     setSearchQuery('')
     setSearchBy('name')
     setStatusFilter('all')
-    setSortColumn('created_at')
-    setSortDirection('desc')
+    setEacNoFilter('')
+    setVillageFilter('')
+    setSortColumn(activeTab === 'child_data' ? 'eac_no' : 'created_at')
+    setSortDirection(activeTab === 'child_data' ? 'asc' : 'desc')
     setPage(1)
     if (sessionToken) {
       fetchRecords(sessionToken, {
@@ -502,10 +644,21 @@ export default function AdminRecordsPage() {
         status: 'all',
         search: '',
         searchBy: 'name',
-        sortColumn: 'created_at',
-        sortDirection: 'desc'
+        entityType: activeTab,
+        sortColumn: activeTab === 'child_data' ? 'eac_no' : 'created_at',
+        sortDirection: activeTab === 'child_data' ? 'asc' : 'desc'
       })
     }
+  }
+
+  const handleChildDataSort = (column: 'eac_no' | 'reg_no') => {
+    if (sortColumn === column) {
+      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortColumn(column)
+      setSortDirection('asc')
+    }
+    setPage(1)
   }
 
   const handleEdit = (record: DataRecord) => {
@@ -736,6 +889,28 @@ export default function AdminRecordsPage() {
               <p className="text-slate-600 mt-2">View, search, and edit all records</p>
             </div>
             <div className="flex items-center gap-3">
+              {isChildDataTab && (
+                <>
+                  <button
+                    onClick={() => handleChildDataSort('eac_no')}
+                    className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${sortColumn === 'eac_no'
+                      ? 'bg-slate-900 text-white hover:bg-slate-800'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      }`}
+                  >
+                    Sort by EAC No ({sortColumn === 'eac_no' ? sortDirection.toUpperCase() : 'ASC'})
+                  </button>
+                  <button
+                    onClick={() => handleChildDataSort('reg_no')}
+                    className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${sortColumn === 'reg_no'
+                      ? 'bg-slate-900 text-white hover:bg-slate-800'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      }`}
+                  >
+                    Sort by REG No ({sortColumn === 'reg_no' ? sortDirection.toUpperCase() : 'ASC'})
+                  </button>
+                </>
+              )}
               {EXPORTABLE_ENTITY_TYPES.includes(activeTab) && (
                 <button
                   onClick={handleExportCSV}
@@ -788,6 +963,50 @@ export default function AdminRecordsPage() {
 
           {/* Search & Filters */}
           <div className="bg-white rounded-lg border border-slate-200 p-4 mb-6">
+            {isChildDataTab && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">EAC No</label>
+                  <select
+                    value={eacNoFilter}
+                    onChange={(e) => {
+                      setPage(1)
+                      setVillageFilter('')
+                      setEacNoFilter(e.target.value)
+                    }}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">All EAC Numbers</option>
+                    {childDataFilterOptions.eacNos.map((eacNo) => (
+                      <option key={eacNo} value={eacNo}>
+                        {eacNo}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">EAC Village</label>
+                  <select
+                    value={villageFilter}
+                    onChange={(e) => {
+                      setPage(1)
+                      setVillageFilter(e.target.value)
+                    }}
+                    disabled={!eacNoFilter}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-slate-100 disabled:text-slate-400"
+                  >
+                    <option value="">All Villages</option>
+                    {getChildDataVillageOptions().map((village) => (
+                      <option key={village} value={village}>
+                        {village}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+
             <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-slate-700 mb-1">Search</label>
@@ -888,7 +1107,7 @@ export default function AdminRecordsPage() {
                           <th key={field} className={`px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap ${getStickyHeaderClass(field)}`}>
                             <div className="flex items-center gap-2">
                               <span>{getColumnLabel(field)}</span>
-                              {isSortableColumn(field) && (
+                              {!isChildDataTab && isSortableColumn(field) && (
                                 <button
                                   type="button"
                                   onClick={() => handleSort(field)}
@@ -936,12 +1155,16 @@ export default function AdminRecordsPage() {
                                     View Photo
                                   </button>
                                 ) : '-'
+                              ) : field === 'dateofbirth' ? (
+                                String(record.dateofbirth ?? record.dob ?? '-')
                               ) : field === 'status' ? (
                                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(record.status)}`}>
                                   {String(record[field] ?? '-')}
                                 </span>
                               ) : field === 'child_left' ? (
-                                record[field] === true || String(record[field]).toLowerCase() === 'true' ? 'LEFT' : 'ENROLLED'
+                                record[field] === true || String(record[field]).toLowerCase() === 'true' || String(record[field]).toUpperCase() === 'LEFT'
+                                  ? 'LEFT'
+                                  : 'ENROLLED'
                               ) : (
                                 String(record[field] ?? '-')
                               )}

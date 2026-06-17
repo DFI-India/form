@@ -80,10 +80,13 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status') || 'all'
     const search = (searchParams.get('search') || '').trim()
     const searchBy = searchParams.get('searchBy') || 'name'
+    const eacNoFilter = (searchParams.get('eacNoFilter') || '').trim()
+    const villageFilter = (searchParams.get('villageFilter') || '').trim()
     const rawSortColumn = searchParams.get('sortColumn') || DEFAULT_SORT_COLUMN_BY_ENTITY[entityType] || 'created_at'
     const sortDirection = searchParams.get('sortDirection') === 'asc' ? 'asc' : 'desc'
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '20')
+    const includeFilterOptions = searchParams.get('includeFilterOptions') === '1'
     const offset = (page - 1) * limit
 
     // Map entity type to table name
@@ -140,6 +143,14 @@ export async function GET(request: NextRequest) {
 
       if (profile.role === 'dfi_field_staff' && profile.centre_eac_no) {
         query = query.eq('eac_no', profile.centre_eac_no) as T
+      }
+
+      if (eacNoFilter) {
+        query = query.eq('eac_no', eacNoFilter) as T
+      }
+
+      if (villageFilter) {
+        query = query.eq('village_name', villageFilter) as T
       }
 
       if (search) {
@@ -313,11 +324,56 @@ export async function GET(request: NextRequest) {
 
     const statusSummary = Object.fromEntries(statusCounts)
 
+    let filterOptions: { eacNos: string[]; villagesByEacNo: Record<string, string[]> } | undefined
+
+    if (includeFilterOptions && entityType === 'child_data') {
+      let filterQuery = supabaseAdmin
+        .from('Child_Data')
+        .select('eac_no, village_name')
+
+      if (profile.role === 'dfi_field_staff' && profile.centre_eac_no) {
+        filterQuery = filterQuery.eq('eac_no', profile.centre_eac_no)
+      }
+
+      const { data: filterRows, error: filterError } = await filterQuery
+
+      if (filterError) {
+        console.error('List record filter options error:', filterError)
+        return NextResponse.json({ error: 'Failed to fetch filter options' }, { status: 500 })
+      }
+
+      const eacMap = new Map<string, Set<string>>()
+      for (const row of filterRows || []) {
+        const eacNo = String(row.eac_no ?? '').trim()
+        const villageName = String(row.village_name ?? '').trim()
+        if (!eacNo) continue
+
+        if (!eacMap.has(eacNo)) {
+          eacMap.set(eacNo, new Set<string>())
+        }
+
+        if (villageName) {
+          eacMap.get(eacNo)!.add(villageName)
+        }
+      }
+
+      filterOptions = {
+        eacNos: Array.from(eacMap.keys()).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })),
+        villagesByEacNo: Object.fromEntries(
+          Array.from(eacMap.entries()).map(([eacNo, villages]) => [
+            eacNo,
+            Array.from(villages).sort((a, b) => a.localeCompare(b))
+          ])
+        )
+      }
+    }
+
     return NextResponse.json({
       success: true,
       data: data || [],
       total: count || 0,
       statusSummary,
+      filterOptions,
       pagination: {
         page,
         limit,
