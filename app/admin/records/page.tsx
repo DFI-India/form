@@ -65,6 +65,14 @@ const ENTITY_LABELS: { [key in EntityType]: string } = {
   computer_course: 'Computer'
 }
 
+const VISIBLE_ENTITY_TYPES: EntityType[] = [
+  'child_data',
+  'childfmly',
+  'childsibling',
+  'childuniform',
+  'childleaving'
+]
+
 const NON_EDITABLE_FIELDS = new Set([
   'id',
   'record_id',
@@ -122,75 +130,72 @@ const COLUMN_GROUPS_BY_ENTITY: Record<EntityType, string[]> = {
     'updated_at'
   ],
   childfmly: [
-    'reg_no',
     'eac_no',
-    'village_name',
+    'reg_no',
     'f_name',
-    'm_name',
-    'guardian_name',
     'f_mobile',
     'm_mobile',
-    'guardian_mobile',
+    'f_aadhar',
+    'f_income',
     'f_occupation',
+    'm_name',
+    'm_aadhar',
+    'm_income',
     'm_occupation',
-    'family_income',
-    'status',
-    'submitted_by',
-    'verified_by',
-    'approved_by',
-    'verified_at',
-    'approved_at',
-    'created_at',
-    'updated_at'
+    'fmly_addr1',
+    'fmly_addr2',
+    'fmly_addr3',
+    'fmly_pincode',
+    'fmly_remarks'
   ],
   childsibling: [
-    'reg_no',
     'eac_no',
-    'village_name',
-    's_name',
-    'sibling_name',
-    'name',
-    'gender',
-    'relation',
-    'class_std_text',
-    'age',
-    'status',
-    'submitted_by',
-    'verified_by',
-    'approved_by',
-    'verified_at',
-    'approved_at',
-    'created_at',
-    'updated_at'
+    'reg_no',
+    'names_1',
+    'ages_1',
+    'class_occup_1',
+    'genders_1',
+    'names_2',
+    'ages_2',
+    'class_occup_2',
+    'genders_2',
+    'names_3',
+    'ages_3',
+    'class_occup_3',
+    'genders_3',
+    'names_4',
+    'ages_4',
+    'class_occup_4',
+    'genders_4',
+    'names_5',
+    'ages_5',
+    'class_occup_5',
+    'genders_5',
+    'sibling_remarks'
   ],
   childuniform: [
-    'reg_no',
     'eac_no',
-    'uniform_size',
-    'shoe_size',
-    'status',
-    'submitted_by',
-    'verified_by',
-    'approved_by',
-    'verified_at',
-    'approved_at',
-    'created_at',
-    'updated_at'
+    'reg_no',
+    'chudidharsize',
+    'footwearsize',
+    'knickersize',
+    'pant_skirtsize',
+    'shirtsize',
+    'top_pantsize',
+    'uniform_updated'
   ],
   childleaving: [
-    'reg_no',
     'eac_no',
+    'reg_no',
     'reason',
-    'leaving_reason',
-    'leave_date',
-    'status',
-    'submitted_by',
-    'verified_by',
-    'approved_by',
-    'verified_at',
-    'approved_at',
-    'created_at',
-    'updated_at'
+    'leav_addr1',
+    'leav_addr2',
+    'leav_addr3',
+    'leav_class',
+    'leav_date',
+    'leav_pincode',
+    'leav_remarks',
+    'pass_status'
   ],
   vocational_course: [
     'reg_no',
@@ -329,6 +334,63 @@ const CHILD_DATA_VISIBLE_COLUMNS = [
 
 const CHILD_DATA_SORT_COLUMNS = new Set(['eac_no', 'reg_no'])
 
+const TABLE_COLUMN_LABELS: Record<string, string> = {
+  eac_no: 'EAC No',
+  reg_no: 'REG No',
+  f_name: 'F Name',
+  f_mobile: 'F Mobile',
+  m_mobile: 'M Mobile',
+  f_aadhar: 'F Aadhar',
+  f_income: 'F Income',
+  f_occupation: 'F Occupation',
+  m_name: 'M Name',
+  m_aadhar: 'M Aadhar',
+  m_income: 'M Income',
+  m_occupation: 'M Occupation',
+  fmly_addr1: 'Family Address 1',
+  fmly_addr2: 'Family Address 2',
+  fmly_addr3: 'Family Address 3',
+  fmly_pincode: 'Family Pincode',
+  fmly_remarks: 'Family Remarks',
+  names_1: 'Names 1',
+  ages_1: 'Ages 1',
+  class_occup_1: 'Class/Occupation 1',
+  genders_1: 'Genders 1',
+  names_2: 'Names 2',
+  ages_2: 'Ages 2',
+  class_occup_2: 'Class/Occupation 2',
+  genders_2: 'Genders 2',
+  names_3: 'Names 3',
+  ages_3: 'Ages 3',
+  class_occup_3: 'Class/Occupation 3',
+  genders_3: 'Genders 3',
+  names_4: 'Names 4',
+  ages_4: 'Ages 4',
+  class_occup_4: 'Class/Occupation 4',
+  genders_4: 'Genders 4',
+  names_5: 'Names 5',
+  ages_5: 'Ages 5',
+  class_occup_5: 'Class/Occupation 5',
+  genders_5: 'Genders 5',
+  sibling_remarks: 'Sibling Remarks',
+  chudidharsize: 'Chudidhar Size',
+  footwearsize: 'Footwear Size',
+  knickersize: 'Knicker Size',
+  pant_skirtsize: 'Pant/Skirt Size',
+  shirtsize: 'Shirt Size',
+  top_pantsize: 'Top/Pant Size',
+  uniform_updated: 'Uniform Updated',
+  reason: 'Reason',
+  leav_addr1: 'Leaving Address 1',
+  leav_addr2: 'Leaving Address 2',
+  leav_addr3: 'Leaving Address 3',
+  leav_class: 'Leaving Class',
+  leav_date: 'Leaving Date',
+  leav_pincode: 'Leaving Pincode',
+  leav_remarks: 'Leaving Remarks',
+  pass_status: 'Pass Status'
+}
+
 const TABLE_NAME_BY_ENTITY: Record<EntityType, string> = {
   child_data: 'Child_Data',
   childfmly: 'childfmly',
@@ -409,11 +471,15 @@ export default function AdminRecordsPage() {
   }
 
   const visibleColumns = useMemo(() => {
+    if (activeTab !== 'child_data' && COLUMN_GROUPS_BY_ENTITY[activeTab].length > 0) {
+      return COLUMN_GROUPS_BY_ENTITY[activeTab]
+    }
     if (isChildDataTab) return CHILD_DATA_VISIBLE_COLUMNS
     if (records.length === 0) return []
     const allColumns = Array.from(new Set(records.flatMap((record) => Object.keys(record))))
     const filteredColumns = allColumns.filter((column) => {
       if (HIDDEN_TABLE_METADATA_FIELDS.has(column)) return false
+      if (column === 'status') return false
       if ((activeTab === 'vocational_course' || activeTab === 'computer_course') && column === 'record_id') return false
       return true
     })
@@ -446,6 +512,7 @@ export default function AdminRecordsPage() {
 
   const getColumnLabel = (field: string) => {
     const labelMap: Record<string, string> = {
+      ...TABLE_COLUMN_LABELS,
       eac_no: 'EAC No',
       reg_no: 'REG No',
       first_name: 'First Name',
@@ -570,6 +637,13 @@ export default function AdminRecordsPage() {
     }
   }, [activeTab, childDataFilterOptions.eacNos, eacNoFilter, isChildDataTab, villageFilter])
 
+  useEffect(() => {
+    if (!SORTABLE_COLUMNS_BY_ENTITY[activeTab].has(sortColumn)) {
+      setSortColumn('eac_no')
+      setSortDirection('asc')
+    }
+  }, [activeTab, sortColumn])
+
   const fetchRecords = async (
     token: string,
     overrides?: Partial<{
@@ -635,8 +709,8 @@ export default function AdminRecordsPage() {
     setStatusFilter('all')
     setEacNoFilter('')
     setVillageFilter('')
-    setSortColumn(activeTab === 'child_data' ? 'eac_no' : 'created_at')
-    setSortDirection(activeTab === 'child_data' ? 'asc' : 'desc')
+    setSortColumn('eac_no')
+    setSortDirection('asc')
     setPage(1)
     if (sessionToken) {
       fetchRecords(sessionToken, {
@@ -645,13 +719,13 @@ export default function AdminRecordsPage() {
         search: '',
         searchBy: 'name',
         entityType: activeTab,
-        sortColumn: activeTab === 'child_data' ? 'eac_no' : 'created_at',
-        sortDirection: activeTab === 'child_data' ? 'asc' : 'desc'
+        sortColumn: 'eac_no',
+        sortDirection: 'asc'
       })
     }
   }
 
-  const handleChildDataSort = (column: 'eac_no' | 'reg_no') => {
+  const handleEntitySort = (column: 'eac_no' | 'reg_no') => {
     if (sortColumn === column) {
       setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
     } else {
@@ -889,22 +963,22 @@ export default function AdminRecordsPage() {
               <p className="text-slate-600 mt-2">View, search, and edit all records</p>
             </div>
             <div className="flex items-center gap-3">
-              {isChildDataTab && (
+              {VISIBLE_ENTITY_TYPES.includes(activeTab) && (
                 <>
                   <button
-                    onClick={() => handleChildDataSort('eac_no')}
-                    className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${sortColumn === 'eac_no'
-                      ? 'bg-slate-900 text-white hover:bg-slate-800'
+                    onClick={() => handleEntitySort('eac_no')}
+                    className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 border ${sortColumn === 'eac_no'
+                      ? 'bg-slate-900 text-white border-slate-900 hover:bg-slate-800'
                       : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                       }`}
                   >
                     Sort by EAC No ({sortColumn === 'eac_no' ? sortDirection.toUpperCase() : 'ASC'})
                   </button>
                   <button
-                    onClick={() => handleChildDataSort('reg_no')}
-                    className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${sortColumn === 'reg_no'
-                      ? 'bg-slate-900 text-white hover:bg-slate-800'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    onClick={() => handleEntitySort('reg_no')}
+                    className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 border font-semibold shadow-sm ${sortColumn === 'reg_no'
+                      ? 'bg-blue-700 text-white border-blue-700 hover:bg-blue-800 ring-2 ring-blue-200'
+                      : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
                       }`}
                   >
                     Sort by REG No ({sortColumn === 'reg_no' ? sortDirection.toUpperCase() : 'ASC'})
@@ -1066,7 +1140,7 @@ export default function AdminRecordsPage() {
           {/* Entity Type Tabs */}
           <div className="bg-white rounded-lg border border-slate-200 mb-6">
             <div className="flex overflow-x-auto">
-              {(Object.keys(ENTITY_LABELS) as EntityType[]).map(type => (
+              {VISIBLE_ENTITY_TYPES.map(type => (
                 <button
                   key={type}
                   onClick={() => {
@@ -1107,7 +1181,7 @@ export default function AdminRecordsPage() {
                           <th key={field} className={`px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap ${getStickyHeaderClass(field)}`}>
                             <div className="flex items-center gap-2">
                               <span>{getColumnLabel(field)}</span>
-                              {!isChildDataTab && isSortableColumn(field) && (
+                              {isSortableColumn(field) && (
                                 <button
                                   type="button"
                                   onClick={() => handleSort(field)}
