@@ -237,15 +237,17 @@ export async function GET(request: NextRequest) {
       .select('*', { count: 'exact' })
 
     // Apply enrollment filter (Child Left) across entities.
+    let enrolledChildPairs: Array<{ eac_no: string | number; reg_no: string | number }> = []
+
     if (status === 'ENROLLED' || status === 'LEFT') {
       const childLeftValue = status === 'LEFT'
 
       if (entityType === 'child_data') {
         query = query.eq('child_left', childLeftValue)
       } else {
-        const matchingPairs = await getChildDataMatchingPairs(childLeftValue)
+        enrolledChildPairs = await getChildDataMatchingPairs(childLeftValue)
 
-        if (matchingPairs.length === 0) {
+        if (enrolledChildPairs.length === 0) {
           return NextResponse.json({
             success: true,
             data: [],
@@ -256,14 +258,6 @@ export async function GET(request: NextRequest) {
               totalPages: 0
             }
           })
-        }
-
-        if (['childfmly', 'childsibling', 'childuniform'].includes(entityType)) {
-          query = query.or(
-            matchingPairs
-              .map((pair) => `(eac_no.eq.${pair.eac_no} and reg_no.eq.${pair.reg_no})`)
-              .join(',')
-          )
         }
       }
     }
@@ -305,9 +299,7 @@ export async function GET(request: NextRequest) {
       : (DEFAULT_SORT_COLUMN_BY_ENTITY[entityType] || 'created_at')
 
     // Apply sorting before pagination so ordering is global across the dataset.
-    query = query
-      .order(finalSortColumn, { ascending: sortDirection === 'asc' })
-      .range(offset, offset + limit - 1)
+    query = query.order(finalSortColumn, { ascending: sortDirection === 'asc' })
 
     const { data, count, error } = await query
 
@@ -315,6 +307,30 @@ export async function GET(request: NextRequest) {
       console.error('List records error:', error)
       return NextResponse.json({ error: 'Failed to fetch records' }, { status: 500 })
     }
+
+    let filteredRecords = data || []
+
+    if (status === 'ENROLLED' || status === 'LEFT') {
+      const matchingPairs = new Set(
+        enrolledChildPairs.map((pair) => `${String(pair.eac_no)}::${String(pair.reg_no)}`)
+      )
+
+      if (entityType !== 'child_data' && matchingPairs.size > 0) {
+        filteredRecords = (data || []).filter((row: any) => {
+          const rowEacNo = row?.eac_no
+          const rowRegNo = row?.reg_no
+
+          if (rowEacNo === null || rowEacNo === undefined || rowRegNo === null || rowRegNo === undefined) {
+            return false
+          }
+
+          return matchingPairs.has(`${String(rowEacNo)}::${String(rowRegNo)}`)
+        })
+      }
+    }
+
+    const paginatedRecords = filteredRecords.slice(offset, offset + limit)
+    const filteredCount = filteredRecords.length
 
     const statuses = ['Pending', 'Verified', 'Approved', 'Rejected'] as const
     const statusCounts = await Promise.all(
@@ -389,14 +405,14 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: data || [],
-      total: count || 0,
+      data: paginatedRecords,
+      total: filteredCount || 0,
       statusSummary,
       filterOptions,
       pagination: {
         page,
         limit,
-        totalPages: Math.ceil((count || 0) / limit)
+        totalPages: Math.ceil((filteredCount || 0) / limit)
       }
     })
   } catch (error: any) {
