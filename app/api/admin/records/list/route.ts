@@ -98,6 +98,37 @@ export async function GET(request: NextRequest) {
       ? rawSortColumn
       : (DEFAULT_SORT_COLUMN_BY_ENTITY[entityType] || 'created_at')
 
+    const getChildDataMatchingPairs = async (childLeftValue: boolean) => {
+      let childStatusQuery = supabaseAdmin
+        .from('Child_Data')
+        .select('eac_no, reg_no')
+        .eq('child_left', childLeftValue)
+
+      if (profile.role === 'dfi_field_staff' && profile.centre_eac_no) {
+        childStatusQuery = childStatusQuery.eq('eac_no', profile.centre_eac_no)
+      }
+
+      if (eacNoFilter) {
+        childStatusQuery = childStatusQuery.eq('eac_no', eacNoFilter)
+      }
+
+      if (villageFilter) {
+        childStatusQuery = childStatusQuery.eq('village_name', villageFilter)
+      }
+
+      const { data: childStatusMatches, error: childStatusError } = await childStatusQuery
+      if (childStatusError) {
+        throw childStatusError
+      }
+
+      return (childStatusMatches || [])
+        .map((row: any) => ({
+          eac_no: row.eac_no,
+          reg_no: row.reg_no,
+        }))
+        .filter((row: any) => row.eac_no !== null && row.eac_no !== undefined && row.reg_no !== null && row.reg_no !== undefined)
+    }
+
     let matchingRegNosForNameSearch: any[] | null = null
     let forceEmptyResult = false
 
@@ -212,27 +243,9 @@ export async function GET(request: NextRequest) {
       if (entityType === 'child_data') {
         query = query.eq('child_left', childLeftValue)
       } else {
-        let childStatusQuery = supabaseAdmin
-          .from('Child_Data')
-          .select('reg_no')
-          .eq('child_left', childLeftValue)
+        const matchingPairs = await getChildDataMatchingPairs(childLeftValue)
 
-        if (profile.role === 'dfi_field_staff' && profile.centre_eac_no) {
-          childStatusQuery = childStatusQuery.eq('eac_no', profile.centre_eac_no)
-        }
-
-        const { data: childStatusMatches, error: childStatusError } = await childStatusQuery
-
-        if (childStatusError) {
-          console.error('Child enrollment filter error:', childStatusError)
-          return NextResponse.json({ error: 'Failed to filter records' }, { status: 500 })
-        }
-
-        const matchingRegNos = (childStatusMatches || [])
-          .map((row: any) => row.reg_no)
-          .filter((regNo: any) => regNo !== null && regNo !== undefined)
-
-        if (matchingRegNos.length === 0) {
+        if (matchingPairs.length === 0) {
           return NextResponse.json({
             success: true,
             data: [],
@@ -245,7 +258,13 @@ export async function GET(request: NextRequest) {
           })
         }
 
-        query = query.in('reg_no', matchingRegNos)
+        if (['childfmly', 'childsibling', 'childuniform'].includes(entityType)) {
+          query = query.or(
+            matchingPairs
+              .map((pair) => `(eac_no.eq.${pair.eac_no} and reg_no.eq.${pair.reg_no})`)
+              .join(',')
+          )
+        }
       }
     }
 

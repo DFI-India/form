@@ -550,8 +550,12 @@ export default function AdminRecordsPage() {
   }
 
   const getChildDataVillageOptions = () => {
-    if (!eacNoFilter) return []
-    return childDataFilterOptions.villagesByEacNo[eacNoFilter] || []
+    if (eacNoFilter) {
+      return childDataFilterOptions.villagesByEacNo[eacNoFilter] || []
+    }
+
+    const allVillages = Object.values(childDataFilterOptions.villagesByEacNo).flat()
+    return Array.from(new Set(allVillages)).sort((a, b) => a.localeCompare(b))
   }
 
   const loadChildDataFilterOptions = async (token: string) => {
@@ -1067,7 +1071,6 @@ export default function AdminRecordsPage() {
                       setPage(1)
                       setVillageFilter(e.target.value)
                     }}
-                    disabled={!eacNoFilter}
                     className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-slate-100 disabled:text-slate-400"
                   >
                     <option value="">All Villages</option>
