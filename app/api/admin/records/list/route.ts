@@ -308,7 +308,47 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch records' }, { status: 500 })
     }
 
-    let filteredRecords = data || []
+    let rows = (data || []) as Record<string, any>[]
+
+    if (entityType === 'childuniform') {
+      const uniquePairs = Array.from(
+        new Set(
+          rows
+            .filter((row) => row?.eac_no !== null && row?.eac_no !== undefined && row?.reg_no !== null && row?.reg_no !== undefined)
+            .map((row) => `${String(row.eac_no)}::${String(row.reg_no)}`)
+        )
+      )
+
+      if (uniquePairs.length > 0) {
+        const eacNos = Array.from(new Set(rows.map((row) => row?.eac_no).filter((value) => value !== null && value !== undefined)))
+
+        const { data: childDataRows, error: childDataError } = await supabaseAdmin
+          .from('Child_Data')
+          .select('eac_no, reg_no, gender')
+          .in('eac_no', eacNos as any)
+
+        if (childDataError) {
+          console.error('Child uniform gender mapping error:', childDataError)
+          return NextResponse.json({ error: 'Failed to map gender for childuniform records' }, { status: 500 })
+        }
+
+        const genderMap = new Map<string, string>()
+        for (const childRow of childDataRows || []) {
+          const childEacNo = childRow?.eac_no
+          const childRegNo = childRow?.reg_no
+          if (childEacNo !== null && childEacNo !== undefined && childRegNo !== null && childRegNo !== undefined) {
+            genderMap.set(`${String(childEacNo)}::${String(childRegNo)}`, childRow.gender)
+          }
+        }
+
+        rows = rows.map((row) => ({
+          ...row,
+          gender: genderMap.get(`${String(row?.eac_no ?? '')}::${String(row?.reg_no ?? '')}`) ?? row.gender ?? null,
+        }))
+      }
+    }
+
+    let filteredRecords = rows
 
     if (status === 'ENROLLED' || status === 'LEFT') {
       const matchingPairs = new Set(

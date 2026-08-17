@@ -176,6 +176,7 @@ const COLUMN_GROUPS_BY_ENTITY: Record<EntityType, string[]> = {
   childuniform: [
     'eac_no',
     'reg_no',
+    'gender',
     'chudidharsize',
     'footwearsize',
     'knickersize',
@@ -274,7 +275,7 @@ const SORTABLE_COLUMNS_BY_ENTITY: Record<EntityType, Set<string>> = {
     'record_id', 'id', 'reg_no', 'eac_no', 'sibling_name', 'name', 'gender', 'class_std_text', 'age', 'status', 'created_at', 'updated_at',
   ]),
   childuniform: new Set([
-    'record_id', 'id', 'reg_no', 'eac_no', 'uniform_size', 'shoe_size', 'status', 'created_at', 'updated_at',
+    'record_id', 'id', 'reg_no', 'eac_no', 'gender', 'uniform_size', 'shoe_size', 'status', 'created_at', 'updated_at',
   ]),
   childleaving: new Set([
     'record_id', 'id', 'reg_no', 'eac_no', 'reason', 'leaving_reason', 'leave_date', 'status', 'created_at', 'updated_at',
