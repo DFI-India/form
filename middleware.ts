@@ -71,7 +71,7 @@ export async function middleware(request: NextRequest) {
     field_volunteer: ['/field-volunteer'],
     dfi_field_staff: ['/dfi-field-staff'],
     dfi_staff: ['/dfi-staff'],
-    admin: ['/admin', '/EAC_details', '/tech-support/reports', '/profile/activity'],
+    admin: ['/admin', '/EAC_details', '/child-details', '/tech-support/reports', '/profile/activity'],
     tech_support: ['/tech-support'],
   }
 

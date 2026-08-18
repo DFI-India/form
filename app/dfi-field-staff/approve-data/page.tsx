@@ -11,6 +11,7 @@ import DFILogo from '../../../public/DFI.png'
 import { supabase } from '../../../lib/supabase'
 import { getStandardColumnLabel } from '../../../lib/columnLabels'
 import { useRequireRole } from '../../../lib/hooks'
+import { getErrorMessage } from '../../../lib/errors'
 import { LoadingSpinner } from '../../components/UI'
 import { Navbar, Sidebar, PageContainer } from '../../components/Navbar'
 import { ROLE_CONFIG, getRoleCapabilities } from '../../../lib/types'
@@ -242,7 +243,7 @@ export default function ApproveDataPage() {
                 [tabType]: enrichedData,
             }))
         } catch (error: unknown) {
-            const fallback = error instanceof Error ? error.message : 'Failed to fetch data'
+            const fallback = getErrorMessage(error, 'Failed to fetch data')
             setMessage({ type: 'error', text: `Unable to load ${tabType} data: ${fallback}` })
         } finally {
             setVerifyLoading((prev) => ({ ...prev, [tabType]: false }))
@@ -297,7 +298,7 @@ export default function ApproveDataPage() {
                 throw new Error('Unknown error during verification')
             }
         } catch (error: unknown) {
-            const fallback = error instanceof Error ? error.message : 'Failed to verify'
+            const fallback = getErrorMessage(error, 'Failed to verify')
             addToast({ type: 'error', text: `Unable to verify: ${fallback}` })
         } finally {
             setActionLoading((prev) => ({ ...prev, [recordId]: false }))
@@ -350,7 +351,7 @@ export default function ApproveDataPage() {
             // Refetch data to sync with actual backend state
             await fetchVerifyData(verifySubTab)
         } catch (error: unknown) {
-            const fallback = error instanceof Error ? error.message : 'Failed to reject'
+            const fallback = getErrorMessage(error, 'Failed to reject')
             addToast({ type: 'error', text: `Unable to reject: ${fallback}` })
         } finally {
             setActionLoading((prev) => ({ ...prev, [recordId]: false }))

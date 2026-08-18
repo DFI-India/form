@@ -7,6 +7,7 @@ import { Navbar, Sidebar, PageContainer } from '../../components/Navbar'
 import { LoadingSpinner } from '../../components/UI'
 import { ROLE_CONFIG } from '../../../lib/types'
 import { useRequireRole } from '../../../lib/hooks'
+import { getErrorMessage } from '../../../lib/errors'
 
 type HistorySubTabType = 'child' | 'family' | 'sibling' | 'uniform' | 'leaving' | 'vocational' | 'computer'
 type MessageState = { type: 'success' | 'error'; text: string } | null
@@ -159,7 +160,7 @@ export default function FieldStaffHistoryPage() {
 
             setData(data || [])
         } catch (error: unknown) {
-            const fallback = error instanceof Error ? error.message : 'Failed to fetch data'
+            const fallback = getErrorMessage(error, 'Failed to fetch data')
             setMessage({ type: 'error', text: `Unable to load history data: ${fallback}` })
             setData([])
         } finally {

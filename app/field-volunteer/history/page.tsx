@@ -7,6 +7,7 @@ import { Navbar, Sidebar, PageContainer } from '../../components/Navbar'
 import { LoadingSpinner } from '../../components/UI'
 import { ROLE_CONFIG } from '../../../lib/types'
 import { useRequireRole } from '../../../lib/hooks'
+import { getErrorMessage } from '../../../lib/errors'
 
 type HistorySubTabType = 'child' | 'family' | 'sibling' | 'uniform' | 'leaving' | 'vocational' | 'computer'
 
@@ -135,7 +136,7 @@ export default function ActivityHistoryPage() {
       setHistoryData(sorted as HistoryRow[])
     } catch (error) {
       console.error('Error fetching personal history:', error)
-      const fallback = error instanceof Error ? error.message : 'Unexpected error occurred.'
+      const fallback = getErrorMessage(error, 'Unexpected error occurred.')
       setHistoryMessage({ type: 'error', text: `Unable to load history: ${fallback}` })
     } finally {
       setHistoryLoading(false)

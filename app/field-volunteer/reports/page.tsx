@@ -7,6 +7,7 @@ import { Navbar, Sidebar, PageContainer } from '../../components/Navbar'
 import { Alert, LoadingSpinner } from '../../components/UI'
 import { supabase } from '../../../lib/supabase'
 import { useRequireRole } from '../../../lib/hooks'
+import { getErrorMessage } from '../../../lib/errors'
 import { ROLE_CONFIG } from '../../../lib/types'
 
 type ReportTab = 'child' | 'family' | 'sibling' | 'uniform'
@@ -304,7 +305,7 @@ export default function FieldVolunteerReportsPage() {
                 setUniformRows(enrichedUniform)
             } catch (loadError) {
                 console.error('Failed to load volunteer reports:', loadError)
-                const message = loadError instanceof Error ? loadError.message : 'Unable to load reports.'
+                const message = getErrorMessage(loadError, 'Unable to load reports.')
                 setError(message)
                 setChildRows([])
                 setFamilyRows([])

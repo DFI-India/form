@@ -3,6 +3,7 @@
 import {
   useState,
   useEffect,
+  useMemo,
   useRef,
   type ChangeEvent,
   type ChangeEventHandler,
@@ -12,6 +13,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { supabase } from '../../../lib/supabase'
 import { useRequireRole } from '../../../lib/hooks'
+import { getErrorMessage } from '../../../lib/errors'
 import { Navbar, Sidebar, PageContainer } from '../../components/Navbar'
 import { LoadingSpinner } from '../../components/UI'
 import { User, Users, Shirt, LogOut, BookOpen, Laptop, AlertCircle, History, ChevronRight, Check, X } from 'lucide-react'
@@ -983,7 +985,7 @@ export default function ChildForm() {
       setHistoryData(sorted as HistoryRow[])
     } catch (error) {
       console.error('Error fetching personal history:', error)
-      const fallback = error instanceof Error ? error.message : 'Unexpected error occurred.'
+      const fallback = getErrorMessage(error, 'Unexpected error occurred.')
       setHistoryMessage({ type: 'error', text: `Unable to load history: ${fallback}` })
     } finally {
       setHistoryLoading(false)
@@ -1697,7 +1699,7 @@ export default function ChildForm() {
       setWizardStep(0)
       setDraftExistsForRegNo(false)
     } catch (error: unknown) {
-      const fallback = error instanceof Error ? error.message : 'Unexpected error occurred.'
+      const fallback = getErrorMessage(error, 'Unexpected error occurred.')
       setMessage({ type: 'error', text: `Unable to submit complete form: ${fallback}` })
     } finally {
       setLoading(false)
@@ -1972,7 +1974,7 @@ export default function ChildForm() {
       setPhotoPreview('')
       setPhotoInputKey(Date.now())
     } catch (error: unknown) {
-      const fallback = error instanceof Error ? error.message : 'Unexpected error occurred.'
+      const fallback = getErrorMessage(error, 'Unexpected error occurred.')
       setMessage({ type: 'error', text: `Unable to save the form: ${fallback}` })
     } finally {
       setLoading(false)
@@ -2051,7 +2053,7 @@ export default function ChildForm() {
       setFamilyMessage({ type: 'success', text: 'Family data submitted for approval.' })
       setFamilyData(createEmptyFamilyForm())
     } catch (error: unknown) {
-      const fallback = error instanceof Error ? error.message : 'Unexpected error occurred.'
+      const fallback = getErrorMessage(error, 'Unexpected error occurred.')
       setFamilyMessage({ type: 'error', text: `Unable to save: ${fallback}` })
     } finally {
       setFamilyLoading(false)
@@ -2123,7 +2125,7 @@ export default function ChildForm() {
       setSiblingMessage({ type: 'success', text: 'Sibling data submitted for approval.' })
       setSiblingData(createEmptySiblingForm())
     } catch (error: unknown) {
-      const fallback = error instanceof Error ? error.message : 'Unexpected error occurred.'
+      const fallback = getErrorMessage(error, 'Unexpected error occurred.')
       setSiblingMessage({ type: 'error', text: `Unable to save: ${fallback}` })
     } finally {
       setSiblingLoading(false)
@@ -2184,7 +2186,7 @@ export default function ChildForm() {
       setUniformMessage({ type: 'success', text: 'Uniform data submitted for approval.' })
       setUniformData(createEmptyUniformForm())
     } catch (error: unknown) {
-      const fallback = error instanceof Error ? error.message : 'Unexpected error occurred.'
+      const fallback = getErrorMessage(error, 'Unexpected error occurred.')
       setUniformMessage({ type: 'error', text: `Unable to save: ${fallback}` })
     } finally {
       setUniformLoading(false)
@@ -2245,7 +2247,7 @@ export default function ChildForm() {
       setLeavingMessage({ type: 'success', text: 'Leaving data submitted for approval.' })
       setLeavingData(createEmptyLeavingForm())
     } catch (error: unknown) {
-      const fallback = error instanceof Error ? error.message : 'Unexpected error occurred.'
+      const fallback = getErrorMessage(error, 'Unexpected error occurred.')
       setLeavingMessage({ type: 'error', text: `Unable to save: ${fallback}` })
     } finally {
       setLeavingLoading(false)
@@ -2370,7 +2372,7 @@ export default function ChildForm() {
       setVocationalPhotoFile(null)
       setVocationalPhotoPreview('')
     } catch (error: unknown) {
-      const fallback = error instanceof Error ? error.message : 'Unexpected error occurred.'
+      const fallback = getErrorMessage(error, 'Unexpected error occurred.')
       setVocationalMessage({ type: 'error', text: `Unable to save: ${fallback}` })
     } finally {
       setVocationalLoading(false)
@@ -2478,7 +2480,7 @@ export default function ChildForm() {
       setComputerPhotoFile(null)
       setComputerPhotoPreview('')
     } catch (error: unknown) {
-      const fallback = error instanceof Error ? error.message : 'Unexpected error occurred.'
+      const fallback = getErrorMessage(error, 'Unexpected error occurred.')
       setComputerMessage({ type: 'error', text: `Unable to save: ${fallback}` })
     } finally {
       setComputerLoading(false)
@@ -2824,7 +2826,7 @@ export default function ChildForm() {
       closeEditModal()
       fetchRejectedData(activeRejectedSubTab)
     } catch (error: unknown) {
-      const fallback = error instanceof Error ? error.message : 'Unexpected error occurred.'
+      const fallback = getErrorMessage(error, 'Unexpected error occurred.')
       setRejectedMessage({ type: 'error', text: `Unable to save: ${fallback}` })
     } finally {
       setEditLoading(false)
@@ -2904,7 +2906,7 @@ export default function ChildForm() {
       setRejectedMessage({ type: 'success', text: `${type} data resubmitted for approval.` })
       fetchRejectedData(activeRejectedSubTab)
     } catch (error: unknown) {
-      const fallback = error instanceof Error ? error.message : 'Unexpected error occurred.'
+      const fallback = getErrorMessage(error, 'Unexpected error occurred.')
       setRejectedMessage({ type: 'error', text: `Unable to resubmit: ${fallback}` })
     } finally {
       setRejectedLoading(false)
@@ -2912,6 +2914,16 @@ export default function ChildForm() {
   }
 
   const { profile, loading: authLoading, isAuthorized } = useRequireRole(['field_volunteer'])
+
+  // Field volunteers may only submit records for their own assigned centre;
+  // the dropdown is narrowed accordingly. This is a UI-level safeguard only —
+  // real enforcement still depends on Supabase RLS policies for these tables.
+  const visibleEacOptions = useMemo(() => {
+    if (profile?.role === 'field_volunteer' && profile?.centre_eac_no) {
+      return eacOptions.filter((eac) => eac.eac_no?.toString() === profile.centre_eac_no?.toString())
+    }
+    return eacOptions
+  }, [eacOptions, profile])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -3118,7 +3130,7 @@ export default function ChildForm() {
                               className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                             >
                               <option value="">Select EAC No</option>
-                              {eacOptions.map((eac) => (
+                              {visibleEacOptions.map((eac) => (
                                 <option key={eac.eac_no} value={eac.eac_no}>
                                   {eac.eac_no}
                                 </option>

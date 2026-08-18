@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import DFILogo from '../../../public/DFI.png'
 import { supabase } from '../../../lib/supabase'
+import { useRequireRole } from '../../../lib/hooks'
 import TablePagination from '@mui/material/TablePagination'
 
 type FormState = {
@@ -45,19 +46,20 @@ type FormState = {
 export default function ChildDetailsPage({ params }: { params: { eac_no: string } }) {
     const { eac_no } = params
     const router = useRouter()
+    const { loading: authLoading, isAuthorized } = useRequireRole(['admin'])
 
     const [children, setChildren] = useState<FormState[]>([])
     const [loading, setLoading] = useState(true)
     const [message, setMessage] = useState<string | null>(null)
 
     useEffect(() => {
+        if (!isAuthorized) return
+
         let mounted = true
 
         const fetchChildren = async () => {
             try {
                 setLoading(true)
-                // adjust table name if yours differs (Child_Data / child_data)
-                console.log(eac_no);
                 const { data, error } = await supabase
                     .from('Child_Data')
                     .select('*')
@@ -82,7 +84,26 @@ export default function ChildDetailsPage({ params }: { params: { eac_no: string 
         return () => {
             mounted = false
         }
-    }, [eac_no])
+    }, [eac_no, isAuthorized])
+
+    if (authLoading) {
+        return (
+            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+                <p className="text-sm text-slate-500">Loading…</p>
+            </div>
+        )
+    }
+
+    if (!isAuthorized) {
+        return (
+            <main className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+                <div className="bg-white rounded-lg shadow-lg p-6 max-w-md text-center">
+                    <h1 className="text-2xl font-bold text-slate-900 mb-2">Access Denied</h1>
+                    <p className="text-slate-600">You don't have permission to access this page.</p>
+                </div>
+            </main>
+        )
+    }
 
     return (
         <main className="flex-1 bg-slate-100 min-h-screen p-8">

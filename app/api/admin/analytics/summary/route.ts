@@ -38,25 +38,31 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    // Build filters for non-admin users
-    const isAdmin = profile.role === 'admin'
-    const centreFilter = !isAdmin && profile.centre_eac_no ? { eac_no: profile.centre_eac_no } : {}
+    // Centre-scope every query for dfi_field_staff (single-centre role), matching the
+    // scoping convention used in approvals/list and records/list. admin and dfi_staff
+    // are oversight roles and continue to see system-wide numbers.
+    const shouldScopeToCentre = profile.role === 'dfi_field_staff' && Boolean(profile.centre_eac_no)
+    const scopedEacNo = profile.centre_eac_no
 
     const { count: totalEacs } = await supabaseAdmin
       .from('centre_data')
       .select('*', { count: 'exact', head: true })
 
     // Get total children counts by status
-    const [pendingRes, approvedRes, rejectedRes] = await Promise.all([
-      supabaseAdmin.from('Child_Data').select('*', { count: 'exact', head: true }).eq('status', 'Pending'),
-      supabaseAdmin.from('Child_Data').select('*', { count: 'exact', head: true }).eq('status', 'Approved'),
-      supabaseAdmin.from('Child_Data').select('*', { count: 'exact', head: true }).eq('status', 'Rejected'),
-    ])
+    let pendingQuery = supabaseAdmin.from('Child_Data').select('*', { count: 'exact', head: true }).eq('status', 'Pending')
+    let approvedQuery = supabaseAdmin.from('Child_Data').select('*', { count: 'exact', head: true }).eq('status', 'Approved')
+    let rejectedQuery = supabaseAdmin.from('Child_Data').select('*', { count: 'exact', head: true }).eq('status', 'Rejected')
+    if (shouldScopeToCentre) {
+      pendingQuery = pendingQuery.eq('eac_no', scopedEacNo)
+      approvedQuery = approvedQuery.eq('eac_no', scopedEacNo)
+      rejectedQuery = rejectedQuery.eq('eac_no', scopedEacNo)
+    }
+    const [pendingRes, approvedRes, rejectedRes] = await Promise.all([pendingQuery, approvedQuery, rejectedQuery])
 
     // Get total children by centre
-    const { data: centreData } = await supabaseAdmin
-      .from('Child_Data')
-      .select('eac_no, village_name')
+    let centreDataQuery = supabaseAdmin.from('Child_Data').select('eac_no, village_name')
+    if (shouldScopeToCentre) centreDataQuery = centreDataQuery.eq('eac_no', scopedEacNo)
+    const { data: centreData } = await centreDataQuery
       .then(res => ({
         data: res.data?.reduce((acc: any[], row: any) => {
           const existing = acc.find(c => c.eac_no === row.eac_no)
@@ -67,9 +73,9 @@ export async function GET(request: NextRequest) {
       }))
 
     // Get top submitting volunteers
-    const { data: volunteerData } = await supabaseAdmin
-      .from('Child_Data')
-      .select('submitted_by')
+    let volunteerBaseQuery = supabaseAdmin.from('Child_Data').select('submitted_by')
+    if (shouldScopeToCentre) volunteerBaseQuery = volunteerBaseQuery.eq('eac_no', scopedEacNo)
+    const { data: volunteerData } = await volunteerBaseQuery
       .then(async (res) => {
         if (!res.data) return { data: [] }
         const submitted = res.data.reduce((acc: any[], row: any) => {
@@ -100,22 +106,21 @@ export async function GET(request: NextRequest) {
       })
 
     // Get VTC enrollment trends
-    const { data: vocationalData } = await supabaseAdmin
-      .from('vocational_course')
-      .select('course_name, status')
+    let vocationalDataQuery = supabaseAdmin.from('vocational_course').select('course_name, status')
+    let totalVocationalQuery = supabaseAdmin.from('vocational_course').select('*', { count: 'exact', head: true })
+    let approvedVocationalQuery = supabaseAdmin.from('vocational_course').select('*', { count: 'exact', head: true }).eq('status', 'Approved')
+    let computerDataQuery = supabaseAdmin.from('computer_course').select('course_name, status')
+    if (shouldScopeToCentre) {
+      vocationalDataQuery = vocationalDataQuery.eq('eac_no', scopedEacNo)
+      totalVocationalQuery = totalVocationalQuery.eq('eac_no', scopedEacNo)
+      approvedVocationalQuery = approvedVocationalQuery.eq('eac_no', scopedEacNo)
+      computerDataQuery = computerDataQuery.eq('eac_no', scopedEacNo)
+    }
 
-    const { count: totalVocationalStudents } = await supabaseAdmin
-      .from('vocational_course')
-      .select('*', { count: 'exact', head: true })
-
-    const { count: totalApprovedVocationalStudents } = await supabaseAdmin
-      .from('vocational_course')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'Approved')
-
-    const { data: computerData } = await supabaseAdmin
-      .from('computer_course')
-      .select('course_name, status')
+    const { data: vocationalData } = await vocationalDataQuery
+    const { count: totalVocationalStudents } = await totalVocationalQuery
+    const { count: totalApprovedVocationalStudents } = await approvedVocationalQuery
+    const { data: computerData } = await computerDataQuery
 
     const vocationCourses = vocationalData?.reduce((acc: any, row: any) => {
       const existing = acc.find((c: any) => c.course === row.course_name)
@@ -135,10 +140,12 @@ export async function GET(request: NextRequest) {
     const thirtyDaysAgo = new Date()
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
-    const { data: timelineData } = await supabaseAdmin
+    let timelineQuery = supabaseAdmin
       .from('Child_Data')
       .select('created_at, status')
       .gte('created_at', thirtyDaysAgo.toISOString())
+    if (shouldScopeToCentre) timelineQuery = timelineQuery.eq('eac_no', scopedEacNo)
+    const { data: timelineData } = await timelineQuery
 
     const timeline = Array.from({ length: 30 }, (_, i) => {
       const date = new Date()
@@ -154,9 +161,11 @@ export async function GET(request: NextRequest) {
     })
 
     // Get gender distribution
-    const { data: allChildren } = await supabaseAdmin
+    let allChildrenQuery = supabaseAdmin
       .from('Child_Data')
       .select('gender, adm_date, dateofbirth, class_std_text')
+    if (shouldScopeToCentre) allChildrenQuery = allChildrenQuery.eq('eac_no', scopedEacNo)
+    const { data: allChildren } = await allChildrenQuery
 
     const genderStats = allChildren?.reduce((acc: any, child: any) => {
       const gender = child.gender || 'Unknown'

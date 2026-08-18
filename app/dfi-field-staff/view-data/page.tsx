@@ -7,6 +7,7 @@ import { Navbar, Sidebar, PageContainer } from '../../components/Navbar'
 import { LoadingSpinner } from '../../components/UI'
 import { ROLE_CONFIG } from '../../../lib/types'
 import { useRequireRole } from '../../../lib/hooks'
+import { getErrorMessage } from '../../../lib/errors'
 import { X } from 'lucide-react'
 
 type ViewSubTabType = 'child' | 'family' | 'sibling' | 'uniform' | 'leaving'
@@ -164,7 +165,7 @@ export default function FieldStaffViewDataPage() {
                 [tabType]: data || [],
             }))
         } catch (error: unknown) {
-            const fallback = error instanceof Error ? error.message : 'Failed to fetch data'
+            const fallback = getErrorMessage(error, 'Failed to fetch data')
             setMessage({ type: 'error', text: `Unable to load ${tabType} data: ${fallback}` })
         } finally {
             setViewLoading((prev) => ({ ...prev, [tabType]: false }))
