@@ -77,7 +77,14 @@ export async function GET(request: NextRequest) {
     // Get query params
     const { searchParams } = new URL(request.url)
     const entityType = (searchParams.get('entityType') || 'child_data') as EntityType
+    // `status` used to carry two unrelated ideas: approval state and whether
+    // the child had left. They are separate params now; ENROLLED/LEFT are still
+    // accepted on `status` so older links keep working.
     const status = searchParams.get('status') || 'all'
+    const legacyEnrollment =
+      status === 'ENROLLED' ? 'enrolled' : status === 'LEFT' ? 'left' : null
+    const enrollment = searchParams.get('enrollment') || legacyEnrollment || 'all'
+    const approval = searchParams.get('approval') || (legacyEnrollment ? 'all' : status)
     const search = (searchParams.get('search') || '').trim()
     const searchBy = searchParams.get('searchBy') || 'name'
     const eacNoFilter = (searchParams.get('eacNoFilter') || '').trim()
@@ -161,14 +168,16 @@ export async function GET(request: NextRequest) {
     const applyFilters = <T extends { eq: Function; in: Function; or: Function }>(baseQuery: T, includeStatusFilter: boolean) => {
       let query = baseQuery
 
-      if (includeStatusFilter) {
-        // Note: ENROLLED/LEFT status is handled separately above; this filters by approval status only
-        if (status !== 'all' && status !== 'ENROLLED' && status !== 'LEFT') {
-          if (status === 'reviewable') {
-            query = query.in('status', ['Verified', 'Approved']) as T
-          } else {
-            query = query.eq('status', status) as T
-          }
+      if (includeStatusFilter && approval !== 'all') {
+        if (approval === 'reviewable') {
+          query = query.in('status', ['Verified', 'Approved']) as T
+        } else if (approval === 'Pending') {
+          // Older rows predate the column default and have a null status.
+          query = query.or('status.is.null,status.eq.Pending') as T
+        } else if (approval === 'unapproved') {
+          query = query.or('status.is.null,status.neq.Approved') as T
+        } else {
+          query = query.eq('status', approval) as T
         }
       }
 
@@ -239,8 +248,8 @@ export async function GET(request: NextRequest) {
     // Apply enrollment filter (Child Left) across entities.
     let enrolledChildPairs: Array<{ eac_no: string | number; reg_no: string | number }> = []
 
-    if (status === 'ENROLLED' || status === 'LEFT') {
-      const childLeftValue = status === 'LEFT'
+    if (enrollment === 'enrolled' || enrollment === 'left') {
+      const childLeftValue = enrollment === 'left'
 
       if (entityType === 'child_data') {
         query = query.eq('child_left', childLeftValue)
@@ -385,12 +394,12 @@ export async function GET(request: NextRequest) {
           return [statusValue, 0] as const
         }
 
-        statusQuery = statusQuery.eq('status', statusValue)
-
-        // Approved card should represent actively enrolled children for Child_Data.
-        if (entityType === 'child_data' && statusValue === 'Approved') {
-          statusQuery = statusQuery.eq('child_left', false)
-        }
+        // A pure approval count. It used to exclude children who had left,
+        // which quietly mixed enrolment into an approval number.
+        statusQuery =
+          statusValue === 'Pending'
+            ? statusQuery.or('status.is.null,status.eq.Pending')
+            : statusQuery.eq('status', statusValue)
 
         const { count: statusCount } = await statusQuery
         return [statusValue, statusCount || 0] as const

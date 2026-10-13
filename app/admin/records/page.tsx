@@ -1,927 +1,304 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRequireRole } from '../../../lib/hooks'
 import { supabase } from '../../../lib/supabase'
+import { getErrorMessage } from '../../../lib/errors'
 import { LoadingSpinner, Alert } from '../../components/UI'
-import { Navbar, Sidebar, PageContainer } from '../../components/Navbar'
-import { ROLE_CONFIG } from '../../../lib/types'
-import {
-  ArrowLeft,
-  Search as SearchIcon,
-  RotateCcw,
-  Inbox,
-  Pencil,
-  Trash2,
-  ChevronLeft,
-  ChevronRight,
-  X,
-  Save,
-  Download,
-} from 'lucide-react'
+import AdminShell from '../AdminShell'
+import ChildProfilePanel, { type SectionKey } from './ChildProfilePanel'
+import { SECTION_SCHEMA, sectionFields, type ChildSectionKey } from '../../../lib/childSections'
+import { Search, Inbox, SlidersHorizontal, X, Pencil, Trash2, Download } from 'lucide-react'
 
-type EntityType = 'child_data' | 'childfmly' | 'childsibling' | 'childuniform' | 'childleaving' | 'vocational_course' | 'computer_course'
-type StatusFilter = 'all' | 'ENROLLED' | 'LEFT'
-type SearchBy = 'name' | 'reg_no' | 'eac_no'
+type EntityType = SectionKey
 type SortDirection = 'asc' | 'desc'
 
-interface ChildDataFilterOptions {
-  eacNos: string[]
-  villagesByEacNo: Record<string, string[]>
-}
+const PAGE_SIZE = 20
 
-interface DataRecord {
-  record_id: number
-  eac_no: string | number
-  reg_no?: string | number
-  status: string
-  created_at: string
-  submitter?: { username: string; role: string }
-  approver?: { username: string; role: string }
-  verified_at?: string
-  first_name?: string
-  last_name?: string
-  trainee_name?: string
-  child_name?: string
-  f_name?: string
-  [key: string]: any
-}
-
-interface StatusSummary {
-  Pending: number
-  Verified: number
-  Approved: number
-  Rejected: number
-}
-
-const ENTITY_LABELS: { [key in EntityType]: string } = {
-  child_data: 'Child Data',
-  childfmly: 'Family',
-  childsibling: 'Siblings',
-  childuniform: 'Uniform',
-  childleaving: 'Leaving',
-  vocational_course: 'Vocational',
-  computer_course: 'Computer'
-}
-
-const VISIBLE_ENTITY_TYPES: EntityType[] = [
-  'child_data',
-  'childfmly',
-  'childsibling',
-  'childuniform',
-  'childleaving'
+const TABS: { key: EntityType; label: string }[] = [
+  { key: 'child_data', label: 'Personal' },
+  { key: 'childfmly', label: 'Family' },
+  { key: 'childsibling', label: 'Siblings' },
+  { key: 'childuniform', label: 'Uniform' },
+  { key: 'childleaving', label: 'Leaving' },
 ]
 
-const NON_EDITABLE_FIELDS = new Set([
-  'id',
-  'record_id',
-  'vocational_id',
-  'computer_id',
-  'submitted_by',
-  'verified_by',
-  'verified_at',
-  'approved_by',
-  'approved_at',
-  'created_at',
-  'updated_at',
-  'status',
-  'submitter',
-  'approver'
-])
-
-const HIDDEN_TABLE_METADATA_FIELDS = new Set([
-  'record_id',
-  'centre_id',
-  'class_std',
-  'submitted_by',
-  'verified_by',
-  'verified_at',
-  'approved_by',
-  'approved_at',
-  'submitter',
-  'approver'
-])
-
-const COLUMN_GROUPS_BY_ENTITY: Record<EntityType, string[]> = {
-  child_data: [
-    'reg_no',
-    'first_name',
-    'last_name',
-    'eac_no',
-    'village_name',
-    'gender',
-    'dob',
-    'age',
-    'class_std_text',
-    'adm_date',
-    'health_status',
-    'blood_group',
-    'height',
-    'weight',
-    'photo_link',
-    'status',
-    'submitted_by',
-    'verified_by',
-    'approved_by',
-    'verified_at',
-    'approved_at',
-    'created_at',
-    'updated_at'
-  ],
-  childfmly: [
-    'eac_no',
-    'reg_no',
-    'f_name',
-    'f_mobile',
-    'm_mobile',
-    'f_aadhar',
-    'f_income',
-    'f_occupation',
-    'm_name',
-    'm_aadhar',
-    'm_income',
-    'm_occupation',
-    'fmly_addr1',
-    'fmly_addr2',
-    'fmly_addr3',
-    'fmly_pincode',
-    'fmly_remarks'
-  ],
-  childsibling: [
-    'eac_no',
-    'reg_no',
-    'names_1',
-    'ages_1',
-    'class_occup_1',
-    'genders_1',
-    'names_2',
-    'ages_2',
-    'class_occup_2',
-    'genders_2',
-    'names_3',
-    'ages_3',
-    'class_occup_3',
-    'genders_3',
-    'names_4',
-    'ages_4',
-    'class_occup_4',
-    'genders_4',
-    'names_5',
-    'ages_5',
-    'class_occup_5',
-    'genders_5',
-    'sibling_remarks'
-  ],
-  childuniform: [
-    'eac_no',
-    'reg_no',
-    'gender',
-    'chudidharsize',
-    'footwearsize',
-    'knickersize',
-    'pant_skirtsize',
-    'shirtsize',
-    'top_pantsize',
-    'uniform_updated'
-  ],
-  childleaving: [
-    'eac_no',
-    'reg_no',
-    'reason',
-    'leav_addr1',
-    'leav_addr2',
-    'leav_addr3',
-    'leav_class',
-    'leav_date',
-    'leav_pincode',
-    'leav_remarks',
-    'pass_status'
-  ],
-  vocational_course: [
-    'reg_no',
-    'eac_no',
-    'trainee_name',
-    'course_name',
-    'institution_name',
-    'start_date',
-    'end_date',
-    'status',
-    'submitted_by',
-    'verified_by',
-    'approved_by',
-    'verified_at',
-    'approved_at',
-    'created_at',
-    'updated_at'
-  ],
-  computer_course: [
-    'reg_no',
-    'eac_no',
-    'child_name',
-    'course_name',
-    'institution_name',
-    'start_date',
-    'end_date',
-    'status',
-    'submitted_by',
-    'verified_by',
-    'approved_by',
-    'verified_at',
-    'approved_at',
-    'created_at',
-    'updated_at'
-  ]
-}
-
-const DEFAULT_PRIORITY_COLUMNS = [
-  'reg_no',
-  'eac_no',
-  'first_name',
-  'last_name',
-  'child_name',
-  'trainee_name',
-  'f_name',
-  'm_name',
-  's_name',
-  'sibling_name',
-  'name',
-  'village_name',
-  'gender',
-  'class_std_text',
-  'status',
-  'created_at',
-  'updated_at'
-]
-
-const DEFAULT_SORT_COLUMN_BY_ENTITY: Record<EntityType, string> = {
-  child_data: 'first_name',
-  childfmly: 'f_name',
-  childsibling: 'reg_no',
-  childuniform: 'reg_no',
-  childleaving: 'reg_no',
-  vocational_course: 'trainee_name',
-  computer_course: 'child_name'
-}
-
-const SORTABLE_COLUMNS_BY_ENTITY: Record<EntityType, Set<string>> = {
-  child_data: new Set([
-    'record_id', 'id', 'reg_no', 'eac_no', 'first_name', 'last_name', 'village_name', 'gender', 'class_std_text', 'adm_date', 'status', 'created_at', 'updated_at',
-  ]),
-  childfmly: new Set([
-    'record_id', 'id', 'reg_no', 'eac_no', 'f_name', 'm_name', 'guardian_name', 'village_name', 'f_mobile', 'm_mobile', 'status', 'created_at', 'updated_at',
-  ]),
-  childsibling: new Set([
-    'record_id', 'id', 'reg_no', 'eac_no', 'sibling_name', 'name', 'gender', 'class_std_text', 'age', 'status', 'created_at', 'updated_at',
-  ]),
-  childuniform: new Set([
-    'record_id', 'id', 'reg_no', 'eac_no', 'gender', 'uniform_size', 'shoe_size', 'status', 'created_at', 'updated_at',
-  ]),
-  childleaving: new Set([
-    'record_id', 'id', 'reg_no', 'eac_no', 'reason', 'leaving_reason', 'leave_date', 'status', 'created_at', 'updated_at',
-  ]),
-  vocational_course: new Set([
-    'record_id', 'vocational_id', 'id', 'reg_no', 'eac_no', 'trainee_name', 'course_name', 'institution_name', 'status', 'created_at', 'updated_at',
-  ]),
-  computer_course: new Set([
-    'record_id', 'computer_id', 'id', 'reg_no', 'eac_no', 'child_name', 'course_name', 'institution_name', 'status', 'created_at', 'updated_at',
-  ]),
-}
-
-const ENTITY_ID_CANDIDATES: Record<EntityType, string[]> = {
-  child_data: ['record_id', 'id'],
-  childfmly: ['record_id', 'id'],
-  childsibling: ['record_id', 'id'],
-  childuniform: ['record_id', 'id'],
-  childleaving: ['record_id', 'id'],
-  vocational_course: ['record_id', 'vocational_id', 'id'],
-  computer_course: ['record_id', 'computer_id', 'id']
-}
-
-const EXPORTABLE_ENTITY_TYPES: EntityType[] = ['child_data', 'childfmly', 'childsibling', 'childuniform', 'childleaving']
-
-const CHILD_DATA_VISIBLE_COLUMNS = [
-  'eac_no',
-  'reg_no',
-  'first_name',
-  'last_name',
-  'gender',
-  'dateofbirth',
-  'class_std_text',
-  'blood_group',
-  'height',
-  'weight',
-  'photo_link',
-  'aadhar_no',
-  'birth_place',
-  'caste',
-  'child_left',
-  'child_other_info',
-  'district',
-  'fav_subject',
-  'health',
-  'life_ambition',
-  'medium_of_study',
-  'mother_tongue',
-  'panchayat',
-  'pen_no',
-  'religion',
-  'sats_no',
-  'school_category',
-  'school_name',
-  'taluk',
-  'village_name'
-]
-
-const CHILD_DATA_SORT_COLUMNS = new Set(['eac_no', 'reg_no'])
-
-const TABLE_COLUMN_LABELS: Record<string, string> = {
-  eac_no: 'EAC No',
-  reg_no: 'REG No',
-  f_name: 'F Name',
-  f_mobile: 'F Mobile',
-  m_mobile: 'M Mobile',
-  f_aadhar: 'F Aadhar',
-  f_income: 'F Income',
-  f_occupation: 'F Occupation',
-  m_name: 'M Name',
-  m_aadhar: 'M Aadhar',
-  m_income: 'M Income',
-  m_occupation: 'M Occupation',
-  fmly_addr1: 'Family Address 1',
-  fmly_addr2: 'Family Address 2',
-  fmly_addr3: 'Family Address 3',
-  fmly_pincode: 'Family Pincode',
-  fmly_remarks: 'Family Remarks',
-  names_1: 'Names 1',
-  ages_1: 'Ages 1',
-  class_occup_1: 'Class/Occupation 1',
-  genders_1: 'Genders 1',
-  names_2: 'Names 2',
-  ages_2: 'Ages 2',
-  class_occup_2: 'Class/Occupation 2',
-  genders_2: 'Genders 2',
-  names_3: 'Names 3',
-  ages_3: 'Ages 3',
-  class_occup_3: 'Class/Occupation 3',
-  genders_3: 'Genders 3',
-  names_4: 'Names 4',
-  ages_4: 'Ages 4',
-  class_occup_4: 'Class/Occupation 4',
-  genders_4: 'Genders 4',
-  names_5: 'Names 5',
-  ages_5: 'Ages 5',
-  class_occup_5: 'Class/Occupation 5',
-  genders_5: 'Genders 5',
-  sibling_remarks: 'Sibling Remarks',
-  chudidharsize: 'Chudidhar Size',
-  footwearsize: 'Footwear Size',
-  knickersize: 'Knicker Size',
-  pant_skirtsize: 'Pant/Skirt Size',
-  shirtsize: 'Shirt Size',
-  top_pantsize: 'Top/Pant Size',
-  uniform_updated: 'Uniform Updated',
-  reason: 'Reason',
-  leav_addr1: 'Leaving Address 1',
-  leav_addr2: 'Leaving Address 2',
-  leav_addr3: 'Leaving Address 3',
-  leav_class: 'Leaving Class',
-  leav_date: 'Leaving Date',
-  leav_pincode: 'Leaving Pincode',
-  leav_remarks: 'Leaving Remarks',
-  pass_status: 'Pass Status'
-}
-
-const TABLE_NAME_BY_ENTITY: Record<EntityType, string> = {
+const TABLE_BY_ENTITY: Record<EntityType, string> = {
   child_data: 'Child_Data',
   childfmly: 'childfmly',
   childsibling: 'childsibling',
   childuniform: 'childuniform',
   childleaving: 'childleaving',
-  vocational_course: 'vocational_course',
-  computer_course: 'computer_course'
+}
+
+interface Column {
+  key: string
+  label: string
+  width: number
+  /** Right-aligned, monospaced: ids and numbers. */
+  mono?: boolean
+}
+
+/**
+ * Columns per tab.
+ *
+ * The section tabs take theirs from the shared field definitions, so a column
+ * can't drift away from what the editor writes. Personal has no such schema, so
+ * it lists the columns worth scanning and leaves the rest to the editor.
+ */
+const PERSONAL_COLUMNS: Column[] = [
+  { key: 'gender', label: 'Gender', width: 70 },
+  { key: 'dateofbirth', label: 'Date of birth', width: 96 },
+  { key: 'class_std_text', label: 'Class', width: 88 },
+  { key: 'village', label: 'Village', width: 110 },
+  { key: 'district', label: 'District', width: 100 },
+  { key: 'taluk', label: 'Taluk', width: 100 },
+  { key: 'school_name', label: 'School', width: 150 },
+  { key: 'adm_date', label: 'Admitted', width: 96 },
+  { key: 'aadhar_no', label: 'Aadhaar', width: 120, mono: true },
+  { key: 'blood_group', label: 'Blood group', width: 90 },
+  { key: 'mother_tongue', label: 'Mother tongue', width: 110 },
+]
+
+const columnsFor = (entity: EntityType): Column[] => {
+  if (entity === 'child_data') return PERSONAL_COLUMNS
+  return sectionFields(entity as ChildSectionKey).map((f) => ({
+    key: f.key,
+    label: f.label,
+    width: f.kind === 'textarea' ? 190 : f.kind === 'number' ? 90 : 130,
+    mono: f.kind === 'number',
+  }))
+}
+
+/** Group headings above the section columns, so 15 fields stay readable. */
+const groupSpansFor = (entity: EntityType): { title: string; span: number }[] | null => {
+  if (entity === 'child_data') return null
+  const groups = SECTION_SCHEMA[entity as ChildSectionKey].groups
+  return groups.map((g) => ({ title: g.title ?? '', span: g.fields.length }))
+}
+
+/** Only these reach the database; anything else would be ignored server-side. */
+const SORTS = [
+  { value: 'eac_no:asc', label: 'Centre, then Reg No' },
+  { value: 'reg_no:asc', label: 'Reg No' },
+  { value: 'first_name:asc', label: 'Name A–Z' },
+  { value: 'village_name:asc', label: 'Centre village' },
+  { value: 'created_at:desc', label: 'Recently added' },
+]
+
+const APPROVAL_CHIPS = [
+  { value: 'all', label: 'All' },
+  { value: 'unapproved', label: 'Not approved' },
+  { value: 'Verified', label: 'Awaiting approval' },
+  { value: 'Rejected', label: 'Sent back' },
+  { value: 'Approved', label: 'Approved' },
+]
+
+const ENROLMENT_CHIPS = [
+  { value: 'all', label: 'Everyone' },
+  { value: 'enrolled', label: 'Enrolled' },
+  { value: 'left', label: 'Left' },
+]
+
+interface RecordRow {
+  record_id: number
+  eac_no: string | number
+  reg_no?: string | number
+  status?: string
+  child_left?: boolean | string
+  [key: string]: any
+}
+
+const txt = (value: unknown) => String(value ?? '').trim()
+
+const hasLeft = (row: RecordRow) => row.child_left === true || String(row.child_left).toLowerCase() === 'true'
+
+function approvalChipClass(status?: string) {
+  switch (status) {
+    case 'Approved':
+      return 'bg-status-approved-bg text-status-approved-fg'
+    case 'Verified':
+      return 'bg-status-verified-bg text-status-verified-fg'
+    case 'Rejected':
+      return 'bg-status-returned-bg text-status-returned-fg'
+    default:
+      return 'bg-status-pending-bg text-status-pending-fg'
+  }
+}
+
+const approvalLabel = (status?: string) =>
+  status === 'Rejected' ? 'Sent back' : status === 'Verified' ? 'Awaiting' : status || 'Pending'
+
+function cellValue(row: RecordRow, key: string): string {
+  const raw = row[key]
+  if (raw === null || raw === undefined || txt(raw) === '') return '—'
+  if (typeof raw === 'boolean') return raw ? 'Yes' : 'No'
+  if (/date|_at$/.test(key)) return txt(raw).slice(0, 10)
+  return txt(raw)
 }
 
 export default function AdminRecordsPage() {
-  const router = useRouter()
   const { profile, loading: authLoading, isAuthorized } = useRequireRole(['admin'])
 
-  const [activeTab, setActiveTab] = useState<EntityType>('child_data')
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
-  const [searchBy, setSearchBy] = useState<SearchBy>('name')
-  const [searchQuery, setSearchQuery] = useState('')
-  const [records, setRecords] = useState<DataRecord[]>([])
-  const [totalRecords, setTotalRecords] = useState(0)
+  const [token, setToken] = useState<string | null>(null)
+  const [entity, setEntity] = useState<EntityType>('child_data')
+  const [rows, setRows] = useState<RecordRow[]>([])
+  const [total, setTotal] = useState(0)
+  const [summary, setSummary] = useState<Record<string, number>>({})
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
-  const [sessionToken, setSessionToken] = useState<string | null>(null)
-  const [eacNoFilter, setEacNoFilter] = useState('')
-  const [villageFilter, setVillageFilter] = useState('')
-  const [childDataFilterOptions, setChildDataFilterOptions] = useState<ChildDataFilterOptions>({
-    eacNos: [],
-    villagesByEacNo: {}
-  })
-  const [statusSummary, setStatusSummary] = useState<StatusSummary>({
-    Pending: 0,
-    Verified: 0,
-    Approved: 0,
-    Rejected: 0,
-  })
+  const [notice, setNotice] = useState('')
 
-  // Edit modal state
-  const [editingRecord, setEditingRecord] = useState<DataRecord | null>(null)
-  const [editFormData, setEditFormData] = useState<{ [key: string]: any }>({})
-  const [saving, setSaving] = useState(false)
-  const [uploadingPhoto, setUploadingPhoto] = useState(false)
-  const [photoPreviewModal, setPhotoPreviewModal] = useState<{ isOpen: boolean; url: string }>({
-    isOpen: false,
-    url: ''
-  })
-  const [deletingRecord, setDeletingRecord] = useState<DataRecord | null>(null)
-  const [deleting, setDeleting] = useState(false)
+  const [searchInput, setSearchInput] = useState('')
+  const [search, setSearch] = useState('')
+  const [searchBy, setSearchBy] = useState<'name' | 'reg_no' | 'eac_no'>('name')
+  const [approval, setApproval] = useState('all')
+  const [enrollment, setEnrollment] = useState('all')
+  const [eacNo, setEacNo] = useState('')
+  const [village, setVillage] = useState('')
+  const [showMore, setShowMore] = useState(false)
+  const [sort, setSort] = useState('created_at:desc')
+  const [sortColumn, sortDirection] = sort.split(':') as [string, SortDirection]
+
+  const [filterOptions, setFilterOptions] = useState<{
+    eacNos: string[]
+    villagesByEacNo: Record<string, string[]>
+  }>({ eacNos: [], villagesByEacNo: {} })
+
+  const [editing, setEditing] = useState<{ eacNo: string | number; regNo: string | number } | null>(null)
+  const [deleting, setDeleting] = useState<RecordRow | null>(null)
+  const [deleteBusy, setDeleteBusy] = useState(false)
   const [exporting, setExporting] = useState(false)
-  const [sortColumn, setSortColumn] = useState<string>('created_at')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
 
-  const isSortableColumn = (column: string) => {
-    const sortableColumns = SORTABLE_COLUMNS_BY_ENTITY[activeTab]
-    return sortableColumns.has(column)
-  }
-
-  const isChildDataTab = activeTab === 'child_data'
-
-  const getStickyHeaderClass = (field: string) => {
-    return ''
-  }
-
-  const getStickyCellClass = (field: string) => {
-    return ''
-  }
-
-  const getEntityIdentity = (record: DataRecord) => {
-    const keys = ENTITY_ID_CANDIDATES[activeTab]
-    for (const key of keys) {
-      const value = record[key]
-      if (value !== null && value !== undefined && String(value).trim() !== '') {
-        return { key, value }
-      }
-    }
-    return null
-  }
-
-  const visibleColumns = useMemo(() => {
-    if (activeTab !== 'child_data' && COLUMN_GROUPS_BY_ENTITY[activeTab].length > 0) {
-      return COLUMN_GROUPS_BY_ENTITY[activeTab]
-    }
-    if (isChildDataTab) return CHILD_DATA_VISIBLE_COLUMNS
-    if (records.length === 0) return []
-    const allColumns = Array.from(new Set(records.flatMap((record) => Object.keys(record))))
-    const filteredColumns = allColumns.filter((column) => {
-      if (HIDDEN_TABLE_METADATA_FIELDS.has(column)) return false
-      if (column === 'status') return false
-      if ((activeTab === 'vocational_course' || activeTab === 'computer_course') && column === 'record_id') return false
-      return true
-    })
-
-    const tabPriority = COLUMN_GROUPS_BY_ENTITY[activeTab] || []
-    const prioritized = [...tabPriority, ...DEFAULT_PRIORITY_COLUMNS].filter(
-      (column, index, arr) => arr.indexOf(column) === index && filteredColumns.includes(column)
-    )
-
-    const remaining = filteredColumns
-      .filter((column) => !prioritized.includes(column))
-      .sort((a, b) => a.localeCompare(b))
-
-    return [...prioritized, ...remaining]
-  }, [records, activeTab, isChildDataTab])
-
-  const handleSort = (column: string) => {
-    if (!isSortableColumn(column)) return
-
-    if (sortColumn === column) {
-      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
-      setPage(1)
-      return
-    }
-
-    setSortColumn(column)
-    setSortDirection('asc')
-    setPage(1)
-  }
-
-  const getColumnLabel = (field: string) => {
-    const labelMap: Record<string, string> = {
-      ...TABLE_COLUMN_LABELS,
-      eac_no: 'EAC No',
-      reg_no: 'REG No',
-      first_name: 'First Name',
-      last_name: 'Last Name',
-      gender: 'Gender',
-      dateofbirth: 'Date of Birth',
-      class_std_text: 'Class Std Text',
-      blood_group: 'Blood Group',
-      height: 'Height',
-      weight: 'Weight',
-      photo_link: 'Photo Link',
-      aadhar_no: 'Aadhar No',
-      birth_place: 'Birth Place',
-      caste: 'Caste',
-      child_left: 'Child Left',
-      child_other_info: 'Child Other Info',
-      district: 'District',
-      fav_subject: 'Fav Subject',
-      health: 'Health',
-      life_ambition: 'Life Ambition',
-      medium_of_study: 'Medium of Study',
-      mother_tongue: 'Mother Tongue',
-      panchayat: 'Panchayat',
-      pen_no: 'PEN No',
-      religion: 'Religion',
-      sats_no: 'SATS No',
-      school_category: 'School Category',
-      school_name: 'School Name',
-      taluk: 'Taluk',
-      village_name: isChildDataTab ? 'Village' : 'EAC Village'
-    }
-
-    if (labelMap[field]) return labelMap[field]
-    return field.replace(/_/g, ' ')
-  }
-
-  const getChildDataVillageOptions = () => {
-    if (eacNoFilter) {
-      return childDataFilterOptions.villagesByEacNo[eacNoFilter] || []
-    }
-
-    const allVillages = Object.values(childDataFilterOptions.villagesByEacNo).flat()
-    return Array.from(new Set(allVillages)).sort((a, b) => a.localeCompare(b))
-  }
-
-  const loadChildDataFilterOptions = async (token: string) => {
-    if (!isChildDataTab) return
-
-    try {
-      const params = new URLSearchParams({
-        entityType: 'child_data',
-        status: 'all',
-        search: '',
-        searchBy: 'name',
-        sortColumn: 'eac_no',
-        sortDirection: 'asc',
-        page: '1',
-        limit: '1',
-        includeFilterOptions: '1'
-      })
-
-      const res = await fetch(`/api/admin/records/list?${params}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error)
-
-      setChildDataFilterOptions(json.filterOptions || { eacNos: [], villagesByEacNo: {} })
-    } catch (err: any) {
-      setError(err.message || 'Failed to load EAC filters')
-    }
-  }
-
-  const getSortSummaryLabel = () => {
-    const label = getColumnLabel(sortColumn)
-    const prettyLabel =
-      label === label.toUpperCase()
-        ? label
-        : label.replace(/\b\w/g, (char) => char.toUpperCase())
-    const prettyDirection = sortDirection === 'asc' ? 'Asc' : 'Desc'
-    return `${prettyLabel} (${prettyDirection})`
-  }
-
-  const getStatusBadgeClass = (status: string) => {
-    if (status === 'Pending') return 'bg-yellow-100 text-yellow-800'
-    if (status === 'Approved') return 'bg-green-100 text-green-800'
-    if (status === 'Verified') return 'bg-blue-100 text-blue-800'
-    return 'bg-red-100 text-red-800'
-  }
+  const columns = useMemo(() => columnsFor(entity), [entity])
+  const groupSpans = useMemo(() => groupSpansFor(entity), [entity])
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   useEffect(() => {
-    const init = async () => {
-      const { data: session } = await supabase.auth.getSession()
-      const token = session.session?.access_token || null
-      if (token) {
-        setSessionToken(token)
-        await loadChildDataFilterOptions(token)
-        await fetchRecords(token)
-      }
-    }
-    if (isAuthorized) {
-      init()
-    }
+    if (!isAuthorized) return
+    supabase.auth.getSession().then(({ data }) => setToken(data.session?.access_token ?? null))
   }, [isAuthorized])
 
-  useEffect(() => {
-    if (sessionToken) {
-      fetchRecords(sessionToken)
-    }
-  }, [activeTab, statusFilter, page, sortColumn, sortDirection, sessionToken, eacNoFilter, villageFilter])
+  const villageOptions = useMemo(() => {
+    if (eacNo) return filterOptions.villagesByEacNo[eacNo] || []
+    return Array.from(new Set(Object.values(filterOptions.villagesByEacNo).flat())).sort((a, b) => a.localeCompare(b))
+  }, [eacNo, filterOptions])
 
-  useEffect(() => {
-    if (!isChildDataTab) {
-      setEacNoFilter('')
-      setVillageFilter('')
-      return
-    }
-
-    if (eacNoFilter && !childDataFilterOptions.eacNos.includes(eacNoFilter)) {
-      setEacNoFilter('')
-      setVillageFilter('')
-    }
-
-    if (villageFilter && !getChildDataVillageOptions().includes(villageFilter)) {
-      setVillageFilter('')
-    }
-  }, [activeTab, childDataFilterOptions.eacNos, eacNoFilter, isChildDataTab, villageFilter])
-
-  useEffect(() => {
-    if (!SORTABLE_COLUMNS_BY_ENTITY[activeTab].has(sortColumn)) {
-      setSortColumn('eac_no')
-      setSortDirection('asc')
-    }
-  }, [activeTab, sortColumn])
-
-  const fetchRecords = async (
-    token: string,
-    overrides?: Partial<{
-      entityType: EntityType
-      status: StatusFilter
-      search: string
-      searchBy: SearchBy
-      sortColumn: string
-      sortDirection: SortDirection
-      page: number
-    }>
-  ) => {
+  const fetchRows = useCallback(async () => {
+    if (!token) return
     setLoading(true)
     setError('')
-    try {
-      const requestEntityType = overrides?.entityType || activeTab
-      const params = new URLSearchParams({
-        entityType: requestEntityType,
-        status: overrides?.status || statusFilter,
-        search: overrides?.search ?? searchQuery,
-        searchBy: overrides?.searchBy || searchBy,
-        sortColumn: overrides?.sortColumn || sortColumn,
-        sortDirection: overrides?.sortDirection || sortDirection,
-        page: String(overrides?.page || page),
-        limit: '20'
-      })
 
-      if (requestEntityType === 'child_data') {
-        if (eacNoFilter) params.set('eacNoFilter', eacNoFilter)
-        if (villageFilter) params.set('villageFilter', villageFilter)
-      }
+    try {
+      const params = new URLSearchParams({
+        entityType: entity,
+        approval,
+        enrollment,
+        search,
+        searchBy,
+        sortColumn,
+        sortDirection,
+        page: String(page),
+        limit: String(PAGE_SIZE),
+        includeFilterOptions: '1',
+      })
+      if (eacNo) params.set('eacNoFilter', eacNo)
+      if (village) params.set('villageFilter', village)
 
       const res = await fetch(`/api/admin/records/list?${params}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       })
       const json = await res.json()
-      if (!res.ok) throw new Error(json.error)
-      setRecords(json.data || [])
-      setTotalRecords(json.total || 0)
-      setStatusSummary(json.statusSummary || { Pending: 0, Verified: 0, Approved: 0, Rejected: 0 })
-    } catch (err: any) {
-      setError(err.message)
+      if (!res.ok) throw new Error(json.error || 'Could not load records')
+
+      setRows(json.data || [])
+      setTotal(json.total || 0)
+      setSummary(json.statusSummary || {})
+      if (json.filterOptions) setFilterOptions(json.filterOptions)
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Could not load records.'))
     } finally {
       setLoading(false)
     }
-  }
+  }, [token, entity, approval, enrollment, search, searchBy, sortColumn, sortDirection, page, eacNo, village])
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (sessionToken) {
-      setPage(1)
-      fetchRecords(sessionToken, {
-        page: 1,
-        search: searchQuery,
-        searchBy,
-      })
-    }
-  }
+  useEffect(() => {
+    fetchRows()
+  }, [fetchRows])
 
-  const handleRefreshFilters = () => {
-    setSearchQuery('')
-    setSearchBy('name')
-    setStatusFilter('all')
-    setEacNoFilter('')
-    setVillageFilter('')
-    setSortColumn('eac_no')
-    setSortDirection('asc')
+  useEffect(() => {
     setPage(1)
-    if (sessionToken) {
-      fetchRecords(sessionToken, {
-        page: 1,
-        status: 'all',
-        search: '',
-        searchBy: 'name',
-        entityType: activeTab,
-        sortColumn: 'eac_no',
-        sortDirection: 'asc'
-      })
-    }
-  }
+  }, [entity, approval, enrollment, search, searchBy, eacNo, village])
 
-  const handleEntitySort = (column: 'eac_no' | 'reg_no') => {
-    if (sortColumn === column) {
-      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
-    } else {
-      setSortColumn(column)
-      setSortDirection('asc')
-    }
-    setPage(1)
-  }
-
-  const handleEdit = (record: DataRecord) => {
-    setEditingRecord(record)
-    // Create a copy for editing, excluding meta fields
-    const editableFields: { [key: string]: any } = { ...record }
-    Array.from(NON_EDITABLE_FIELDS).forEach((field) => {
-      delete editableFields[field]
-    })
-    setEditFormData(editableFields)
-  }
-
-  const handlePhotoUpload = async (file: File) => {
-    if (!file) return
-    if (file.size > 5 * 1024 * 1024) {
-      setError('Image must be 5MB or smaller')
-      return
-    }
-
-    setUploadingPhoto(true)
-    setError('')
-
-    try {
-      const safeName = file.name.replace(/\s+/g, '-')
-      const fileName = `${Date.now()}-${safeName}`
-      const filePath = `admin_records_photos/${fileName}`
-
-      const { error: uploadError } = await supabase.storage
-        .from('profiles')
-        .upload(filePath, file)
-
-      if (uploadError) throw uploadError
-
-      const { data } = supabase.storage.from('profiles').getPublicUrl(filePath)
-      setEditFormData((prev) => ({
-        ...prev,
-        photo_link: data.publicUrl
-      }))
-    } catch (err: any) {
-      setError(err.message || 'Failed to upload photo')
-    } finally {
-      setUploadingPhoto(false)
-    }
-  }
-
-  const handleSaveEdit = async () => {
-    if (!sessionToken || !editingRecord) return
-    const identity = getEntityIdentity(editingRecord)
-    if (!identity) {
-      setError('Unable to determine record identity for update')
-      return
-    }
-    setSaving(true)
-    setError('')
-    try {
-      const res = await fetch('/api/admin/records/update', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${sessionToken}`
-        },
-        body: JSON.stringify({
-          entityType: activeTab,
-          entityId: identity.value,
-          entityKey: identity.key,
-          updates: editFormData
-        })
-      })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error)
-      setSuccess('Record updated successfully!')
-      setEditingRecord(null)
-      setTimeout(() => setSuccess(''), 3000)
-      await fetchRecords(sessionToken)
-    } catch (err: any) {
-      setError(err.message)
-    } finally {
-      setSaving(false)
-    }
-  }
+  // The village list is per centre, so a stale pick would return nothing.
+  useEffect(() => {
+    if (village && !villageOptions.includes(village)) setVillage('')
+  }, [village, villageOptions])
 
   const handleDelete = async () => {
-    if (!sessionToken || !deletingRecord) return
-
-    const identity = getEntityIdentity(deletingRecord)
-    if (!identity) {
-      setError('Unable to determine record identity for delete')
-      return
-    }
-
-    setDeleting(true)
+    if (!token || !deleting) return
+    setDeleteBusy(true)
     setError('')
     try {
       const res = await fetch('/api/admin/records/delete', {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${sessionToken}`,
-        },
-        body: JSON.stringify({
-          entityType: activeTab,
-          entityId: identity.value,
-          entityKey: identity.key,
-        }),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ entityType: entity, entityId: deleting.record_id, entityKey: 'record_id' }),
       })
       const json = await res.json()
-      if (!res.ok) throw new Error(json.error)
-
-      setSuccess('Record deleted successfully!')
-      setDeletingRecord(null)
-      setTimeout(() => setSuccess(''), 3000)
-      await fetchRecords(sessionToken)
-    } catch (err: any) {
-      setError(err.message)
+      if (!res.ok) throw new Error(json.error || 'Could not delete this record')
+      setDeleting(null)
+      setNotice('Record deleted.')
+      setTimeout(() => setNotice(''), 3000)
+      fetchRows()
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Could not delete this record.'))
     } finally {
-      setDeleting(false)
+      setDeleteBusy(false)
     }
   }
 
-  const handleExportCSV = async () => {
-    if (!EXPORTABLE_ENTITY_TYPES.includes(activeTab)) {
-      setError('CSV export is only available for child data tables.')
-      return
-    }
-
+  const handleExport = async () => {
     setExporting(true)
     setError('')
-
     try {
-      const tableName = TABLE_NAME_BY_ENTITY[activeTab]
-      const pageSize = 1000
-      let from = 0
-      const rows: Record<string, any>[] = []
-
-      while (true) {
-        const { data, error } = await supabase
-          .from(tableName)
+      const table = TABLE_BY_ENTITY[entity]
+      const all: Record<string, any>[] = []
+      const size = 1000
+      for (let from = 0; ; from += size) {
+        const { data, error: pageError } = await supabase
+          .from(table)
           .select('*')
           .order('created_at', { ascending: false })
-          .range(from, from + pageSize - 1)
-
-        if (error) throw error
-
-        const chunk = (data || []) as Record<string, any>[]
-        rows.push(...chunk)
-
-        if (chunk.length < pageSize) break
-        from += pageSize
+          .range(from, from + size - 1)
+        if (pageError) throw pageError
+        all.push(...(data || []))
+        if (!data || data.length < size) break
       }
+      if (all.length === 0) throw new Error('There is nothing to export in this table.')
 
-      if (rows.length === 0) {
-        setError(`No records found in ${ENTITY_LABELS[activeTab]} to export.`)
-        return
-      }
+      const headerSet = new Set<string>()
+      for (const row of all) Object.keys(row).forEach((k) => headerSet.add(k))
+      const headers = Array.from(headerSet)
 
-      const headers = Array.from(new Set(rows.flatMap((row) => Object.keys(row))))
-
-      const escapeCsv = (value: unknown) => {
+      const escape = (value: unknown) => {
         if (value === null || value === undefined) return ''
-        const str = String(value)
-        const escaped = str.replace(/"/g, '""')
-        return /[",\n]/.test(escaped) ? `"${escaped}"` : escaped
+        const text = typeof value === 'object' ? JSON.stringify(value) : String(value)
+        return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
       }
 
-      const csv = [
-        headers.join(','),
-        ...rows.map((row) => headers.map((header) => escapeCsv(row[header])).join(','))
-      ].join('\n')
-
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      const dateStamp = new Date().toISOString().split('T')[0]
-      a.href = url
-      a.download = `${activeTab}_${dateStamp}.csv`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
+      const csv = [headers.join(','), ...all.map((row) => headers.map((h) => escape(row[h])).join(','))].join('\n')
+      const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }))
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `${table}-${new Date().toISOString().slice(0, 10)}.csv`
+      link.click()
       URL.revokeObjectURL(url)
-
-      setSuccess(`Exported ${rows.length} records from ${ENTITY_LABELS[activeTab]}.`)
-      setTimeout(() => setSuccess(''), 3000)
-    } catch (err: any) {
-      setError(err.message || 'Failed to export CSV')
+      setNotice(`Exported ${all.length.toLocaleString()} rows.`)
+      setTimeout(() => setNotice(''), 3000)
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Could not export this table.'))
     } finally {
       setExporting(false)
     }
@@ -929,7 +306,7 @@ export default function AdminRecordsPage() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-surface">
         <LoadingSpinner size="lg" />
       </div>
     )
@@ -937,478 +314,370 @@ export default function AdminRecordsPage() {
 
   if (!isAuthorized || !profile) {
     return (
-      <main className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-lg p-6 max-w-md text-center">
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">Access Denied</h1>
-          <p className="text-slate-600">You don't have permission to access this page.</p>
+      <main className="flex min-h-screen items-center justify-center bg-surface p-4">
+        <div className="max-w-md rounded-lg border border-rule p-6 text-center">
+          <h1 className="mb-2 text-2xl font-semibold">Access denied</h1>
+          <p className="text-ink-muted">You don&apos;t have permission to view this page.</p>
         </div>
       </main>
     )
   }
 
-  const roleInfo = ROLE_CONFIG.find(r => r.value === 'admin')!
-  const totalPages = Math.ceil(totalRecords / 20)
+  const selectClass =
+    'h-[30px] rounded-md border border-rule-strong bg-surface px-2.5 text-[12.5px] text-ink outline-none focus:border-blue-500'
+
+  const chipRow = (
+    label: string,
+    options: { value: string; label: string }[],
+    current: string,
+    onPick: (value: string) => void
+  ) => (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <span className="w-[68px] shrink-0 text-[11px] font-medium text-ink-faint">{label}</span>
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          onClick={() => onPick(option.value)}
+          className={`h-[26px] rounded-md px-2.5 text-[12.5px] transition-colors ${
+            current === option.value
+              ? 'bg-ink text-surface'
+              : 'border border-rule-strong text-ink hover:bg-surface-hover'
+          }`}
+        >
+          {option.label}
+          {option.value !== 'all' && summary[option.value] !== undefined && (
+            <span className="ml-1.5 font-mono text-[11px] opacity-70">{summary[option.value]}</span>
+          )}
+        </button>
+      ))}
+    </div>
+  )
 
   return (
-    <main className="min-h-screen bg-slate-50">
-      <Navbar
-        username={profile.username}
-        role="admin"
-        roleLabel={roleInfo.label}
-        roleColor={roleInfo.color}
-      />
-      <Sidebar role="admin" />
+    <AdminShell active="/admin/records" breadcrumb={['Manage records', 'All records']} username={profile.username}>
+      <div className="px-6 pb-10 pt-5">
+        {error && <Alert type="error" message={error} className="mb-4" />}
+        {notice && <Alert type="success" message={notice} className="mb-4" />}
 
-      <PageContainer>
-        <div className="p-8">
-          {/* Header */}
-          <div className="mb-8 flex items-center justify-between">
-            <div>
-              <h2 className="text-3xl font-bold text-slate-900">All Records</h2>
-              <p className="text-slate-600 mt-2">View, search, and edit all records</p>
-            </div>
-            <div className="flex items-center gap-3">
-              {VISIBLE_ENTITY_TYPES.includes(activeTab) && (
-                <>
-                  <button
-                    onClick={() => handleEntitySort('eac_no')}
-                    className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 border ${sortColumn === 'eac_no'
-                      ? 'bg-slate-900 text-white border-slate-900 hover:bg-slate-800'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                      }`}
-                  >
-                    Sort by EAC No ({sortColumn === 'eac_no' ? sortDirection.toUpperCase() : 'ASC'})
-                  </button>
-                  <button
-                    onClick={() => handleEntitySort('reg_no')}
-                    className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 border font-semibold shadow-sm ${sortColumn === 'reg_no'
-                      ? 'bg-blue-700 text-white border-blue-700 hover:bg-blue-800 ring-2 ring-blue-200'
-                      : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
-                      }`}
-                  >
-                    Sort by REG No ({sortColumn === 'reg_no' ? sortDirection.toUpperCase() : 'ASC'})
-                  </button>
-                </>
-              )}
-              {EXPORTABLE_ENTITY_TYPES.includes(activeTab) && (
-                <button
-                  onClick={handleExportCSV}
-                  disabled={exporting}
-                  className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 flex items-center gap-2"
-                >
-                  <Download className="w-4 h-4" />
-                  {exporting ? 'Exporting...' : 'Export as CSV'}
-                </button>
-              )}
-              <button
-                onClick={() => router.push('/admin')}
-                className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors flex items-center gap-2"
-              >
-                <ArrowLeft className="w-4 h-4" /> Back to Dashboard
-              </button>
-            </div>
+        <div className="mb-4 flex items-center justify-between gap-5">
+          <h1 className="text-xl font-semibold tracking-tight">All records</h1>
+          <div className="flex items-center gap-3">
+            <span className="text-[12.5px] text-ink-faint">
+              {loading ? 'Counting…' : `${total.toLocaleString()} ${total === 1 ? 'row' : 'rows'}`}
+            </span>
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={exporting}
+              className="flex h-[30px] items-center gap-1.5 rounded-md border border-rule-strong px-2.5 text-[12.5px] transition-colors hover:bg-surface-hover disabled:opacity-50"
+            >
+              <Download className="h-[13px] w-[13px] text-ink-muted" />
+              {exporting ? 'Exporting…' : 'Export CSV'}
+            </button>
+          </div>
+        </div>
+
+        {/* One tab per table */}
+        <div className="mb-3 flex gap-1 border-b border-rule">
+          {TABS.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setEntity(tab.key)}
+              className={`-mb-px h-[32px] border-b-2 px-3 text-[13px] transition-colors ${
+                entity === tab.key
+                  ? 'border-ink font-medium text-ink'
+                  : 'border-transparent text-ink-muted hover:text-ink'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="mb-3 flex flex-col gap-2">
+          {chipRow('Approval', APPROVAL_CHIPS, approval, setApproval)}
+          {chipRow('Enrolment', ENROLMENT_CHIPS, enrollment, setEnrollment)}
+        </div>
+
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              setSearch(searchInput.trim())
+            }}
+            className="flex h-[30px] w-[260px] items-center gap-2 rounded-md border border-rule-strong px-2.5 focus-within:border-blue-500"
+          >
+            <Search className="h-[13px] w-[13px] shrink-0 text-ink-faint" />
+            <input
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder={searchBy === 'name' ? 'Child name' : searchBy === 'reg_no' ? 'Reg No' : 'EAC No'}
+              className="min-w-0 flex-1 bg-transparent text-[12.5px] outline-none placeholder:text-ink-faint"
+            />
+          </form>
+
+          <select value={searchBy} onChange={(e) => setSearchBy(e.target.value as typeof searchBy)} className={selectClass}>
+            <option value="name">by name</option>
+            <option value="reg_no">by Reg No</option>
+            <option value="eac_no">by EAC No</option>
+          </select>
+
+          <select value={eacNo} onChange={(e) => setEacNo(e.target.value)} className={selectClass}>
+            <option value="">All centres</option>
+            {filterOptions.eacNos.map((eac) => (
+              <option key={eac} value={eac}>
+                EAC {eac}
+              </option>
+            ))}
+          </select>
+
+          <button
+            type="button"
+            onClick={() => setShowMore((v) => !v)}
+            className="flex h-[30px] items-center gap-1.5 rounded-md border border-rule-strong px-2.5 text-[12.5px] transition-colors hover:bg-surface-hover"
+          >
+            <SlidersHorizontal className="h-[13px] w-[13px] text-ink-muted" />
+            More filters
+          </button>
+
+          <div className="ml-auto flex items-center gap-2">
+            <span className="text-[12px] text-ink-faint">Sort</span>
+            <select value={sort} onChange={(e) => setSort(e.target.value)} className={selectClass}>
+              {SORTS.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {showMore && (
+          <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-rule bg-surface-sunken px-3 py-2.5">
+            <select value={village} onChange={(e) => setVillage(e.target.value)} className={selectClass}>
+              <option value="">Any centre village</option>
+              {villageOptions.map((v) => (
+                <option key={v} value={v}>
+                  {v}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() => {
+                setApproval('all')
+                setEnrollment('all')
+                setEacNo('')
+                setVillage('')
+                setSearch('')
+                setSearchInput('')
+                setSort('created_at:desc')
+              }}
+              className="h-[30px] rounded-md px-2.5 text-[12.5px] text-ink-muted transition-colors hover:bg-surface-hover"
+            >
+              Reset all
+            </button>
+          </div>
+        )}
+
+        {/* Table */}
+        <div className="overflow-hidden rounded-md border border-rule">
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-[12.5px]">
+              <thead>
+                {groupSpans && (
+                  <tr className="bg-surface-sunken">
+                    <th className="sticky left-0 z-20 border-b border-r border-rule bg-surface-sunken" />
+                    {groupSpans.map((group, i) => (
+                      <th
+                        key={i}
+                        colSpan={group.span}
+                        className="border-b border-l border-rule px-2 py-1 text-left text-[11px] font-medium text-ink-faint"
+                      >
+                        {group.title}
+                      </th>
+                    ))}
+                    <th className="border-b border-rule" colSpan={2} />
+                  </tr>
+                )}
+                <tr className="bg-surface-sunken">
+                  <th className="sticky left-0 z-20 w-[190px] min-w-[190px] border-b border-r border-rule bg-surface-sunken px-3 py-2 text-left text-[11.5px] font-medium text-ink-muted">
+                    Child
+                  </th>
+                  {columns.map((column) => (
+                    <th
+                      key={column.key}
+                      style={{ minWidth: column.width }}
+                      className="border-b border-rule px-2 py-2 text-left text-[11.5px] font-medium text-ink-muted"
+                    >
+                      {column.label}
+                    </th>
+                  ))}
+                  <th className="border-b border-rule px-2 py-2 text-left text-[11.5px] font-medium text-ink-muted">Approval</th>
+                  <th className="w-[72px] border-b border-rule px-2 py-2" />
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan={columns.length + 3} className="p-12 text-center">
+                      <LoadingSpinner size="lg" />
+                      <p className="mt-3 text-[13px] text-ink-muted">Loading records…</p>
+                    </td>
+                  </tr>
+                ) : rows.length === 0 ? (
+                  <tr>
+                    <td colSpan={columns.length + 3} className="p-12 text-center">
+                      <Inbox className="mx-auto mb-3 h-10 w-10 text-rule-strong" />
+                      <p className="text-[13.5px] text-ink-muted">No records match these filters</p>
+                    </td>
+                  </tr>
+                ) : (
+                  rows.map((row) => {
+                    const name =
+                      [row.first_name, row.last_name].filter(Boolean).join(' ') ||
+                      txt(row.child_name) ||
+                      txt(row.trainee_name)
+                    const canOpen = row.eac_no !== null && row.eac_no !== undefined && row.reg_no !== null && row.reg_no !== undefined
+
+                    return (
+                      <tr key={row.record_id} className="group border-b border-rule-faint last:border-0 hover:bg-surface-hover">
+                        <td className="sticky left-0 z-10 w-[190px] min-w-[190px] border-r border-rule bg-surface px-3 py-1.5 group-hover:bg-surface-hover">
+                          <span className="flex items-center gap-1.5 whitespace-nowrap">
+                            <span className="min-w-0 flex-1 truncate">{name || '—'}</span>
+                            {entity === 'child_data' && hasLeft(row) && (
+                              <span className="shrink-0 rounded bg-status-inactive-bg px-1 py-px text-[10.5px] text-status-inactive-fg">
+                                Left
+                              </span>
+                            )}
+                          </span>
+                          <span className="block whitespace-nowrap font-mono text-[11px] text-ink-faint">
+                            EAC {txt(row.eac_no) || '—'} · Reg {txt(row.reg_no) || '—'}
+                          </span>
+                        </td>
+                        {columns.map((column) => (
+                          <td
+                            key={column.key}
+                            className={`px-2 py-1.5 text-ink-muted ${column.mono ? 'font-mono text-[12px]' : ''}`}
+                          >
+                            <span className="block max-w-[260px] truncate" title={cellValue(row, column.key)}>
+                              {cellValue(row, column.key)}
+                            </span>
+                          </td>
+                        ))}
+                        <td className="px-2 py-1.5">
+                          <span className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${approvalChipClass(row.status)}`}>
+                            {approvalLabel(row.status)}
+                          </span>
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <span className="flex items-center justify-end gap-1">
+                            <button
+                              type="button"
+                              disabled={!canOpen}
+                              onClick={() => canOpen && setEditing({ eacNo: row.eac_no, regNo: row.reg_no! })}
+                              title={canOpen ? 'Edit' : 'This row has no Reg No, so it belongs to no child'}
+                              aria-label="Edit"
+                              className="rounded p-1 text-ink-faint transition-colors hover:bg-surface hover:text-ink disabled:opacity-30"
+                            >
+                              <Pencil className="h-[13px] w-[13px]" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setDeleting(row)}
+                              title="Delete"
+                              aria-label="Delete"
+                              className="rounded p-1 text-ink-faint transition-colors hover:bg-surface hover:text-status-returned-fg"
+                            >
+                              <Trash2 className="h-[13px] w-[13px]" />
+                            </button>
+                          </span>
+                        </td>
+                      </tr>
+                    )
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
 
-          <div className="mb-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4">
-            <div className="bg-white rounded-lg border border-slate-200 p-4">
-              <p className="text-xs text-slate-500 uppercase tracking-wide">Active Entity</p>
-              <p className="text-lg font-semibold text-slate-900 mt-1">{ENTITY_LABELS[activeTab]}</p>
-            </div>
-            <div className="bg-white rounded-lg border border-slate-200 p-4">
-              <p className="text-xs text-slate-500 uppercase tracking-wide">Matching Results</p>
-              <p className="text-lg font-semibold text-slate-900 mt-1">{totalRecords}</p>
-            </div>
-            <div className="bg-white rounded-lg border border-slate-200 p-4">
-              <p className="text-xs text-slate-500 uppercase tracking-wide">Pending</p>
-              <p className="text-lg font-semibold text-yellow-700 mt-1">{statusSummary.Pending}</p>
-            </div>
-            <div className="bg-white rounded-lg border border-slate-200 p-4">
-              <p className="text-xs text-slate-500 uppercase tracking-wide">Verified</p>
-              <p className="text-lg font-semibold text-blue-700 mt-1">{statusSummary.Verified}</p>
-            </div>
-            <div className="bg-white rounded-lg border border-slate-200 p-4">
-              <p className="text-xs text-slate-500 uppercase tracking-wide">Approved</p>
-              <p className="text-lg font-semibold text-emerald-700 mt-1">{statusSummary.Approved}</p>
-            </div>
-            <div className="bg-white rounded-lg border border-slate-200 p-4">
-              <p className="text-xs text-slate-500 uppercase tracking-wide">Current Sort</p>
-              <p className="text-lg font-semibold text-indigo-700 mt-1">{getSortSummaryLabel()}</p>
-            </div>
-          </div>
-
-          {/* Alerts */}
-          {error && <Alert type="error" message={error} className="mb-6" />}
-          {success && <Alert type="success" message={success} className="mb-6" />}
-
-          {/* Search & Filters */}
-          <div className="bg-white rounded-lg border border-slate-200 p-4 mb-6">
-            {isChildDataTab && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">EAC No</label>
-                  <select
-                    value={eacNoFilter}
-                    onChange={(e) => {
-                      setPage(1)
-                      setVillageFilter('')
-                      setEacNoFilter(e.target.value)
-                    }}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="">All EAC Numbers</option>
-                    {childDataFilterOptions.eacNos.map((eacNo) => (
-                      <option key={eacNo} value={eacNo}>
-                        {eacNo}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">EAC Village</label>
-                  <select
-                    value={villageFilter}
-                    onChange={(e) => {
-                      setPage(1)
-                      setVillageFilter(e.target.value)
-                    }}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-slate-100 disabled:text-slate-400"
-                  >
-                    <option value="">All Villages</option>
-                    {getChildDataVillageOptions().map((village) => (
-                      <option key={village} value={village}>
-                        {village}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            )}
-
-            <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-slate-700 mb-1">Search</label>
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={searchBy === 'reg_no' ? 'Search by Reg No' : searchBy === 'eac_no' ? 'Search by EAC No' : 'Search by Name'}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Search By</label>
-                <select
-                  value={searchBy}
-                  onChange={(e) => setSearchBy(e.target.value as SearchBy)}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="name">Name</option>
-                  <option value="reg_no">Reg No</option>
-                  <option value="eac_no">EAC No</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Status Filter</label>
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="all">All Status</option>
-                  <option value="ENROLLED">ENROLLED</option>
-                  <option value="LEFT">LEFT</option>
-                </select>
-              </div>
-
-              <div className="md:col-span-4 flex gap-3">
-                <button
-                  type="submit"
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-                >
-                  <SearchIcon className="w-4 h-4" /> Search
-                </button>
+          {!loading && rows.length > 0 && (
+            <div className="flex items-center justify-between border-t border-rule px-4 py-2.5">
+              <span className="text-[12.5px] text-ink-faint">
+                {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} of {total.toLocaleString()}
+              </span>
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={handleRefreshFilters}
-                  className="px-6 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors flex items-center gap-2"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="h-[28px] rounded-md border border-rule-strong px-2.5 text-[12.5px] transition-colors hover:bg-surface-hover disabled:opacity-40"
                 >
-                  <RotateCcw className="w-4 h-4" /> Refresh
+                  Previous
                 </button>
-              </div>
-            </form>
-          </div>
-
-          {/* Entity Type Tabs */}
-          <div className="bg-white rounded-lg border border-slate-200 mb-6">
-            <div className="flex overflow-x-auto">
-              {VISIBLE_ENTITY_TYPES.map(type => (
+                <span className="text-[12.5px] text-ink-muted">
+                  {page} / {totalPages}
+                </span>
                 <button
-                  key={type}
-                  onClick={() => {
-                    setActiveTab(type)
-                    setPage(1)
-                  }}
-                  className={`flex-1 min-w-[100px] px-4 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === type
-                    ? 'border-blue-600 text-blue-600 bg-blue-50'
-                    : 'border-transparent text-slate-600 hover:bg-slate-50'
-                    }`}
+                  type="button"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages}
+                  className="h-[28px] rounded-md border border-rule-strong px-2.5 text-[12.5px] transition-colors hover:bg-surface-hover disabled:opacity-40"
                 >
-                  {ENTITY_LABELS[type]}
+                  Next
                 </button>
-              ))}
+              </div>
             </div>
-          </div>
-
-          {/* Records Table */}
-          <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
-            {loading ? (
-              <div className="p-12 text-center">
-                <LoadingSpinner size="lg" />
-                <p className="mt-4 text-slate-600">Loading records...</p>
-              </div>
-            ) : records.length === 0 ? (
-              <div className="p-12 text-center">
-                <Inbox className="w-14 h-14 text-slate-300 mx-auto mb-4" />
-                <p className="text-slate-600 font-medium">No records found</p>
-              </div>
-            ) : (
-              <>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-slate-50 border-b border-slate-200">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap sticky left-0 z-30 bg-slate-50 w-24 min-w-24 shadow-[2px_0_0_0_#e2e8f0]">Actions</th>
-                        {visibleColumns.map((field: string) => (
-                          <th key={field} className={`px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap ${getStickyHeaderClass(field)}`}>
-                            <div className="flex items-center gap-2">
-                              <span>{getColumnLabel(field)}</span>
-                              {isSortableColumn(field) && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleSort(field)}
-                                  className="rounded border border-slate-300 px-1.5 py-0.5 text-[10px] font-medium text-slate-700 hover:bg-slate-100"
-                                >
-                                  {sortColumn === field ? (sortDirection === 'asc' ? 'ASC' : 'DESC') : 'SORT'}
-                                </button>
-                              )}
-                            </div>
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200">
-                      {records.map((record) => (
-                        <tr key={String(getEntityIdentity(record)?.value ?? record.record_id)} className="hover:bg-slate-50">
-                          <td className="px-4 py-3 text-left">
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => handleEdit(record)}
-                                aria-label="Edit record"
-                                title="Edit"
-                                className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors inline-flex items-center justify-center"
-                              >
-                                <Pencil className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => setDeletingRecord(record)}
-                                aria-label="Delete record"
-                                title="Delete"
-                                className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors inline-flex items-center justify-center"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </td>
-                          {visibleColumns.map((field: string) => (
-                            <td key={`${String(getEntityIdentity(record)?.value ?? record.record_id)}-${field}`} className={`px-4 py-3 text-sm text-slate-600 whitespace-nowrap align-top ${getStickyCellClass(field)}`}>
-                              {field === 'photo_link' ? (
-                                record[field] ? (
-                                  <button
-                                    onClick={() => setPhotoPreviewModal({ isOpen: true, url: String(record[field]) })}
-                                    className="px-2.5 py-1.5 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 text-xs font-medium"
-                                  >
-                                    View Photo
-                                  </button>
-                                ) : '-'
-                              ) : field === 'dateofbirth' ? (
-                                String(record.dateofbirth ?? record.dob ?? '-')
-                              ) : field === 'status' ? (
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(record.status)}`}>
-                                  {String(record[field] ?? '-')}
-                                </span>
-                              ) : field === 'child_left' ? (
-                                record[field] === true || String(record[field]).toLowerCase() === 'true' || String(record[field]).toUpperCase() === 'LEFT'
-                                  ? 'LEFT'
-                                  : 'ENROLLED'
-                              ) : (
-                                String(record[field] ?? '-')
-                              )}
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Pagination */}
-                <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
-                  <p className="text-sm text-slate-600">
-                    Showing {(page - 1) * 20 + 1} - {Math.min(page * 20, totalRecords)} of {totalRecords}
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setPage(p => Math.max(1, p - 1))}
-                      disabled={page === 1}
-                      className="px-3 py-1 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1"
-                    >
-                      <ChevronLeft className="w-4 h-4" /> Prev
-                    </button>
-                    <span className="px-3 py-1 text-slate-600">
-                      Page {page} of {totalPages || 1}
-                    </span>
-                    <button
-                      onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                      disabled={page >= totalPages}
-                      className="px-3 py-1 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1"
-                    >
-                      Next <ChevronRight className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
+          )}
         </div>
-      </PageContainer>
+      </div>
 
-      {/* Edit Modal */}
-      {editingRecord && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full my-8 max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
-              <h3 className="text-xl font-bold text-slate-900">Edit {ENTITY_LABELS[activeTab]}</h3>
-              <button
-                onClick={() => setEditingRecord(null)}
-                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5" />
+      {deleting && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setDeleting(null)}>
+          <div className="w-full max-w-md rounded-lg border border-rule bg-surface p-5" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <h2 className="text-[15px] font-semibold">Delete this record?</h2>
+              <button type="button" onClick={() => setDeleting(null)} className="rounded p-1 text-ink-faint hover:bg-surface-hover" aria-label="Close">
+                <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {Object.entries(editFormData).map(([key, value]: [string, unknown]) => {
-                  if (NON_EDITABLE_FIELDS.has(key)) {
-                    return null
-                  }
-                  return (
-                    <div key={key}>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">
-                        {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                      </label>
-                      {key === 'photo_link' ? (
-                        <div className="space-y-2">
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0]
-                              if (file) handlePhotoUpload(file)
-                            }}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                          />
-                          {uploadingPhoto && <p className="text-xs text-slate-500">Uploading image...</p>}
-                          {value ? (
-                            <a href={String(value)} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline break-all">
-                              {String(value)}
-                            </a>
-                          ) : null}
-                        </div>
-                      ) : (
-                        <input
-                          type={key.includes('date') ? 'date' : 'text'}
-                          value={String(value ?? '')}
-                          onChange={(e) => setEditFormData(prev => ({ ...prev, [key]: e.target.value }))}
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                        />
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-              <div className="flex gap-3 mt-6 pt-6 border-t border-slate-200">
-                <button
-                  onClick={() => setEditingRecord(null)}
-                  className="flex-1 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSaveEdit}
-                  disabled={saving || uploadingPhoto}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
-                >
-                  <Save className="w-4 h-4" />
-                  {uploadingPhoto ? 'Uploading Photo...' : saving ? 'Saving...' : 'Save Changes'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {photoPreviewModal.isOpen && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-slate-900">Photo Preview</h3>
-              <button
-                onClick={() => setPhotoPreviewModal({ isOpen: false, url: '' })}
-                className="text-slate-600 hover:text-slate-900"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-4 flex justify-center bg-slate-50">
-              <img
-                src={photoPreviewModal.url}
-                alt="Record photo"
-                className="max-h-[70vh] w-auto rounded-lg border border-slate-200 bg-white"
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {deletingRecord && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
-            <h3 className="text-xl font-bold text-slate-900 mb-3">Delete Record</h3>
-            <p className="text-slate-600 mb-5">
-              Are you sure you want to delete this {ENTITY_LABELS[activeTab]} entry?
+            <p className="mb-4 text-[13px] leading-relaxed text-ink-muted">
+              This permanently removes the {TABS.find((t) => t.key === entity)?.label.toLowerCase()} row for EAC{' '}
+              {txt(deleting.eac_no) || '—'}, Reg No {txt(deleting.reg_no) || '—'}. It cannot be undone.
             </p>
-            <div className="flex gap-3">
+            <div className="flex justify-end gap-2">
               <button
-                onClick={() => setDeletingRecord(null)}
-                disabled={deleting}
-                className="flex-1 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors disabled:opacity-50"
+                type="button"
+                onClick={() => setDeleting(null)}
+                className="h-[32px] rounded-md border border-rule-strong px-3 text-[13px] transition-colors hover:bg-surface-hover"
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={handleDelete}
-                disabled={deleting}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                disabled={deleteBusy}
+                className="h-[32px] rounded-md bg-status-returned-fg px-3 text-[13px] font-medium text-surface transition-opacity hover:opacity-90 disabled:opacity-50"
               >
-                {deleting ? 'Deleting...' : 'Delete'}
+                {deleteBusy ? 'Deleting…' : 'Delete'}
               </button>
             </div>
           </div>
         </div>
       )}
-    </main>
+
+      {editing && token && (
+        <ChildProfilePanel
+          eacNo={editing.eacNo}
+          regNo={editing.regNo}
+          token={token}
+          initialSection={entity}
+          onClose={() => setEditing(null)}
+          onSaved={fetchRows}
+        />
+      )}
+    </AdminShell>
   )
 }
