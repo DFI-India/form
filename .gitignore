@@ -4,3 +4,7 @@ node_modules
 .env
 dist
 build
+# Local tooling and build artefacts
+.DS_Store
+tsconfig.tsbuildinfo
+.claude/
