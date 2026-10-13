@@ -11,10 +11,10 @@ interface AlertProps {
 
 export function Alert({ type, message, onDismiss, className = '' }: AlertProps) {
   const styles = {
-    error: 'bg-red-50 text-red-700 border-red-200',
-    success: 'bg-green-50 text-green-700 border-green-200',
-    info: 'bg-blue-50 text-blue-700 border-blue-200',
-    warning: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+    error: 'bg-status-returned-bg text-status-returned-fg border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-900',
+    success: 'bg-status-approved-bg text-status-approved-fg border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-900',
+    info: 'bg-accent-bg text-accent-fg border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-900',
+    warning: 'bg-status-pending-bg text-status-pending-fg border-yellow-200 dark:bg-yellow-950 dark:text-yellow-300 dark:border-yellow-900',
   }
 
   return (
@@ -38,7 +38,7 @@ export function Skeleton({ rows = 1, className = '' }: SkeletonProps) {
   return (
     <div className={`space-y-2 ${className}`}>
       {Array.from({ length: rows }).map((_, i) => (
-        <div key={i} className="h-4 bg-slate-200 rounded animate-pulse" />
+        <div key={i} className="h-4 bg-slate-200 dark:bg-rule rounded animate-pulse" />
       ))}
     </div>
   )
@@ -57,7 +57,7 @@ export function LoadingSpinner({ size = 'md' }: LoadingSpinnerProps) {
 
   return (
     <div className="flex justify-center items-center p-4">
-      <div className={`${sizeClass} border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin`} />
+      <div className={`${sizeClass} border-4 border-slate-200 dark:border-rule border-t-blue-600 dark:border-t-blue-400 rounded-full animate-spin`} />
     </div>
   )
 }
@@ -73,7 +73,7 @@ export function TableSkeleton({ rows = 5, columns = 5 }: TableSkeletonProps) {
       {Array.from({ length: rows }).map((_, i) => (
         <div key={i} className="flex gap-4">
           {Array.from({ length: columns }).map((_, j) => (
-            <div key={j} className="flex-1 h-4 bg-slate-200 rounded animate-pulse" />
+            <div key={j} className="flex-1 h-4 bg-slate-200 dark:bg-rule rounded animate-pulse" />
           ))}
         </div>
       ))}

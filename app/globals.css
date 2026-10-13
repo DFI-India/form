@@ -1,3 +1,141 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/**
+ * Design tokens.
+ *
+ * Values are space-separated RGB channels rather than hex so Tailwind can build
+ * `rgb(var(--token) / <alpha-value>)` and slash-opacity utilities keep working.
+ * The dark set is applied by a `dark` class on <html>, written by the theme
+ * toggle in the admin shell and re-applied before first paint by the boot
+ * script in `app/layout.tsx`.
+ */
+@layer base {
+  :root {
+    color-scheme: light;
+
+    --ink: 55 53 47;
+    --ink-muted: 120 119 116;
+    --ink-faint: 155 154 151;
+
+    --surface: 255 255 255;
+    --surface-sunken: 251 251 250;
+    --surface-sidebar: 247 247 245;
+    --surface-hover: 241 241 239;
+
+    --rule: 233 233 231;
+    --rule-strong: 220 220 218;
+    --rule-faint: 241 241 239;
+
+    --status-pending-bg: 251 243 219;
+    --status-pending-fg: 138 97 22;
+    --status-verified-bg: 221 235 241;
+    --status-verified-fg: 28 90 117;
+    --status-approved-bg: 219 237 219;
+    --status-approved-fg: 44 94 46;
+    --status-returned-bg: 251 228 228;
+    --status-returned-fg: 141 58 53;
+    --status-inactive-bg: 241 241 239;
+    --status-inactive-fg: 120 119 116;
+
+    --meter-filled: 74 157 109;
+    --meter-empty: 233 233 231;
+    --meter-inactive: 213 212 209;
+
+    --accent-bg: 223 232 245;
+    --accent-fg: 37 99 235;
+  }
+
+  .dark {
+    color-scheme: dark;
+
+    --ink: 230 229 227;
+    --ink-muted: 155 154 151;
+    --ink-faint: 115 114 112;
+
+    --surface: 31 31 31;
+    --surface-sunken: 25 25 25;
+    --surface-sidebar: 26 26 26;
+    --surface-hover: 44 44 44;
+
+    --rule: 51 51 49;
+    --rule-strong: 69 69 66;
+    --rule-faint: 42 42 41;
+
+    --status-pending-bg: 59 48 24;
+    --status-pending-fg: 227 179 65;
+    --status-verified-bg: 23 48 61;
+    --status-verified-fg: 124 196 232;
+    --status-approved-bg: 27 51 32;
+    --status-approved-fg: 131 201 142;
+    --status-returned-bg: 61 31 30;
+    --status-returned-fg: 235 142 134;
+    --status-inactive-bg: 44 44 44;
+    --status-inactive-fg: 155 154 151;
+
+    --meter-filled: 92 179 127;
+    --meter-empty: 51 51 49;
+    --meter-inactive: 69 69 66;
+
+    --accent-bg: 30 47 69;
+    --accent-fg: 147 197 253;
+  }
+}
+
+/**
+ * Printing a report.
+ *
+ * The builder's chrome is hidden and only the result table prints, with the
+ * report header repeated on every page. Landscape by default: reports are
+ * wider than they are tall.
+ */
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 14mm;
+  }
+
+  /* Printing happens on paper, so the dark theme's ink would waste toner. */
+  :root,
+  :root[data-theme='dark'],
+  .dark {
+    --ink: 0 0 0;
+    --ink-muted: 70 70 70;
+    --ink-faint: 110 110 110;
+    --surface: 255 255 255;
+    --surface-sunken: 255 255 255;
+    --surface-sidebar: 255 255 255;
+    --surface-hover: 255 255 255;
+    --rule: 190 190 190;
+    --rule-strong: 150 150 150;
+    --rule-faint: 215 215 215;
+  }
+
+  .print-hide {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  .print-sheet {
+    position: static !important;
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  tr {
+    break-inside: avoid;
+  }
+}
+
+.print-only {
+  display: none;
+}
