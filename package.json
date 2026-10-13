@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "NODE_EXTRA_CA_CERTS=${NODE_EXTRA_CA_CERTS:-$HOME/.certs/sophos-ca.pem} next dev",
     "build": "next build",
     "start": "next start"
   },
@@ -15,7 +15,9 @@
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.0.0",
     "bcryptjs": "^2.4.3",
+    "buffer": "^6.0.3",
     "lucide-react": "^0.263.1",
+    "mdb-reader": "^3.2.0",
     "next": "^14.0.0",
     "react": "^18.0.0",
     "react-dom": "^18.0.0"
