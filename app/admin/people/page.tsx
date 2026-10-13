@@ -1,15 +1,15 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRequireRole } from '../../lib/hooks'
-import { supabase } from '../../lib/supabase'
-import { ROLE_CONFIG, ROLE_CAPABILITIES, getRoleConfig, getRoleCapabilities } from '../../lib/types'
-import type { UserProfile, CreateUserForm, DeleteConfirmState } from '../../lib/types'
-import { Alert, LoadingSpinner } from '../components/UI'
-import { Navbar, Sidebar, PageContainer } from '../components/Navbar'
+import { useRequireRole } from '../../../lib/hooks'
+import { supabase } from '../../../lib/supabase'
+import { ROLE_CONFIG, ROLE_CAPABILITIES, getRoleConfig, getRoleCapabilities } from '../../../lib/types'
+import type { UserProfile, CreateUserForm, DeleteConfirmState } from '../../../lib/types'
+import { Alert, LoadingSpinner } from '../../components/UI'
+import AdminShell from '../AdminShell'
 import { CheckCircle, ClipboardList, TrendingUp, FileEdit } from 'lucide-react'
 
-export default function AdminPage() {
+export default function AdminPeoplePage() {
   const { profile, loading: authLoading, isAuthorized } = useRequireRole(['admin'])
   const [form, setForm] = useState<CreateUserForm>({ first_name: '', last_name: '', phone_no: '', username: '', email: '', password: '', confirmPassword: '', role: 'field_volunteer', centre_eac_no: '', assigned_eacs: [] })
   const [loading, setLoading] = useState(false)
@@ -106,7 +106,7 @@ export default function AdminPage() {
   // NOW CONDITIONAL RETURNS AFTER ALL HOOKS
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-surface-sunken flex items-center justify-center">
         <LoadingSpinner size="lg" />
       </div>
     )
@@ -114,10 +114,10 @@ export default function AdminPage() {
 
   if (!isAuthorized || !profile) {
     return (
-      <main className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-lg p-6 max-w-md text-center">
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">Access Denied</h1>
-          <p className="text-slate-600">You don't have permission to access this page.</p>
+      <main className="min-h-screen bg-surface-sunken flex items-center justify-center p-4">
+        <div className="bg-surface rounded-lg shadow-lg p-6 max-w-md text-center">
+          <h1 className="text-xl font-bold sm:text-2xl text-ink mb-2">Access Denied</h1>
+          <p className="text-ink-muted">You don't have permission to access this page.</p>
         </div>
       </main>
     )
@@ -310,23 +310,15 @@ export default function AdminPage() {
   })
 
   return (
-    <main className="min-h-screen bg-slate-50">
-      <Navbar
-        username={profile.username}
-        role="admin"
-        roleLabel="Admin"
-        roleColor="bg-indigo-100 text-indigo-800"
-      />
-      <Sidebar role="admin" />
-
-      <PageContainer>
+    <AdminShell active="/admin/people" breadcrumb={['Admin', 'People']} username={profile.username}>
+      <div>
         <div className="p-8">
           <div className="mx-auto max-w-7xl space-y-8">
             {/* Header */}
             <div className="flex items-start justify-between">
               <div>
-                <h1 className="text-4xl font-bold text-slate-900">Admin Dashboard</h1>
-                <p className="mt-2 text-slate-600">Manage users, approvals, and system settings.</p>
+                <h1 className="text-4xl font-bold text-ink">People</h1>
+                <p className="mt-2 text-ink-muted">Manage user accounts and what each role can reach.</p>
               </div>
             </div>
 
@@ -334,42 +326,42 @@ export default function AdminPage() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <a
                 href="/admin/center-management"
-                className="bg-white rounded-lg border border-slate-200 p-6 hover:border-blue-400 hover:shadow-md transition-all group"
+                className="bg-surface rounded-lg border border-rule p-6 hover:border-blue-400 hover:shadow-md transition-all group"
               >
-                <CheckCircle className="w-8 h-8 mb-2 text-slate-700 group-hover:text-blue-600" />
-                <h3 className="font-semibold text-slate-900 group-hover:text-blue-600">Centre Management</h3>
-                <p className="text-sm text-slate-600 mt-1">Manage Centre Data</p>
+                <CheckCircle className="w-8 h-8 mb-2 text-ink group-hover:text-blue-600" />
+                <h3 className="font-semibold text-ink group-hover:text-blue-600">Centre Management</h3>
+                <p className="text-sm text-ink-muted mt-1">Manage Centre Data</p>
               </a>
               <a
                 href="/admin/records"
-                className="bg-white rounded-lg border border-slate-200 p-6 hover:border-blue-400 hover:shadow-md transition-all group"
+                className="bg-surface rounded-lg border border-rule p-6 hover:border-blue-400 hover:shadow-md transition-all group"
               >
-                <ClipboardList className="w-8 h-8 mb-2 text-slate-700 group-hover:text-blue-600" />
-                <h3 className="font-semibold text-slate-900 group-hover:text-blue-600">All Records</h3>
-                <p className="text-sm text-slate-600 mt-1">View and edit all data</p>
+                <ClipboardList className="w-8 h-8 mb-2 text-ink group-hover:text-blue-600" />
+                <h3 className="font-semibold text-ink group-hover:text-blue-600">All Records</h3>
+                <p className="text-sm text-ink-muted mt-1">View and edit all data</p>
               </a>
               <a
                 href="/admin/analytics"
-                className="bg-white rounded-lg border border-slate-200 p-6 hover:border-blue-400 hover:shadow-md transition-all group"
+                className="bg-surface rounded-lg border border-rule p-6 hover:border-blue-400 hover:shadow-md transition-all group"
               >
-                <TrendingUp className="w-8 h-8 mb-2 text-slate-700 group-hover:text-blue-600" />
-                <h3 className="font-semibold text-slate-900 group-hover:text-blue-600">Analytics</h3>
-                <p className="text-sm text-slate-600 mt-1">View reports & statistics</p>
+                <TrendingUp className="w-8 h-8 mb-2 text-ink group-hover:text-blue-600" />
+                <h3 className="font-semibold text-ink group-hover:text-blue-600">Analytics</h3>
+                <p className="text-sm text-ink-muted mt-1">View reports & statistics</p>
               </a>
               <a
                 href="/admin/logs"
-                className="bg-white rounded-lg border border-slate-200 p-6 hover:border-blue-400 hover:shadow-md transition-all group"
+                className="bg-surface rounded-lg border border-rule p-6 hover:border-blue-400 hover:shadow-md transition-all group"
               >
-                <FileEdit className="w-8 h-8 mb-2 text-slate-700 group-hover:text-blue-600" />
-                <h3 className="font-semibold text-slate-900 group-hover:text-blue-600">Activity Logs</h3>
-                <p className="text-sm text-slate-600 mt-1">View system activity</p>
+                <FileEdit className="w-8 h-8 mb-2 text-ink group-hover:text-blue-600" />
+                <h3 className="font-semibold text-ink group-hover:text-blue-600">Activity Logs</h3>
+                <p className="text-sm text-ink-muted mt-1">View system activity</p>
               </a>
             </div>
 
             {/* User Management Section Header */}
             <div>
-              <h2 className="text-2xl font-bold text-slate-900">User Management</h2>
-              <p className="text-slate-600 mt-1">Manage your team members and their account permissions.</p>
+              <h2 className="text-xl font-bold sm:text-2xl text-ink">User Management</h2>
+              <p className="text-ink-muted mt-1">Manage your team members and their account permissions.</p>
             </div>
 
             {/* Messages */}
@@ -381,12 +373,12 @@ export default function AdminPage() {
             )}
 
             {/* User Management Section */}
-            <div className="rounded-lg bg-white border border-slate-200 shadow-sm">
+            <div className="rounded-lg bg-surface border border-rule shadow-sm">
               {/* Top Bar with Controls */}
-              <div className="flex items-center justify-between gap-4 border-b border-slate-200 p-6">
+              <div className="flex items-center justify-between gap-4 border-b border-rule p-6">
                 <div className="flex items-center gap-4 flex-1">
                   <div className="relative flex-1 max-w-xs">
-                    <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-ink-faint" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                     <input
@@ -394,14 +386,14 @@ export default function AdminPage() {
                       placeholder="Search by name or email..."
                       value={searchQuery}
                       onChange={e => setSearchQuery(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full pl-10 pr-4 py-2 rounded-lg border border-rule-strong text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
 
                   <select
                     value={filterRole}
                     onChange={e => setFilterRole(e.target.value)}
-                    className="px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="px-3 py-2 rounded-lg border border-rule-strong text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">All Roles</option>
                     {ROLE_CONFIG.map(role => (
@@ -414,7 +406,7 @@ export default function AdminPage() {
 
                 <button
                   onClick={() => setShowForm(!showForm)}
-                  className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                  className="min-h-[40px] px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   + Add User
                 </button>
@@ -422,39 +414,39 @@ export default function AdminPage() {
 
               {/* Create User Form - Expandable */}
               {showForm && (
-                <div className="border-b border-slate-200 p-6 bg-slate-50">
+                <div className="border-b border-rule p-6 bg-surface-sunken">
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-2 uppercase">First Name</label>
+                        <label className="block text-xs font-semibold text-ink mb-2 uppercase">First Name</label>
                         <input
                           type="text"
                           placeholder="John"
                           value={form.first_name}
                           onChange={e => setForm({ ...form, first_name: e.target.value })}
-                          className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full min-h-[44px] sm:min-h-0 px-3 py-2 rounded-lg border border-rule-strong text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                           required
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-2 uppercase">Last Name</label>
+                        <label className="block text-xs font-semibold text-ink mb-2 uppercase">Last Name</label>
                         <input
                           type="text"
                           placeholder="Doe"
                           value={form.last_name}
                           onChange={e => setForm({ ...form, last_name: e.target.value })}
-                          className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full min-h-[44px] sm:min-h-0 px-3 py-2 rounded-lg border border-rule-strong text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                           required
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-2 uppercase">Contact Number</label>
+                        <label className="block text-xs font-semibold text-ink mb-2 uppercase">Contact Number</label>
                         <input
                           type="tel"
                           placeholder="9876543210"
                           value={form.phone_no}
                           onChange={e => setForm({ ...form, phone_no: e.target.value })}
-                          className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full min-h-[44px] sm:min-h-0 px-3 py-2 rounded-lg border border-rule-strong text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                           required
                         />
                       </div>
@@ -462,40 +454,40 @@ export default function AdminPage() {
 
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-2 uppercase">Username</label>
+                        <label className="block text-xs font-semibold text-ink mb-2 uppercase">Username</label>
                         <input
                           type="text"
                           placeholder="john.doe"
                           value={form.username}
                           onChange={e => setForm({ ...form, username: e.target.value })}
-                          className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full min-h-[44px] sm:min-h-0 px-3 py-2 rounded-lg border border-rule-strong text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                           required
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-2 uppercase">Email</label>
+                        <label className="block text-xs font-semibold text-ink mb-2 uppercase">Email</label>
                         <input
                           type="email"
                           placeholder="john@example.com"
                           value={form.email}
                           onChange={e => setForm({ ...form, email: e.target.value })}
-                          className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full min-h-[44px] sm:min-h-0 px-3 py-2 rounded-lg border border-rule-strong text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                           required
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-2 uppercase">Password</label>
+                        <label className="block text-xs font-semibold text-ink mb-2 uppercase">Password</label>
                         <input
                           type="password"
                           placeholder="••••••••"
                           value={form.password}
                           onChange={e => setForm({ ...form, password: e.target.value })}
-                          className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full min-h-[44px] sm:min-h-0 px-3 py-2 rounded-lg border border-rule-strong text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                           required
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-2 uppercase">Confirm Password</label>
+                        <label className="block text-xs font-semibold text-ink mb-2 uppercase">Confirm Password</label>
                         <input
                           type="password"
                           placeholder="••••••••"
@@ -503,7 +495,7 @@ export default function AdminPage() {
                           onChange={e => setForm({ ...form, confirmPassword: e.target.value })}
                           className={`w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 ${form.password && form.confirmPassword && form.password !== form.confirmPassword
                             ? 'border-red-300 focus:ring-red-500 bg-red-50'
-                            : 'border-slate-300 focus:ring-blue-500'
+                            : 'border-rule-strong focus:ring-blue-500'
                             }`}
                           required
                         />
@@ -514,7 +506,7 @@ export default function AdminPage() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-2 uppercase">Role</label>
+                      <label className="block text-xs font-semibold text-ink mb-2 uppercase">Role</label>
                       <select
                         value={form.role}
                         onChange={e => {
@@ -526,7 +518,7 @@ export default function AdminPage() {
                             assigned_eacs: nextRole === 'dfi_field_staff' ? form.assigned_eacs : [],
                           })
                         }}
-                        className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full min-h-[44px] sm:min-h-0 px-3 py-2 rounded-lg border border-rule-strong text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         {ROLE_CONFIG.map(role => (
                           <option key={role.value} value={role.value}>
@@ -538,11 +530,11 @@ export default function AdminPage() {
 
                     {form.role === 'field_volunteer' && (
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-2 uppercase">Assign Centre EAC No</label>
+                        <label className="block text-xs font-semibold text-ink mb-2 uppercase">Assign Centre EAC No</label>
                         <select
                           value={form.centre_eac_no}
                           onChange={e => setForm({ ...form, centre_eac_no: e.target.value })}
-                          className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full min-h-[44px] sm:min-h-0 px-3 py-2 rounded-lg border border-rule-strong text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                           required
                         >
                           <option value="">Select EAC No</option>
@@ -557,21 +549,21 @@ export default function AdminPage() {
 
                     {form.role === 'dfi_field_staff' && (
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-2 uppercase">Assign EAC Nos</label>
-                        <div className="max-h-48 overflow-y-auto rounded-lg border border-slate-300 bg-white p-3 space-y-2">
+                        <label className="block text-xs font-semibold text-ink mb-2 uppercase">Assign EAC Nos</label>
+                        <div className="max-h-48 overflow-y-auto rounded-lg border border-rule-strong bg-surface p-3 space-y-2">
                           {centres.map((centre) => (
-                            <label key={centre.eac_no} className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+                            <label key={centre.eac_no} className="flex items-center gap-2 text-sm text-ink cursor-pointer">
                               <input
                                 type="checkbox"
                                 checked={form.assigned_eacs.includes(String(centre.eac_no))}
                                 onChange={() => toggleCreateAssignedEac(String(centre.eac_no))}
-                                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                className="h-4 w-4 rounded border-rule-strong text-blue-600 focus:ring-blue-500"
                               />
                               <span>{centre.eac_no}</span>
                             </label>
                           ))}
                         </div>
-                        <p className="mt-1 text-xs text-slate-500">Selected: {form.assigned_eacs.length}</p>
+                        <p className="mt-1 text-xs text-ink-faint">Selected: {form.assigned_eacs.length}</p>
                       </div>
                     )}
 
@@ -579,14 +571,14 @@ export default function AdminPage() {
                       <button
                         type="submit"
                         disabled={loading || (form.password !== form.confirmPassword && form.confirmPassword.length > 0)}
-                        className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="min-h-[40px] px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
                         {loading ? 'Creating…' : 'Create User'}
                       </button>
                       <button
                         type="button"
                         onClick={() => setShowForm(false)}
-                        className="px-4 py-2 bg-slate-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-300 transition-colors"
+                        className="min-h-[40px] px-4 py-2 bg-rule text-ink text-sm font-medium rounded-lg hover:bg-rule-strong transition-colors"
                       >
                         Cancel
                       </button>
@@ -597,25 +589,25 @@ export default function AdminPage() {
 
               {/* Users Table */}
               <div className="overflow-auto max-h-[480px]">
-                <table className="w-full text-sm">
+                <div className="overflow-x-auto"><table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-slate-200 bg-slate-50">
-                      <th className="px-6 py-3 text-left font-semibold text-slate-900">Full name</th>
-                      <th className="px-6 py-3 text-left font-semibold text-slate-900">First Name</th>
-                      <th className="px-6 py-3 text-left font-semibold text-slate-900">Last Name</th>
-                      <th className="px-6 py-3 text-left font-semibold text-slate-900">Contact Number</th>
-                      <th className="px-6 py-3 text-left font-semibold text-slate-900">Email</th>
-                      <th className="px-6 py-3 text-left font-semibold text-slate-900">Role</th>
-                      <th className="px-6 py-3 text-left font-semibold text-slate-900">Assigned EAC(s)</th>
-                      <th className="px-6 py-3 text-left font-semibold text-slate-900">Status</th>
-                      <th className="px-6 py-3 text-left font-semibold text-slate-900">Edit EAC</th>
-                      <th className="px-6 py-3 text-left font-semibold text-slate-900">Delete</th>
+                    <tr className="border-b border-rule bg-surface-sunken">
+                      <th className="px-6 py-3 text-left font-semibold text-ink">Full name</th>
+                      <th className="px-6 py-3 text-left font-semibold text-ink">First Name</th>
+                      <th className="px-6 py-3 text-left font-semibold text-ink">Last Name</th>
+                      <th className="px-6 py-3 text-left font-semibold text-ink">Contact Number</th>
+                      <th className="px-6 py-3 text-left font-semibold text-ink">Email</th>
+                      <th className="px-6 py-3 text-left font-semibold text-ink">Role</th>
+                      <th className="px-6 py-3 text-left font-semibold text-ink">Assigned EAC(s)</th>
+                      <th className="px-6 py-3 text-left font-semibold text-ink">Status</th>
+                      <th className="px-6 py-3 text-left font-semibold text-ink">Edit EAC</th>
+                      <th className="px-6 py-3 text-left font-semibold text-ink">Delete</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredUsers.length === 0 ? (
                       <tr>
-                        <td colSpan={10} className="px-6 py-12 text-center text-slate-500">
+                        <td colSpan={10} className="px-6 py-12 text-center text-ink-faint">
                           No users found
                         </td>
                       </tr>
@@ -623,19 +615,19 @@ export default function AdminPage() {
                       filteredUsers.map(u => {
                         const roleInfo = getRoleConfig(u.role)
                         return (
-                          <tr key={u.id} className="border-b border-slate-200 hover:bg-slate-50 transition-colors">
+                          <tr key={u.id} className="border-b border-rule hover:bg-surface-hover transition-colors">
                             <td className="px-6 py-4">
                               <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-xs font-semibold">
                                   {u.username.charAt(0).toUpperCase()}
                                 </div>
-                                <span className="font-medium text-slate-900">{u.username}</span>
+                                <span className="font-medium text-ink">{u.username}</span>
                               </div>
                             </td>
-                            <td className="px-6 py-4 text-slate-700">{u.first_name || '-'}</td>
-                            <td className="px-6 py-4 text-slate-700">{u.last_name || '-'}</td>
-                            <td className="px-6 py-4 text-slate-700">{u.phone_no || '-'}</td>
-                            <td className="px-6 py-4 text-slate-700">{u.email}</td>
+                            <td className="px-6 py-4 text-ink">{u.first_name || '-'}</td>
+                            <td className="px-6 py-4 text-ink">{u.last_name || '-'}</td>
+                            <td className="px-6 py-4 text-ink">{u.phone_no || '-'}</td>
+                            <td className="px-6 py-4 text-ink">{u.email}</td>
                             <td className="px-6 py-4">
                               <select
                                 defaultValue={u.role || 'field_volunteer'}
@@ -649,7 +641,7 @@ export default function AdminPage() {
                                 ))}
                               </select>
                             </td>
-                            <td className="px-6 py-4 text-slate-700">
+                            <td className="px-6 py-4 text-ink">
                               {u.role === 'field_volunteer'
                                 ? (u.centre_eac_no || '-')
                                 : u.role === 'dfi_field_staff'
@@ -659,7 +651,7 @@ export default function AdminPage() {
                             <td className="px-6 py-4">
                               <div className="flex items-center gap-2">
                                 <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                                <span className="text-xs font-medium text-slate-700">Active</span>
+                                <span className="text-xs font-medium text-ink">Active</span>
                               </div>
                             </td>
                             <td className="px-6 py-4">
@@ -671,7 +663,7 @@ export default function AdminPage() {
                                   Edit EAC
                                 </button>
                               ) : (
-                                <span className="text-slate-400">-</span>
+                                <span className="text-ink-faint">-</span>
                               )}
                             </td>
                             <td className="px-6 py-4">
@@ -687,11 +679,11 @@ export default function AdminPage() {
                       })
                     )}
                   </tbody>
-                </table>
+                </table></div>
               </div>
 
               {/* Footer */}
-              <div className="flex items-center justify-between border-t border-slate-200 px-6 py-4 bg-slate-50 text-sm text-slate-600">
+              <div className="flex items-center justify-between border-t border-rule px-6 py-4 bg-surface-sunken text-sm text-ink-muted">
                 <span>Showing {filteredUsers.length} of {users.length} users</span>
               </div>
             </div>
@@ -699,34 +691,34 @@ export default function AdminPage() {
             {/* Delete Confirmation Modal */}
             {editEacUser && (
               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6 space-y-4">
-                  <h3 className="text-lg font-semibold text-slate-900">Edit EAC Assignment</h3>
-                  <p className="text-sm text-slate-600">Update EAC assignment for <span className="font-semibold">{editEacUser.username}</span>.</p>
+                <div className="bg-surface rounded-lg shadow-lg max-w-md w-full p-6 space-y-4">
+                  <h3 className="text-lg font-semibold text-ink">Edit EAC Assignment</h3>
+                  <p className="text-sm text-ink-muted">Update EAC assignment for <span className="font-semibold">{editEacUser.username}</span>.</p>
 
                   {editEacUser.role === 'dfi_field_staff' ? (
                     <>
-                      <div className="max-h-60 overflow-y-auto rounded-lg border border-slate-300 p-3 space-y-2">
+                      <div className="max-h-60 overflow-y-auto rounded-lg border border-rule-strong p-3 space-y-2">
                         {centres.map((centre) => (
-                          <label key={centre.eac_no} className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+                          <label key={centre.eac_no} className="flex items-center gap-2 text-sm text-ink cursor-pointer">
                             <input
                               type="checkbox"
                               checked={editAssignedEacs.includes(String(centre.eac_no))}
                               onChange={() => toggleEditAssignedEac(String(centre.eac_no))}
-                              className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                              className="h-4 w-4 rounded border-rule-strong text-blue-600 focus:ring-blue-500"
                             />
                             <span>{centre.eac_no}</span>
                           </label>
                         ))}
                       </div>
-                      <p className="text-xs text-slate-500">Selected: {editAssignedEacs.length}</p>
+                      <p className="text-xs text-ink-faint">Selected: {editAssignedEacs.length}</p>
                     </>
                   ) : (
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-2 uppercase">Assign Centre EAC No</label>
+                      <label className="block text-xs font-semibold text-ink mb-2 uppercase">Assign Centre EAC No</label>
                       <select
                         value={editCentreEac}
                         onChange={e => setEditCentreEac(e.target.value)}
-                        className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full min-h-[44px] sm:min-h-0 px-3 py-2 rounded-lg border border-rule-strong text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="">Select EAC No</option>
                         {centres.map((centre) => (
@@ -746,7 +738,7 @@ export default function AdminPage() {
                         setEditCentreEac('')
                         setError('')
                       }}
-                      className="flex-1 px-4 py-2 bg-slate-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-300 transition-colors"
+                      className="flex-1 px-4 py-2 bg-rule text-ink text-sm font-medium rounded-lg hover:bg-rule-strong transition-colors"
                     >
                       Cancel
                     </button>
@@ -764,8 +756,8 @@ export default function AdminPage() {
 
             {deleteConfirm && (
               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6 space-y-4">
-                  <h3 className="text-lg font-semibold text-slate-900">Delete user</h3>
+                <div className="bg-surface rounded-lg shadow-lg max-w-md w-full p-6 space-y-4">
+                  <h3 className="text-lg font-semibold text-ink">Delete user</h3>
 
                   <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                     <p className="text-sm text-red-800">
@@ -774,7 +766,7 @@ export default function AdminPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                    <label className="block text-sm font-medium text-ink mb-2">
                       Type the username to confirm deletion:
                     </label>
                     <input
@@ -782,7 +774,7 @@ export default function AdminPage() {
                       value={deleteConfirmText}
                       onChange={e => setDeleteConfirmText(e.target.value)}
                       placeholder={deleteConfirm.username}
-                      className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                      className="w-full min-h-[44px] sm:min-h-0 px-3 py-2 rounded-lg border border-rule-strong text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
                       autoFocus
                     />
                   </div>
@@ -798,7 +790,7 @@ export default function AdminPage() {
                         setDeleteConfirmText('')
                         setError('')
                       }}
-                      className="flex-1 px-4 py-2 bg-slate-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-300 transition-colors"
+                      className="flex-1 px-4 py-2 bg-rule text-ink text-sm font-medium rounded-lg hover:bg-rule-strong transition-colors"
                     >
                       Cancel
                     </button>
@@ -816,7 +808,7 @@ export default function AdminPage() {
 
           </div>
         </div>
-      </PageContainer>
-    </main>
+      </div>
+    </AdminShell>
   )
 }
