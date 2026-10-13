@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { placeColumnsFor } from '../../../../../lib/placesServer'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -53,7 +54,12 @@ export async function POST(req: Request) {
         const asha_worker_mobile = String(body?.asha_worker_mobile || '').trim() || null
         const cbv_email = String(body?.cbv_email || '').trim() || null
 
-        if (!eac_no || !village_name) {
+        // A village_id wins over anything typed: the master row is the truth and
+        // the text columns are only a copy of it.
+        const place = await placeColumnsFor(supabase, body?.village_id)
+        const resolvedVillageName = place?.village_name ?? village_name
+
+        if (!eac_no || !resolvedVillageName) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
         }
 
@@ -73,10 +79,14 @@ export async function POST(req: Request) {
 
         const { error } = await supabase.from('centre_data').insert({
             eac_no,
-            village_name,
-            district,
-            taluk,
-            panchayat,
+            // centre_data.centre_id is NOT NULL with no default. Every imported
+            // row carries the EAC number here, so a hand-created centre does too.
+            centre_id: String(body?.centre_id || '').trim() || eac_no,
+            village_name: resolvedVillageName,
+            village_id: place?.village_id ?? null,
+            district: place?.district ?? district,
+            taluk: place?.taluk ?? taluk,
+            panchayat: place?.panchayat ?? panchayat,
             start_date,
             end_date,
             cbv_name,

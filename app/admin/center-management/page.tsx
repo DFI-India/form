@@ -1,17 +1,49 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { useRequireRole } from '../../../lib/hooks'
 import { supabase } from '../../../lib/supabase'
-import { LoadingSpinner, Alert } from '../../components/UI'
-import { Navbar, Sidebar, PageContainer } from '../../components/Navbar'
-import { ROLE_CONFIG } from '../../../lib/types'
-import { ArrowLeft, Search, MapPin, Building2, Landmark, Map } from 'lucide-react'
+import { getErrorMessage } from '../../../lib/errors'
+import { Alert, LoadingSpinner } from '../../components/UI'
+import AdminShell from '../AdminShell'
+import PlacePicker from '../../components/PlacePicker'
+import { emptyTree, resolveVillage, taluksIn, villagesIn, type PlaceTree, type ResolvedPlace } from '../../../lib/places'
+import {
+  Search,
+  Plus,
+  ChevronRight,
+  ChevronDown,
+  ChevronLeft,
+  Phone,
+  Mail,
+  MapPin,
+  Pencil,
+  Trash2,
+  X,
+  Check,
+  Users,
+  Tag,
+  AlertCircle,
+} from 'lucide-react'
 
-type CentreRecord = {
+/**
+ * Centre data.
+ *
+ * The old page was a flat 20-column table plus four chained dropdowns. Nobody
+ * navigates a programme by scrolling a spreadsheet sideways: they think
+ * "the centre in Uthiramerur", so the left pane is a district › taluk › centre
+ * tree and the right pane is one centre, whole.
+ *
+ * A centre record is really two things — an address and six people to call.
+ * The people are what the record is *for*, so they lead; the address is
+ * reference material below them.
+ */
+
+type Centre = {
   id: string
   eac_no: string | number
+  village_id: string | null
   village_name: string | null
   district: string | null
   taluk: string | null
@@ -33,1928 +65,1244 @@ type CentreRecord = {
   cbv_email: string | null
 }
 
-type CentreFormState = {
-  eac_no: string
-  village_name: string
-  district: string
-  taluk: string
-  panchayat: string
-  start_date: string
-  end_date: string
-  cbv_name: string
-  in_charge: string
-  panchayat_member: string
-  head_master: string
-  anganvadi: string
-  asha_worker: string
-  head_master_mobile: string
-  in_charge_mobile: string
-  cbv_mobile: string
-  panchayat_member_mobile: string
-  anganvadi_mobile: string
-  asha_worker_mobile: string
-  cbv_email: string
-}
+type CentreCounts = { total: number; enrolled: number; left: number; missingFamily: number }
 
-const emptyForm: CentreFormState = {
-  eac_no: '',
-  village_name: '',
-  district: '',
-  taluk: '',
-  panchayat: '',
-  start_date: '',
-  end_date: '',
-  cbv_name: '',
-  in_charge: '',
-  panchayat_member: '',
-  head_master: '',
-  anganvadi: '',
-  asha_worker: '',
-  head_master_mobile: '',
-  in_charge_mobile: '',
-  cbv_mobile: '',
-  panchayat_member_mobile: '',
-  anganvadi_mobile: '',
-  asha_worker_mobile: '',
-  cbv_email: '',
-}
+type FormState = Record<string, string>
 
-const tableColumns: Array<{ key: keyof CentreFormState; label: string }> = [
-  { key: 'eac_no', label: 'EAC No' },
-  { key: 'village_name', label: 'Village Name' },
-  { key: 'district', label: 'District' },
-  { key: 'taluk', label: 'Taluk' },
-  { key: 'panchayat', label: 'Panchayat' },
-  { key: 'start_date', label: 'Start Date' },
-  { key: 'end_date', label: 'End Date' },
-  { key: 'cbv_name', label: 'CBV Name' },
-  { key: 'in_charge', label: 'In Charge' },
-  { key: 'panchayat_member', label: 'Panchayat Member' },
-  { key: 'head_master', label: 'Head Master' },
-  { key: 'anganvadi', label: 'Anganvadi' },
-  { key: 'asha_worker', label: 'ASHA Worker' },
-  { key: 'head_master_mobile', label: 'Head Master Mobile' },
-  { key: 'in_charge_mobile', label: 'In Charge Mobile' },
-  { key: 'cbv_mobile', label: 'CBV Mobile' },
-  { key: 'panchayat_member_mobile', label: 'Panchayat Member Mobile' },
-  { key: 'anganvadi_mobile', label: 'Anganvadi Mobile' },
-  { key: 'asha_worker_mobile', label: 'ASHA Worker Mobile' },
-  { key: 'cbv_email', label: 'CBV Email' },
+/** The six people a centre is run through, and the columns that hold them. */
+const CONTACTS: { label: string; name: keyof Centre; mobile: keyof Centre; email?: keyof Centre }[] = [
+  { label: 'CBV', name: 'cbv_name', mobile: 'cbv_mobile', email: 'cbv_email' },
+  { label: 'In-charge', name: 'in_charge', mobile: 'in_charge_mobile' },
+  { label: 'Head master', name: 'head_master', mobile: 'head_master_mobile' },
+  { label: 'Anganvadi', name: 'anganvadi', mobile: 'anganvadi_mobile' },
+  { label: 'ASHA worker', name: 'asha_worker', mobile: 'asha_worker_mobile' },
+  { label: 'Panchayat member', name: 'panchayat_member', mobile: 'panchayat_member_mobile' },
 ]
 
-type SortDirection = 'asc' | 'desc'
-type SortableColumn = keyof CentreFormState
-type CascadeManageLevel = 'district' | 'taluk' | 'panchayat' | 'village'
-type CascadeManageRow = { level: CascadeManageLevel; value: string; parent: string; affected: number }
-type TextDialogAction = 'add-district' | 'add-taluk' | 'add-panchayat' | 'add-village' | 'rename-cascade'
+const FORM_KEYS = [
+  'eac_no',
+  'village_id',
+  'village_name',
+  'district',
+  'taluk',
+  'panchayat',
+  'start_date',
+  'end_date',
+  ...CONTACTS.flatMap((c) => [c.name, c.mobile, ...(c.email ? [c.email] : [])]),
+] as string[]
 
-const nonSortableColumns = new Set<SortableColumn>([
-  'head_master_mobile',
-  'in_charge_mobile',
-  'cbv_mobile',
-  'panchayat_member_mobile',
-  'anganvadi_mobile',
-  'asha_worker_mobile',
-  'cbv_email',
-])
+const emptyForm = (): FormState => Object.fromEntries(FORM_KEYS.map((k) => [k, '']))
 
-const uniqueSorted = (items: string[]) => Array.from(new Set(items.filter(Boolean))).sort((a, b) => a.localeCompare(b))
+const formFrom = (centre: Centre): FormState =>
+  Object.fromEntries(FORM_KEYS.map((k) => [k, String((centre as any)[k] ?? '')]))
 
-export default function CenterManagementPage() {
-  const router = useRouter()
+const txt = (v: unknown) => String(v ?? '').trim()
+
+/** A centre is closed once an end date is on the record and in the past. */
+const isClosed = (c: Centre) => Boolean(c.end_date && new Date(c.end_date) <= new Date())
+
+const contactsRecorded = (c: Centre) => CONTACTS.filter((k) => txt(c[k.name])).length
+
+const formatDate = (v: string | null) => {
+  if (!v) return '—'
+  const d = new Date(v)
+  return Number.isNaN(d.getTime())
+    ? v
+    : d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+const UNASSIGNED = 'No district recorded'
+
+export default function CentreDataPage() {
   const { profile, loading: authLoading, isAuthorized } = useRequireRole(['admin'])
 
-  const [centres, setCentres] = useState<CentreRecord[]>([])
+  const [token, setToken] = useState<string | null>(null)
+  const [centres, setCentres] = useState<Centre[]>([])
+  const [counts, setCounts] = useState<Record<string, CentreCounts>>({})
   const [loading, setLoading] = useState(true)
-  const [actionLoading, setActionLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
-  const [sessionToken, setSessionToken] = useState<string | null>(null)
 
-  const [createForm, setCreateForm] = useState<CentreFormState>(emptyForm)
-  const [showCreateForm, setShowCreateForm] = useState(false)
-  const [editCentre, setEditCentre] = useState<CentreRecord | null>(null)
-  const [editForm, setEditForm] = useState<CentreFormState>(emptyForm)
-  const [deleteCentre, setDeleteCentre] = useState<CentreRecord | null>(null)
-  const [sortColumn, setSortColumn] = useState<SortableColumn>('eac_no')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
-  const [tableSearch, setTableSearch] = useState('')
-  const [showCascadeManager, setShowCascadeManager] = useState(false)
-  const [showCentreRecords, setShowCentreRecords] = useState(false)
-  const [customDistricts, setCustomDistricts] = useState<string[]>([])
-  const [customTaluksByDistrict, setCustomTaluksByDistrict] = useState<Record<string, string[]>>({})
-  const [customPanchayatsByTaluk, setCustomPanchayatsByTaluk] = useState<Record<string, string[]>>({})
-  const [customVillagesByPanchayat, setCustomVillagesByPanchayat] = useState<Record<string, string[]>>({})
-  const [cascadeScope, setCascadeScope] = useState({ district: '', taluk: '', panchayat: '' })
-  const [cascadeLoading, setCascadeLoading] = useState(false)
-  const [textDialog, setTextDialog] = useState<{
-    open: boolean
-    title: string
-    label: string
-    confirmText: string
-    action: TextDialogAction
-    value: string
-    row?: CascadeManageRow
-  }>({
-    open: false,
-    title: '',
-    label: '',
-    confirmText: '',
-    action: 'add-district',
-    value: '',
-  })
-  const [cascadeDeleteDialog, setCascadeDeleteDialog] = useState<{ open: boolean; row?: CascadeManageRow }>({ open: false })
-
-  const hierarchy = useMemo(() => {
-    const districts = new Set<string>()
-    const taluksByDistrict: Record<string, Set<string>> = {}
-    const panchayatsByTaluk: Record<string, Set<string>> = {}
-    const villagesByPanchayat: Record<string, Set<string>> = {}
-
-    for (const centre of centres) {
-      const district = String(centre.district ?? '').trim()
-      const taluk = String(centre.taluk ?? '').trim()
-      const panchayat = String(centre.panchayat ?? '').trim()
-      const village = String(centre.village_name ?? '').trim()
-
-      if (!district) continue
-      districts.add(district)
-
-      if (taluk) {
-        const districtTaluks = taluksByDistrict[district] ?? new Set<string>()
-        districtTaluks.add(taluk)
-        taluksByDistrict[district] = districtTaluks
-
-        const talukKey = `${district}::${taluk}`
-        if (panchayat) {
-          const talukPanchayats = panchayatsByTaluk[talukKey] ?? new Set<string>()
-          talukPanchayats.add(panchayat)
-          panchayatsByTaluk[talukKey] = talukPanchayats
-
-          const panchayatKey = `${district}::${taluk}::${panchayat}`
-          if (village) {
-            const panchayatVillages = villagesByPanchayat[panchayatKey] ?? new Set<string>()
-            panchayatVillages.add(village)
-            villagesByPanchayat[panchayatKey] = panchayatVillages
-          }
-        }
-      }
-    }
-
-    return { districts, taluksByDistrict, panchayatsByTaluk, villagesByPanchayat }
-  }, [centres])
-
-  const districtOptions = useMemo(() => {
-    return uniqueSorted([...Array.from(hierarchy.districts), ...customDistricts])
-  }, [customDistricts, hierarchy.districts])
-
-  const talukKey = `${createForm.district}::${createForm.taluk}`
-  const panchayatKey = `${createForm.district}::${createForm.taluk}::${createForm.panchayat}`
-
-  const talukOptions = useMemo(() => {
-    if (!createForm.district) return []
-    const baseTaluks = Array.from(hierarchy.taluksByDistrict[createForm.district] ?? [])
-    const customTaluks = customTaluksByDistrict[createForm.district] ?? []
-    return uniqueSorted([...baseTaluks, ...customTaluks])
-  }, [createForm.district, customTaluksByDistrict, hierarchy.taluksByDistrict])
-
-  const panchayatOptions = useMemo(() => {
-    if (!createForm.district || !createForm.taluk) return []
-    const basePanchayats = Array.from(hierarchy.panchayatsByTaluk[talukKey] ?? [])
-    const customPanchayats = customPanchayatsByTaluk[talukKey] ?? []
-    return uniqueSorted([...basePanchayats, ...customPanchayats])
-  }, [createForm.district, createForm.taluk, customPanchayatsByTaluk, hierarchy.panchayatsByTaluk, talukKey])
-
-  const villageOptions = useMemo(() => {
-    if (!createForm.district || !createForm.taluk || !createForm.panchayat) return []
-    const baseVillages = Array.from(hierarchy.villagesByPanchayat[panchayatKey] ?? [])
-    const customVillages = customVillagesByPanchayat[panchayatKey] ?? []
-    return uniqueSorted([...baseVillages, ...customVillages])
-  }, [createForm.district, createForm.taluk, createForm.panchayat, customVillagesByPanchayat, hierarchy.villagesByPanchayat, panchayatKey])
-
-  const cascadeTalukOptions = useMemo(() => {
-    if (!cascadeScope.district) return []
-    const baseTaluks = Array.from(hierarchy.taluksByDistrict[cascadeScope.district] ?? [])
-    const customTaluks = customTaluksByDistrict[cascadeScope.district] ?? []
-    return uniqueSorted([...baseTaluks, ...customTaluks])
-  }, [cascadeScope.district, hierarchy.taluksByDistrict, customTaluksByDistrict])
-
-  const cascadePanchayatOptions = useMemo(() => {
-    if (!cascadeScope.district || !cascadeScope.taluk) return []
-    const key = `${cascadeScope.district}::${cascadeScope.taluk}`
-    const basePanchayats = Array.from(hierarchy.panchayatsByTaluk[key] ?? [])
-    const customPanchayats = customPanchayatsByTaluk[key] ?? []
-    return uniqueSorted([...basePanchayats, ...customPanchayats])
-  }, [cascadeScope.district, cascadeScope.taluk, hierarchy.panchayatsByTaluk, customPanchayatsByTaluk])
-
-  const cascadeVillageOptions = useMemo(() => {
-    if (!cascadeScope.district || !cascadeScope.taluk || !cascadeScope.panchayat) return []
-    const key = `${cascadeScope.district}::${cascadeScope.taluk}::${cascadeScope.panchayat}`
-    const baseVillages = Array.from(hierarchy.villagesByPanchayat[key] ?? [])
-    const customVillages = customVillagesByPanchayat[key] ?? []
-    return uniqueSorted([...baseVillages, ...customVillages])
-  }, [cascadeScope.district, cascadeScope.taluk, cascadeScope.panchayat, hierarchy.villagesByPanchayat, customVillagesByPanchayat])
-
-  const cascadeManageLevel: CascadeManageLevel = !cascadeScope.district
-    ? 'district'
-    : !cascadeScope.taluk
-      ? 'taluk'
-      : !cascadeScope.panchayat
-        ? 'panchayat'
-        : 'village'
-
-  const cascadeManageRows = useMemo(() => {
-    const rows: CascadeManageRow[] = []
-
-    if (cascadeManageLevel === 'district') {
-      for (const district of districtOptions) {
-        const affected = centres.filter((centre) => String(centre.district ?? '').trim() === district).length
-        rows.push({ level: 'district', value: district, parent: '-', affected })
-      }
-    }
-
-    if (cascadeManageLevel === 'taluk') {
-      for (const taluk of cascadeTalukOptions) {
-        const affected = centres.filter(
-          (centre) =>
-            String(centre.district ?? '').trim() === cascadeScope.district &&
-            String(centre.taluk ?? '').trim() === taluk
-        ).length
-        rows.push({ level: 'taluk', value: taluk, parent: cascadeScope.district, affected })
-      }
-    }
-
-    if (cascadeManageLevel === 'panchayat') {
-      for (const panchayat of cascadePanchayatOptions) {
-        const affected = centres.filter(
-          (centre) =>
-            String(centre.district ?? '').trim() === cascadeScope.district &&
-            String(centre.taluk ?? '').trim() === cascadeScope.taluk &&
-            String(centre.panchayat ?? '').trim() === panchayat
-        ).length
-        rows.push({ level: 'panchayat', value: panchayat, parent: `${cascadeScope.district} / ${cascadeScope.taluk}`, affected })
-      }
-    }
-
-    if (cascadeManageLevel === 'village') {
-      for (const village of cascadeVillageOptions) {
-        const affected = centres.filter(
-          (centre) =>
-            String(centre.district ?? '').trim() === cascadeScope.district &&
-            String(centre.taluk ?? '').trim() === cascadeScope.taluk &&
-            String(centre.panchayat ?? '').trim() === cascadeScope.panchayat &&
-            String(centre.village_name ?? '').trim() === village
-        ).length
-        rows.push({
-          level: 'village',
-          value: village,
-          parent: `${cascadeScope.district} / ${cascadeScope.taluk} / ${cascadeScope.panchayat}`,
-          affected,
-        })
-      }
-    }
-
-    return rows
-  }, [
-    cascadeManageLevel,
-    districtOptions,
-    cascadeTalukOptions,
-    cascadePanchayatOptions,
-    cascadeVillageOptions,
-    centres,
-    cascadeScope.district,
-    cascadeScope.taluk,
-    cascadeScope.panchayat,
-  ])
-
-  const removeCascadeValueLocally = (
-    level: CascadeManageLevel,
-    value: string,
-    scope: { district?: string; taluk?: string; panchayat?: string }
-  ) => {
-    if (level === 'district') {
-      setCustomDistricts((prev) => prev.filter((item) => item !== value))
-      setCustomTaluksByDistrict((prev) => {
-        const next = { ...prev }
-        delete next[value]
-        return next
-      })
-      return
-    }
-
-    if (level === 'taluk' && scope.district) {
-      const key = scope.district
-      setCustomTaluksByDistrict((prev) => ({
-        ...prev,
-        [key]: (prev[key] || []).filter((item) => item !== value),
-      }))
-      setCustomPanchayatsByTaluk((prev) => {
-        const oldKey = `${scope.district}::${value}`
-        const next = { ...prev }
-        delete next[oldKey]
-        return next
-      })
-      return
-    }
-
-    if (level === 'panchayat' && scope.district && scope.taluk) {
-      const key = `${scope.district}::${scope.taluk}`
-      setCustomPanchayatsByTaluk((prev) => ({
-        ...prev,
-        [key]: (prev[key] || []).filter((item) => item !== value),
-      }))
-      setCustomVillagesByPanchayat((prev) => {
-        const oldKey = `${scope.district}::${scope.taluk}::${value}`
-        const next = { ...prev }
-        delete next[oldKey]
-        return next
-      })
-      return
-    }
-
-    if (level === 'village' && scope.district && scope.taluk && scope.panchayat) {
-      const key = `${scope.district}::${scope.taluk}::${scope.panchayat}`
-      setCustomVillagesByPanchayat((prev) => ({
-        ...prev,
-        [key]: (prev[key] || []).filter((item) => item !== value),
-      }))
-    }
-  }
-
-  const openTextDialog = (config: {
-    title: string
-    label: string
-    confirmText: string
-    action: TextDialogAction
-    value?: string
-    row?: CascadeManageRow
-  }) => {
-    setTextDialog({
-      open: true,
-      title: config.title,
-      label: config.label,
-      confirmText: config.confirmText,
-      action: config.action,
-      value: config.value ?? '',
-      row: config.row,
-    })
-  }
-
-  const addDistrict = () => {
-    openTextDialog({
-      title: 'Add District',
-      label: 'District Name',
-      confirmText: 'Add District',
-      action: 'add-district',
-    })
-  }
-
-  const addTaluk = () => {
-    if (!createForm.district) return
-    openTextDialog({
-      title: `Add Taluk in ${createForm.district}`,
-      label: 'Taluk Name',
-      confirmText: 'Add Taluk',
-      action: 'add-taluk',
-    })
-  }
-
-  const addPanchayat = () => {
-    if (!createForm.district || !createForm.taluk) return
-    openTextDialog({
-      title: `Add Panchayat in ${createForm.taluk}`,
-      label: 'Panchayat Name',
-      confirmText: 'Add Panchayat',
-      action: 'add-panchayat',
-    })
-  }
-
-  const addVillage = () => {
-    if (!createForm.district || !createForm.taluk || !createForm.panchayat) return
-    openTextDialog({
-      title: `Add Village in ${createForm.panchayat}`,
-      label: 'Village Name',
-      confirmText: 'Add Village',
-      action: 'add-village',
-    })
-  }
-
-  const applyCascadeRenameLocally = (
-    level: 'district' | 'taluk' | 'panchayat' | 'village',
-    oldValue: string,
-    newValue: string,
-    scope: { district?: string; taluk?: string; panchayat?: string }
-  ) => {
-    if (level === 'district') {
-      setCustomDistricts((prev) => prev.map((item) => (item === oldValue ? newValue : item)))
-      setCustomTaluksByDistrict((prev) => {
-        const next = { ...prev }
-        if (next[oldValue]) {
-          next[newValue] = uniqueSorted([...(next[newValue] || []), ...next[oldValue]])
-          delete next[oldValue]
-        }
-        return next
-      })
-    }
-
-    if (level === 'taluk' && scope.district) {
-      setCustomTaluksByDistrict((prev) => ({
-        ...prev,
-        [scope.district!]: (prev[scope.district!] || []).map((item) => (item === oldValue ? newValue : item)),
-      }))
-      setCustomPanchayatsByTaluk((prev) => {
-        const oldKey = `${scope.district}::${oldValue}`
-        const newKey = `${scope.district}::${newValue}`
-        const next = { ...prev }
-        if (next[oldKey]) {
-          next[newKey] = uniqueSorted([...(next[newKey] || []), ...next[oldKey]])
-          delete next[oldKey]
-        }
-        return next
-      })
-    }
-
-    if (level === 'panchayat' && scope.district && scope.taluk) {
-      const key = `${scope.district}::${scope.taluk}`
-      setCustomPanchayatsByTaluk((prev) => ({
-        ...prev,
-        [key]: (prev[key] || []).map((item) => (item === oldValue ? newValue : item)),
-      }))
-      setCustomVillagesByPanchayat((prev) => {
-        const oldKey = `${scope.district}::${scope.taluk}::${oldValue}`
-        const newKey = `${scope.district}::${scope.taluk}::${newValue}`
-        const next = { ...prev }
-        if (next[oldKey]) {
-          next[newKey] = uniqueSorted([...(next[newKey] || []), ...next[oldKey]])
-          delete next[oldKey]
-        }
-        return next
-      })
-    }
-
-    if (level === 'village' && scope.district && scope.taluk && scope.panchayat) {
-      const key = `${scope.district}::${scope.taluk}::${scope.panchayat}`
-      setCustomVillagesByPanchayat((prev) => ({
-        ...prev,
-        [key]: (prev[key] || []).map((item) => (item === oldValue ? newValue : item)),
-      }))
-    }
-  }
-
-  const handleCascadeTableRename = (
-    row: CascadeManageRow,
-    scope?: { district: string; taluk?: string; panchayat?: string }
-  ) => {
-    if (scope) {
-      setCascadeScope({
-        district: scope.district,
-        taluk: scope.taluk ?? '',
-        panchayat: scope.panchayat ?? '',
-      })
-    }
-    const label = row.level === 'village' ? 'Village' : row.level.charAt(0).toUpperCase() + row.level.slice(1)
-    openTextDialog({
-      title: `Rename ${label}`,
-      label: `${label} Name`,
-      confirmText: `Rename ${label}`,
-      action: 'rename-cascade',
-      value: row.value,
-      row,
-    })
-  }
-
-  const handleCascadeTableDelete = (
-    row: CascadeManageRow,
-    scope?: { district: string; taluk?: string; panchayat?: string }
-  ) => {
-    if (scope) {
-      setCascadeScope({
-        district: scope.district,
-        taluk: scope.taluk ?? '',
-        panchayat: scope.panchayat ?? '',
-      })
-    }
-    setCascadeDeleteDialog({ open: true, row })
-  }
-
-  const selectCascadeDistrict = (district: string) => {
-    setCascadeScope({ district, taluk: '', panchayat: '' })
-  }
-
-  const selectCascadeTaluk = (taluk: string) => {
-    setCascadeScope((prev) => ({ ...prev, taluk, panchayat: '' }))
-  }
-
-  const selectCascadePanchayat = (panchayat: string) => {
-    setCascadeScope((prev) => ({ ...prev, panchayat }))
-  }
-
-  const submitTextDialog = async () => {
-    const value = textDialog.value.trim()
-    if (!value) return
-
-    if (textDialog.action === 'add-district') {
-      setCustomDistricts((prev) => uniqueSorted([...prev, value]))
-      setCreateForm((prev) => ({ ...prev, district: value, taluk: '', panchayat: '', village_name: '' }))
-      setTextDialog((prev) => ({ ...prev, open: false }))
-      return
-    }
-
-    if (textDialog.action === 'add-taluk') {
-      if (!createForm.district) return
-      setCustomTaluksByDistrict((prev) => ({
-        ...prev,
-        [createForm.district]: uniqueSorted([...(prev[createForm.district] ?? []), value]),
-      }))
-      setCreateForm((prev) => ({ ...prev, taluk: value, panchayat: '', village_name: '' }))
-      setTextDialog((prev) => ({ ...prev, open: false }))
-      return
-    }
-
-    if (textDialog.action === 'add-panchayat') {
-      if (!createForm.district || !createForm.taluk) return
-      const key = `${createForm.district}::${createForm.taluk}`
-      setCustomPanchayatsByTaluk((prev) => ({
-        ...prev,
-        [key]: uniqueSorted([...(prev[key] ?? []), value]),
-      }))
-      setCreateForm((prev) => ({ ...prev, panchayat: value, village_name: '' }))
-      setTextDialog((prev) => ({ ...prev, open: false }))
-      return
-    }
-
-    if (textDialog.action === 'add-village') {
-      if (!createForm.district || !createForm.taluk || !createForm.panchayat) return
-      const key = `${createForm.district}::${createForm.taluk}::${createForm.panchayat}`
-      setCustomVillagesByPanchayat((prev) => ({
-        ...prev,
-        [key]: uniqueSorted([...(prev[key] ?? []), value]),
-      }))
-      setCreateForm((prev) => ({ ...prev, village_name: value }))
-      setTextDialog((prev) => ({ ...prev, open: false }))
-      return
-    }
-
-    if (textDialog.action === 'rename-cascade' && textDialog.row && sessionToken) {
-      const row = textDialog.row
-      if (value === row.value) {
-        setTextDialog((prev) => ({ ...prev, open: false }))
-        return
-      }
-      const label = row.level === 'village' ? 'Village' : row.level.charAt(0).toUpperCase() + row.level.slice(1)
-
-      setCascadeLoading(true)
-      setError('')
-      setSuccess('')
-      try {
-        const res = await fetch('/api/admin/centres/cascade-update', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${sessionToken}`,
-          },
-          body: JSON.stringify({
-            level: row.level,
-            oldValue: row.value,
-            newValue: value,
-            district: cascadeScope.district,
-            taluk: cascadeScope.taluk,
-            panchayat: cascadeScope.panchayat,
-          }),
-        })
-        const json = await res.json()
-        if (!res.ok) throw new Error(json.error || `Failed to rename ${label}`)
-
-        applyCascadeRenameLocally(row.level, row.value, value, {
-          district: cascadeScope.district,
-          taluk: cascadeScope.taluk,
-          panchayat: cascadeScope.panchayat,
-        })
-
-        setSuccess(`${label} updated successfully${json.updatedCount ? ` (${json.updatedCount} rows)` : ''}`)
-        setTextDialog((prev) => ({ ...prev, open: false }))
-        await loadCentres(sessionToken)
-      } catch (err: any) {
-        setError(err.message || String(err))
-      } finally {
-        setCascadeLoading(false)
-      }
-    }
-  }
-
-  const confirmCascadeDelete = async () => {
-    if (!sessionToken || !cascadeDeleteDialog.row) return
-    const row = cascadeDeleteDialog.row
-    const label = row.level === 'village' ? 'Village' : row.level.charAt(0).toUpperCase() + row.level.slice(1)
-
-    setCascadeLoading(true)
-    setError('')
-    setSuccess('')
-    try {
-      const res = await fetch('/api/admin/centres/cascade-update', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${sessionToken}`,
-        },
-        body: JSON.stringify({
-          level: row.level,
-          oldValue: row.value,
-          district: cascadeScope.district,
-          taluk: cascadeScope.taluk,
-          panchayat: cascadeScope.panchayat,
-        }),
-      })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error || `Failed to delete ${label}`)
-
-      removeCascadeValueLocally(row.level, row.value, {
-        district: cascadeScope.district,
-        taluk: cascadeScope.taluk,
-        panchayat: cascadeScope.panchayat,
-      })
-
-      setSuccess(`${label} deleted successfully${json.updatedCount ? ` (${json.updatedCount} rows affected)` : ''}`)
-      setCascadeDeleteDialog({ open: false })
-      await loadCentres(sessionToken)
-    } catch (err: any) {
-      setError(err.message || String(err))
-    } finally {
-      setCascadeLoading(false)
-    }
-  }
-
-  const overviewStats = useMemo(() => {
-    const districtCount = hierarchy.districts.size
-    const talukCount = Object.values(hierarchy.taluksByDistrict).reduce((acc, set) => acc + set.size, 0)
-    const panchayatCount = Object.values(hierarchy.panchayatsByTaluk).reduce((acc, set) => acc + set.size, 0)
-    const villageCount = Object.values(hierarchy.villagesByPanchayat).reduce((acc, set) => acc + set.size, 0)
-
-    return {
-      centreCount: centres.length,
-      districtCount,
-      talukCount,
-      panchayatCount,
-      villageCount,
-    }
-  }, [centres.length, hierarchy])
-
-  const nextEacNo = useMemo(() => {
-    const highestEac = centres.reduce((max, centre) => {
-      const parsed = Number(String(centre.eac_no ?? '').trim())
-      return Number.isFinite(parsed) && parsed > max ? parsed : max
-    }, 0)
-
-    return String(highestEac + 1)
-  }, [centres])
-
-  const sortedCentres = useMemo(() => {
-    const search = tableSearch.trim().toLowerCase()
-    const rows = !search
-      ? [...centres]
-      : centres.filter((centre) => {
-          const haystack = [
-            centre.eac_no,
-            centre.village_name,
-            centre.district,
-            centre.taluk,
-            centre.panchayat,
-            centre.cbv_name,
-            centre.in_charge,
-          ]
-            .map((value) => String(value ?? '').toLowerCase())
-            .join(' ')
-
-          return haystack.includes(search)
-        })
-
-    rows.sort((a, b) => {
-      const aValue = a[sortColumn as keyof CentreRecord]
-      const bValue = b[sortColumn as keyof CentreRecord]
-
-      if (aValue === null || aValue === undefined || aValue === '') return 1
-      if (bValue === null || bValue === undefined || bValue === '') return -1
-
-      if (sortColumn === 'eac_no') {
-        const left = Number(aValue)
-        const right = Number(bValue)
-        if (left < right) return sortDirection === 'asc' ? -1 : 1
-        if (left > right) return sortDirection === 'asc' ? 1 : -1
-        return 0
-      }
-
-      const left = String(aValue).toLowerCase()
-      const right = String(bValue).toLowerCase()
-      if (left < right) return sortDirection === 'asc' ? -1 : 1
-      if (left > right) return sortDirection === 'asc' ? 1 : -1
-      return 0
-    })
-
-    return rows
-  }, [centres, sortColumn, sortDirection, tableSearch])
-
-  const toggleSort = (column: SortableColumn) => {
-    if (nonSortableColumns.has(column)) return
-
-    if (sortColumn === column) {
-      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
-      return
-    }
-
-    setSortColumn(column)
-    setSortDirection('asc')
-  }
-
-  const loadCentres = async (token: string) => {
+  const [query, setQuery] = useState('')
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+
+  /** null = viewing, 'new' = creating, otherwise the id being edited. */
+  const [editing, setEditing] = useState<string | null>(null)
+  const [form, setForm] = useState<FormState>(emptyForm())
+  const [saving, setSaving] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [showRename, setShowRename] = useState(false)
+  const [placeTree, setPlaceTree] = useState<PlaceTree>(emptyTree())
+  const [placesSetupNeeded, setPlacesSetupNeeded] = useState(false)
+  /** Off hides districts and taluks where no centre has been recorded yet. */
+  const [showEmptyPlaces, setShowEmptyPlaces] = useState(true)
+
+  useEffect(() => {
+    if (!isAuthorized) return
+    supabase.auth.getSession().then(({ data }) => setToken(data.session?.access_token ?? null))
+  }, [isAuthorized])
+
+  const load = useCallback(async () => {
+    if (!token) return
     setLoading(true)
-    setError('')
     try {
-      const res = await fetch('/api/admin/list-centres', {
+      const res = await fetch('/api/admin/list-centres?counts=1', {
         headers: { Authorization: `Bearer ${token}` },
       })
       const json = await res.json()
-      if (!res.ok) throw new Error(json.error || 'Failed to load centres')
+      if (!res.ok) throw new Error(json.error || 'Could not load centres')
       setCentres(json.centres || [])
-    } catch (err: any) {
-      setError(err.message || String(err))
+      setCounts(json.counts || {})
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Could not load centres.'))
     } finally {
       setLoading(false)
     }
-  }
+  }, [token])
 
   useEffect(() => {
-    const init = async () => {
-      const { data: session } = await supabase.auth.getSession()
-      const token = session.session?.access_token || null
-      if (!token) {
-        setError('Not signed in')
-        setLoading(false)
-        return
+    load()
+  }, [load])
+
+  // The place master fills every location dropdown. A 503 means the migration
+  // has not been run yet, which is worth saying plainly rather than showing
+  // three empty selects.
+  useEffect(() => {
+    if (!token) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch('/api/places', { headers: { Authorization: `Bearer ${token}` } })
+        const json = await res.json()
+        if (cancelled) return
+        if (res.status === 503 && json.setupRequired) {
+          setPlacesSetupNeeded(true)
+          return
+        }
+        if (!res.ok) throw new Error(json.error || 'Could not load places')
+        setPlaceTree(json)
+        setPlacesSetupNeeded(false)
+      } catch (err: unknown) {
+        if (!cancelled) setError(getErrorMessage(err, 'Could not load the district and taluk list.'))
       }
-      setSessionToken(token)
-      await loadCentres(token)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [token])
+
+  /** Admins may add a place inline; the new row is folded into the local tree. */
+  /**
+   * Where a centre actually is, according to the place list.
+   *
+   * The old district/taluk/village text on each row is not shown anywhere on
+   * this screen any more: it still holds imported spellings and test values, so
+   * displaying it would contradict the place list it is supposed to mirror. A
+   * centre with no village yet says so instead.
+   */
+  const placeFor = useCallback(
+    (c: Centre): ResolvedPlace => resolveVillage(placeTree, txt(c.village_id) || null),
+    [placeTree]
+  )
+
+  const matching = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return centres
+    return centres.filter((c) =>
+      [
+        c.eac_no,
+        ...(() => {
+          const p = placeFor(c)
+          return [p.village?.name, p.panchayat?.name, p.taluk?.name, p.district?.name]
+        })(),
+        ...CONTACTS.map((k) => c[k.name]),
+      ]
+        .map((v) => String(v ?? '').toLowerCase())
+        .join(' ')
+        .includes(q)
+    )
+  }, [centres, query, placeFor])
+
+  /**
+   * district → taluk → village → centres, walked from the place master.
+   *
+   * It used to be grouped by the free text on each centre row, which meant the
+   * pane showed whatever had been typed — including old spellings and test
+   * values. Reading the master instead means the tree matches the real place
+   * list, and a taluk with no centre yet is visible rather than absent.
+   */
+  const tree = useMemo(() => {
+    const byVillage = new Map<string, Centre[]>()
+    const unlinked: Centre[] = []
+    for (const c of matching) {
+      const vid = txt(c.village_id)
+      if (vid) {
+        if (!byVillage.has(vid)) byVillage.set(vid, [])
+        byVillage.get(vid)!.push(c)
+      } else {
+        unlinked.push(c)
+      }
     }
 
-    if (isAuthorized) {
-      init()
+    const byEac = (a: Centre, b: Centre) => Number(a.eac_no) - Number(b.eac_no)
+
+    const districts = [...placeTree.districts]
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((district) => {
+        const taluks = taluksIn(placeTree, district.id).map((taluk) => {
+          const villages = villagesIn(placeTree, taluk.id).map((village) => ({
+            key: village.id,
+            name: village.name,
+            centres: (byVillage.get(village.id) ?? []).sort(byEac),
+          }))
+          return {
+            key: taluk.id,
+            taluk: taluk.name,
+            villages,
+            total: villages.reduce((n, v) => n + v.centres.length, 0),
+          }
+        })
+        return {
+          key: district.id,
+          district: district.name,
+          taluks,
+          total: taluks.reduce((n, t) => n + t.total, 0),
+        }
+      })
+
+    // Centres with no village yet, and everything when the master is missing.
+    if (unlinked.length > 0) {
+      districts.push({
+        key: UNASSIGNED,
+        district: UNASSIGNED,
+        total: unlinked.length,
+        taluks: [
+          {
+            key: UNASSIGNED,
+            taluk: 'Pick a village on each one',
+            total: unlinked.length,
+            villages: [{ key: UNASSIGNED, name: '', centres: [...unlinked].sort(byEac) }],
+          },
+        ],
+      })
     }
-  }, [isAuthorized])
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!sessionToken) return
+    return showEmptyPlaces ? districts : districts.filter((d) => d.total > 0)
+  }, [matching, placeTree, showEmptyPlaces])
 
-    const eacNo = createForm.eac_no.trim() || nextEacNo
-    const duplicateEac = centres.some((centre) => String(centre.eac_no).trim() === eacNo)
-    if (duplicateEac) {
-      setError('This EAC No already exists. Please choose a different number.')
+  // A search narrows the tree to a handful of rows — open everything so the
+  // matches are visible without a second click.
+  useEffect(() => {
+    if (!query.trim()) return
+    setOpenGroups(Object.fromEntries(tree.map((g) => [g.key, true])))
+  }, [query, tree])
+
+  // On first load, open the first district so the pane isn't a wall of
+  // collapsed rows. Only once — after that the user's own toggles stand.
+  const [primed, setPrimed] = useState(false)
+  useEffect(() => {
+    if (primed || tree.length === 0) return
+    setOpenGroups((g) => ({ ...g, [tree[0].key]: true }))
+    setPrimed(true)
+  }, [primed, tree])
+
+  const selected = useMemo(
+    () => centres.find((c) => c.id === selectedId) ?? null,
+    [centres, selectedId]
+  )
+
+  // Below md only one pane shows. Picking a centre, or starting a new one,
+  // swaps the list for the detail; the back button swaps it back.
+  const showDetailOnly = Boolean(selected || editing)
+
+  const startEdit = (centre: Centre) => {
+    setForm(formFrom(centre))
+    setEditing(centre.id)
+    setError('')
+    setSuccess('')
+  }
+
+  const startCreate = () => {
+    const nextEac = centres.reduce((max, c) => Math.max(max, Number(c.eac_no) || 0), 0) + 1
+    setForm({ ...emptyForm(), eac_no: String(nextEac) })
+    setEditing('new')
+    setSelectedId(null)
+    setError('')
+    setSuccess('')
+  }
+
+  const save = async () => {
+    if (!token || !editing) return
+    if (!txt(form.eac_no)) {
+      setError('An EAC number is required.')
+      return
+    }
+    // The village carries the taluk and district with it, so this one field
+    // settles the whole address. Only enforced once the place tables exist:
+    // before that there is no picker to choose from, and demanding a village
+    // would block every centre edit outright.
+    if (!placesSetupNeeded && !txt(form.village_id)) {
+      setError('Pick a district, taluk and village for this centre.')
       return
     }
 
-    setActionLoading(true)
+    setSaving(true)
     setError('')
     setSuccess('')
     try {
-      const res = await fetch('/api/admin/centres/create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${sessionToken}`,
-        },
-        body: JSON.stringify({ ...createForm, eac_no: eacNo }),
+      const creating = editing === 'new'
+      const res = await fetch(`/api/admin/centres/${creating ? 'create' : 'update'}`, {
+        method: creating ? 'POST' : 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(creating ? form : { id: editing, ...form }),
       })
       const json = await res.json()
-      if (!res.ok) throw new Error(json.error || 'Failed to create centre')
+      if (!res.ok) throw new Error(json.error || 'Could not save the centre')
 
-      setCreateForm(emptyForm)
-      setShowCreateForm(false)
-      setSuccess('Centre created successfully!')
-      await loadCentres(sessionToken)
-    } catch (err: any) {
-      setError(err.message || String(err))
+      setSuccess(creating ? `Centre ${form.eac_no} created.` : `Centre ${form.eac_no} saved.`)
+      setEditing(null)
+      await load()
+      // The list is rebuilt on reload, so re-select by EAC rather than by id.
+      if (creating) {
+        setQuery('')
+        setSelectedId(null)
+      }
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Could not save the centre.'))
     } finally {
-      setActionLoading(false)
+      setSaving(false)
     }
   }
 
-  const openEditModal = (centre: CentreRecord) => {
+  const remove = async () => {
+    if (!token || !selected) return
+    setSaving(true)
     setError('')
-    setEditCentre(centre)
-    setEditForm({
-      eac_no: String(centre.eac_no || ''),
-      village_name: centre.village_name || '',
-      district: centre.district || '',
-      taluk: centre.taluk || '',
-      panchayat: centre.panchayat || '',
-      start_date: centre.start_date || '',
-      end_date: centre.end_date || '',
-      cbv_name: centre.cbv_name || '',
-      in_charge: centre.in_charge || '',
-      panchayat_member: centre.panchayat_member || '',
-      head_master: centre.head_master || '',
-      anganvadi: centre.anganvadi || '',
-      asha_worker: centre.asha_worker || '',
-      head_master_mobile: centre.head_master_mobile || '',
-      in_charge_mobile: centre.in_charge_mobile || '',
-      cbv_mobile: centre.cbv_mobile || '',
-      panchayat_member_mobile: centre.panchayat_member_mobile || '',
-      anganvadi_mobile: centre.anganvadi_mobile || '',
-      asha_worker_mobile: centre.asha_worker_mobile || '',
-      cbv_email: centre.cbv_email || '',
-    })
-  }
-
-  const handleUpdate = async () => {
-    if (!sessionToken || !editCentre) return
-
-    setActionLoading(true)
-    setError('')
-    setSuccess('')
-    try {
-      const res = await fetch('/api/admin/centres/update', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${sessionToken}`,
-        },
-        body: JSON.stringify({ id: editCentre.id, ...editForm }),
-      })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error || 'Failed to update centre')
-
-      setEditCentre(null)
-      setSuccess('Centre updated successfully!')
-      await loadCentres(sessionToken)
-    } catch (err: any) {
-      setError(err.message || String(err))
-    } finally {
-      setActionLoading(false)
-    }
-  }
-
-  const handleDelete = async () => {
-    if (!sessionToken || !deleteCentre) return
-
-    setActionLoading(true)
-    setError('')
-    setSuccess('')
     try {
       const res = await fetch('/api/admin/centres/delete', {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${sessionToken}`,
-        },
-        body: JSON.stringify({ id: deleteCentre.id }),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ id: selected.id }),
       })
       const json = await res.json()
-      if (!res.ok) throw new Error(json.error || 'Failed to delete centre')
-
-      setDeleteCentre(null)
-      setSuccess('Centre deleted successfully!')
-      await loadCentres(sessionToken)
-    } catch (err: any) {
-      setError(err.message || String(err))
+      if (!res.ok) throw new Error(json.error || 'Could not delete the centre')
+      setSuccess(`Centre ${selected.eac_no} deleted.`)
+      setConfirmDelete(false)
+      setSelectedId(null)
+      await load()
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Could not delete the centre.'))
     } finally {
-      setActionLoading(false)
+      setSaving(false)
     }
   }
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-surface">
         <LoadingSpinner size="lg" />
       </div>
     )
   }
 
-  const roleInfo = ROLE_CONFIG.find(r => r.value === 'admin')!
+  if (!isAuthorized || !profile) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-surface p-4">
+        <div className="max-w-md rounded-lg border border-rule p-6 text-center">
+          <h1 className="mb-2 text-2xl font-semibold">Access denied</h1>
+          <p className="text-ink-muted">You don&apos;t have permission to view this page.</p>
+        </div>
+      </main>
+    )
+  }
+
+  const breadcrumb = ['Manage records', 'Centre data']
+  if (editing === 'new') breadcrumb.push('New centre')
+  else if (selected) breadcrumb.push(`EAC ${selected.eac_no}`)
 
   return (
-    <main className="min-h-screen bg-slate-50">
-      <Navbar
-        username={profile!.username}
-        role="admin"
-        roleLabel={roleInfo.label}
-        roleColor={roleInfo.color}
-      />
-      <Sidebar role="admin" />
-
-      <PageContainer>
-        <div className="p-8 space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900">Centre Management</h1>
-              <p className="mt-1 text-slate-600">Create, edit, and delete centre records.</p>
+    <AdminShell
+      active="/admin/center-management"
+      breadcrumb={breadcrumb}
+      username={profile.username}
+      actions={
+        <button
+          type="button"
+          onClick={startCreate}
+          className="flex h-[30px] items-center gap-1.5 rounded-md bg-blue-600 px-3 text-[12.5px] font-medium text-white transition-colors hover:bg-blue-700"
+        >
+          <Plus className="h-3.5 w-3.5" /> New centre
+        </button>
+      }
+    >
+      <div className="flex h-full min-h-0">
+        {/*
+          Two panes side by side when there is room. On a phone they become one
+          pane at a time: the list until you pick a centre, then the centre with
+          a way back.
+        */}
+        <div
+          className={`${showDetailOnly ? 'hidden' : 'flex'} w-full shrink-0 flex-col border-r border-rule md:flex md:w-[280px]`}
+        >
+          <div className="border-b border-rule p-2.5">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-faint" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Centre, village or person"
+                className="h-8 w-full rounded-md border border-rule bg-surface-sunken pl-8 pr-2.5 text-[13px] outline-none placeholder:text-ink-faint focus:border-rule-strong focus:bg-surface"
+              />
             </div>
-            <button
-              onClick={() => router.push('/admin')}
-              className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors inline-flex items-center gap-2"
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto py-1.5">
+            {loading ? (
+              <div className="px-3 py-6 text-center text-[12.5px] text-ink-muted">Loading centres…</div>
+            ) : tree.length === 0 ? (
+              <div className="px-3 py-6 text-center text-[12.5px] text-ink-muted">
+                {query ? 'No centre matches that.' : 'No centres yet.'}
+              </div>
+            ) : (
+              tree.map((group) => {
+                const open = openGroups[group.key] ?? false
+                return (
+                  <div key={group.key}>
+                    <button
+                      type="button"
+                      onClick={() => setOpenGroups((g) => ({ ...g, [group.key]: !open }))}
+                      className="flex h-7 w-full items-center gap-1 px-2 text-left transition-colors hover:bg-surface-hover"
+                    >
+                      {open ? (
+                        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-ink-faint" />
+                      ) : (
+                        <ChevronRight className="h-3.5 w-3.5 shrink-0 text-ink-faint" />
+                      )}
+                      <span
+                        className={`min-w-0 flex-1 truncate text-[13px] font-medium ${
+                          group.key === UNASSIGNED ? 'italic text-ink-muted' : ''
+                        }`}
+                      >
+                        {group.district}
+                      </span>
+                      <span className="font-mono text-[11px] text-ink-faint">{group.total}</span>
+                    </button>
+
+                    {open &&
+                      group.taluks.map((t) => (
+                        <div key={t.key}>
+                          <div className="flex h-6 items-center gap-1.5 pl-[26px] pr-2">
+                            <span className="min-w-0 flex-1 truncate text-[11.5px] font-medium uppercase tracking-wide text-ink-faint">
+                              {t.taluk}
+                            </span>
+                            {t.total === 0 && <span className="text-[11px] text-ink-faint">no centres</span>}
+                          </div>
+
+                          {t.villages.map((v) => {
+                            // A village almost always holds one centre, so the
+                            // two collapse into a single row. Only where a
+                            // village really has several does it become a
+                            // heading with rows under it.
+                            const single = v.name && v.centres.length === 1
+                            return (
+                              <div key={v.key}>
+                                {v.name && !single && (
+                                  <div className="flex h-6 items-center gap-1.5 pl-[38px] pr-2">
+                                    <span
+                                      className={`min-w-0 flex-1 truncate text-[12px] ${
+                                        v.centres.length === 0 ? 'text-ink-faint' : 'text-ink-muted'
+                                      }`}
+                                    >
+                                      {v.name}
+                                    </span>
+                                    {v.centres.length === 0 && <span className="text-[11px] text-ink-faint">—</span>}
+                                  </div>
+                                )}
+
+                                {v.centres.map((c) => {
+                                  const active = c.id === selectedId
+                                  const recorded = contactsRecorded(c)
+                                  const label = single ? v.name : `EAC ${c.eac_no}`
+                                  return (
+                                    <button
+                                      key={c.id}
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedId(c.id)
+                                        setEditing(null)
+                                        setConfirmDelete(false)
+                                      }}
+                                      className={`flex h-8 w-full items-center gap-2 py-1 pr-2 text-left transition-colors ${
+                                        single ? 'pl-[38px]' : 'pl-[50px]'
+                                      } ${active ? 'bg-rule' : 'hover:bg-surface-hover'}`}
+                                    >
+                                      <span
+                                        className={`w-8 shrink-0 font-mono text-[11.5px] ${
+                                          active ? 'text-ink' : 'text-ink-muted'
+                                        }`}
+                                      >
+                                        {c.eac_no}
+                                      </span>
+                                      <span
+                                        className={`min-w-0 flex-1 truncate text-[13px] ${active ? 'font-medium' : ''} ${
+                                          isClosed(c) ? 'text-ink-faint' : ''
+                                        }`}
+                                      >
+                                        {label}
+                                      </span>
+                                      {isClosed(c) && (
+                                        <span className="shrink-0 text-[11px] text-ink-faint">closed</span>
+                                      )}
+                                      {recorded < CONTACTS.length && (
+                                        <span
+                                          title={`${CONTACTS.length - recorded} contacts missing`}
+                                          className="h-1.5 w-1.5 shrink-0 rounded-full bg-status-pending-fg"
+                                        />
+                                      )}
+                                    </button>
+                                  )
+                                })}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      ))}
+                  </div>
+                )
+              })
+            )}
+          </div>
+
+          <div className="border-t border-rule p-2">
+            <label className="flex h-7 w-full cursor-pointer items-center gap-2 rounded px-2 text-[12.5px] text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink">
+              <input
+                type="checkbox"
+                checked={showEmptyPlaces}
+                onChange={(e) => setShowEmptyPlaces(e.target.checked)}
+                className="h-3.5 w-3.5 accent-current"
+              />
+              Show places with no centre
+            </label>
+            <Link
+              href="/admin/places"
+              className="flex h-7 w-full items-center gap-2 rounded px-2 text-[12.5px] text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink"
             >
-              <ArrowLeft className="w-4 h-4" /> Back to Dashboard
+              <MapPin className="h-3.5 w-3.5" /> Add or rename a place
+            </Link>
+            <button
+              type="button"
+              onClick={() => setShowRename(true)}
+              className="flex h-7 w-full items-center gap-2 rounded px-2 text-[12.5px] text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink"
+            >
+              <Tag className="h-3.5 w-3.5" /> Fix a place name on old rows
             </button>
           </div>
-
-          {error && <Alert type="error" message={error} onDismiss={() => setError('')} />}
-          {success && <Alert type="success" message={success} onDismiss={() => setSuccess('')} />}
-
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-            <div className="bg-white border border-slate-200 rounded-lg p-3 md:p-4">
-              <div className="flex items-center gap-2 text-slate-500 text-xs mb-1">
-                <Building2 className="w-3.5 h-3.5" />
-                Total Centres
-              </div>
-              <p className="text-xl font-semibold text-slate-900">{overviewStats.centreCount}</p>
-            </div>
-            <div className="bg-white border border-slate-200 rounded-lg p-3 md:p-4">
-              <div className="flex items-center gap-2 text-slate-500 text-xs mb-1">
-                <MapPin className="w-3.5 h-3.5" />
-                Districts
-              </div>
-              <p className="text-xl font-semibold text-slate-900">{overviewStats.districtCount}</p>
-            </div>
-            <div className="bg-white border border-slate-200 rounded-lg p-3 md:p-4">
-              <div className="flex items-center gap-2 text-slate-500 text-xs mb-1">
-                <Landmark className="w-3.5 h-3.5" />
-                Taluks
-              </div>
-              <p className="text-xl font-semibold text-slate-900">{overviewStats.talukCount}</p>
-            </div>
-            <div className="bg-white border border-slate-200 rounded-lg p-3 md:p-4">
-              <div className="flex items-center gap-2 text-slate-500 text-xs mb-1">
-                <Map className="w-3.5 h-3.5" />
-                Panchayats / Villages
-              </div>
-              <p className="text-xl font-semibold text-slate-900">
-                {overviewStats.panchayatCount} / {overviewStats.villageCount}
-              </p>
-            </div>
-          </div>
-
-          <section className="space-y-4">
-            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-              <button
-                type="button"
-                onClick={() => setShowCreateForm((prev) => !prev)}
-                className="w-full px-4 py-4 flex items-center justify-between text-left hover:bg-slate-50 transition-colors"
-              >
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">Create Centre</p>
-                  <p className="text-xs text-slate-500">Add a new centre with editable cascade data</p>
-                </div>
-                <span className="text-xs font-medium text-blue-700 rounded-full bg-blue-50 px-3 py-1">
-                  {showCreateForm ? 'Hide' : 'Open'}
-                </span>
-              </button>
-
-              {showCreateForm && (
-                <div className="border-t border-slate-200 p-4 md:p-5">
-                  <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-3 gap-3 [&_input]:py-1.5">
-                    <div className="md:col-span-3 rounded-md border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-900">
-                      Cascade options are loaded from existing centre_data rows. Use +Add new to add values for this form, then save the centre to persist them.
-                    </div>
-                    <label className="space-y-1">
-                      <span className="text-xs font-medium text-slate-600">EAC No</span>
-                      <input
-                        type="number"
-                        value={createForm.eac_no || nextEacNo}
-                        onChange={e => setCreateForm({ ...createForm, eac_no: e.target.value })}
-                        inputMode="numeric"
-                        min="1"
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        required
-                      />
-                      <span className="text-xs text-slate-500">Suggested next EAC No: {nextEacNo}</span>
-                    </label>
-                    <label className="space-y-1">
-                      <span className="text-xs font-medium text-slate-600">District</span>
-                      <select
-                        value={createForm.district}
-                        onChange={e =>
-                          setCreateForm({ ...createForm, district: e.target.value, taluk: '', panchayat: '', village_name: '' })
-                        }
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        required
-                      >
-                        <option value="">Select District</option>
-                        {districtOptions.map((district) => (
-                          <option key={district} value={district}>
-                            {district}
-                          </option>
-                        ))}
-                      </select>
-                      <button type="button" onClick={addDistrict} className="text-xs font-medium text-blue-700 hover:text-blue-800 text-left">
-                        + Add new District
-                      </button>
-                    </label>
-                    <label className="space-y-1">
-                      <span className="text-xs font-medium text-slate-600">Taluk</span>
-                      <select
-                        value={createForm.taluk}
-                        onChange={e => setCreateForm({ ...createForm, taluk: e.target.value, panchayat: '', village_name: '' })}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        disabled={!createForm.district}
-                        required
-                      >
-                        <option value="">Select Taluk</option>
-                        {talukOptions.map((taluk) => (
-                          <option key={taluk} value={taluk}>
-                            {taluk}
-                          </option>
-                        ))}
-                      </select>
-                      <button type="button" onClick={addTaluk} className="text-xs font-medium text-blue-700 hover:text-blue-800 text-left">
-                        + Add new Taluk
-                      </button>
-                    </label>
-                    <label className="space-y-1">
-                      <span className="text-xs font-medium text-slate-600">Panchayat</span>
-                      <select
-                        value={createForm.panchayat}
-                        onChange={e => setCreateForm({ ...createForm, panchayat: e.target.value, village_name: '' })}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        disabled={!createForm.taluk}
-                        required
-                      >
-                        <option value="">Select Panchayat</option>
-                        {panchayatOptions.map((panchayat) => (
-                          <option key={panchayat} value={panchayat}>
-                            {panchayat}
-                          </option>
-                        ))}
-                      </select>
-                      <button type="button" onClick={addPanchayat} className="text-xs font-medium text-blue-700 hover:text-blue-800 text-left">
-                        + Add new Panchayat
-                      </button>
-                    </label>
-                    <label className="space-y-1">
-                      <span className="text-xs font-medium text-slate-600">Village Name</span>
-                      <select
-                        value={createForm.village_name}
-                        onChange={e => setCreateForm({ ...createForm, village_name: e.target.value })}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        disabled={!createForm.panchayat}
-                        required
-                      >
-                        <option value="">Select Village</option>
-                        {villageOptions.map((village) => (
-                          <option key={village} value={village}>
-                            {village}
-                          </option>
-                        ))}
-                      </select>
-                      <button type="button" onClick={addVillage} className="text-xs font-medium text-blue-700 hover:text-blue-800 text-left">
-                        + Add new Village
-                      </button>
-                    </label>
-                    <div className="md:col-span-3 border-t border-slate-200 pt-1" />
-                    <label className="space-y-1">
-                      <span className="text-xs font-medium text-slate-600">Start Date</span>
-                      <input
-                        type="date"
-                        value={createForm.start_date}
-                        onChange={e => setCreateForm({ ...createForm, start_date: e.target.value })}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        required
-                        aria-label="Start Date"
-                      />
-                    </label>
-                    <label className="space-y-1">
-                      <span className="text-xs font-medium text-slate-600">End Date</span>
-                      <input
-                        type="date"
-                        value={createForm.end_date}
-                        onChange={e => setCreateForm({ ...createForm, end_date: e.target.value })}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        required
-                        aria-label="End Date"
-                      />
-                    </label>
-                    <label className="space-y-1">
-                      <span className="text-xs font-medium text-slate-600">CBV Name</span>
-                      <input
-                        type="text"
-                        value={createForm.cbv_name}
-                        onChange={e => setCreateForm({ ...createForm, cbv_name: e.target.value })}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        required
-                      />
-                    </label>
-                    <label className="space-y-1">
-                      <span className="text-xs font-medium text-slate-600">In Charge</span>
-                      <input
-                        type="text"
-                        value={createForm.in_charge}
-                        onChange={e => setCreateForm({ ...createForm, in_charge: e.target.value })}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        required
-                      />
-                    </label>
-                    <label className="space-y-1">
-                      <span className="text-xs font-medium text-slate-600">Panchayat Member</span>
-                      <input
-                        type="text"
-                        value={createForm.panchayat_member}
-                        onChange={e => setCreateForm({ ...createForm, panchayat_member: e.target.value })}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </label>
-                    <label className="space-y-1">
-                      <span className="text-xs font-medium text-slate-600">Head Master</span>
-                      <input
-                        type="text"
-                        value={createForm.head_master}
-                        onChange={e => setCreateForm({ ...createForm, head_master: e.target.value })}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </label>
-                    <label className="space-y-1">
-                      <span className="text-xs font-medium text-slate-600">Anganvadi</span>
-                      <input
-                        type="text"
-                        value={createForm.anganvadi}
-                        onChange={e => setCreateForm({ ...createForm, anganvadi: e.target.value })}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </label>
-                    <label className="space-y-1">
-                      <span className="text-xs font-medium text-slate-600">ASHA Worker</span>
-                      <input
-                        type="text"
-                        value={createForm.asha_worker}
-                        onChange={e => setCreateForm({ ...createForm, asha_worker: e.target.value })}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </label>
-                    <label className="space-y-1">
-                      <span className="text-xs font-medium text-slate-600">Head Master Mobile</span>
-                      <input
-                        type="text"
-                        value={createForm.head_master_mobile}
-                        onChange={e => setCreateForm({ ...createForm, head_master_mobile: e.target.value })}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </label>
-                    <label className="space-y-1">
-                      <span className="text-xs font-medium text-slate-600">In Charge Mobile</span>
-                      <input
-                        type="text"
-                        value={createForm.in_charge_mobile}
-                        onChange={e => setCreateForm({ ...createForm, in_charge_mobile: e.target.value })}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </label>
-                    <label className="space-y-1">
-                      <span className="text-xs font-medium text-slate-600">CBV Mobile</span>
-                      <input
-                        type="text"
-                        value={createForm.cbv_mobile}
-                        onChange={e => setCreateForm({ ...createForm, cbv_mobile: e.target.value })}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </label>
-                    <label className="space-y-1">
-                      <span className="text-xs font-medium text-slate-600">Panchayat Member Mobile</span>
-                      <input
-                        type="text"
-                        value={createForm.panchayat_member_mobile}
-                        onChange={e => setCreateForm({ ...createForm, panchayat_member_mobile: e.target.value })}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </label>
-                    <label className="space-y-1">
-                      <span className="text-xs font-medium text-slate-600">Anganvadi Mobile</span>
-                      <input
-                        type="text"
-                        value={createForm.anganvadi_mobile}
-                        onChange={e => setCreateForm({ ...createForm, anganvadi_mobile: e.target.value })}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </label>
-                    <label className="space-y-1">
-                      <span className="text-xs font-medium text-slate-600">ASHA Worker Mobile</span>
-                      <input
-                        type="text"
-                        value={createForm.asha_worker_mobile}
-                        onChange={e => setCreateForm({ ...createForm, asha_worker_mobile: e.target.value })}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </label>
-                    <label className="space-y-1">
-                      <span className="text-xs font-medium text-slate-600">CBV Email</span>
-                      <input
-                        type="email"
-                        value={createForm.cbv_email}
-                        onChange={e => setCreateForm({ ...createForm, cbv_email: e.target.value })}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </label>
-                    <div className="md:col-span-3 flex flex-col md:flex-row gap-2 pt-1">
-                      <button
-                        type="submit"
-                        disabled={actionLoading}
-                        className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 md:min-w-[170px]"
-                      >
-                        {actionLoading ? 'Creating…' : 'Create Centre'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setShowCreateForm(false)}
-                        className="px-4 py-2 text-sm bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 md:min-w-[130px]"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              )}
-            </div>
-
-            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-              <button
-                type="button"
-                onClick={() => setShowCascadeManager((prev) => !prev)}
-                className="w-full px-4 py-4 flex items-center justify-between text-left hover:bg-slate-50 transition-colors"
-              >
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">Cascade Management</p>
-                  <p className="text-xs text-slate-500">Rename or delete district, taluk, panchayat, and village values</p>
-                </div>
-                <span className="text-xs font-medium text-blue-700 rounded-full bg-blue-50 px-3 py-1">
-                  {showCascadeManager ? 'Hide' : 'Open'}
-                </span>
-              </button>
-
-              {showCascadeManager && (
-                <div className="border-t border-slate-200 p-4 md:p-5 space-y-4">
-                  <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 md:p-4 space-y-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900">Drill down by location</p>
-                        <p className="text-xs text-slate-500">Click any row to drill down. Edit or delete directly from that row.</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="rounded-full bg-white px-3 py-1 text-xs text-slate-600 border border-slate-200">
-                          {cascadeScope.district || 'All Districts'}
-                        </span>
-                        {cascadeScope.taluk && (
-                          <span className="rounded-full bg-white px-3 py-1 text-xs text-slate-600 border border-slate-200">
-                            {cascadeScope.taluk}
-                          </span>
-                        )}
-                        {cascadeScope.panchayat && (
-                          <span className="rounded-full bg-white px-3 py-1 text-xs text-slate-600 border border-slate-200">
-                            {cascadeScope.panchayat}
-                          </span>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => setCascadeScope({ district: '', taluk: '', panchayat: '' })}
-                          className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-600 border border-slate-200 hover:bg-slate-100"
-                        >
-                          Reset
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      {districtOptions.length === 0 ? (
-                        <p className="text-sm text-slate-500">No districts available.</p>
-                      ) : (
-                        districtOptions.map((district) => {
-                          const districtTaluks = uniqueSorted([
-                            ...Array.from(hierarchy.taluksByDistrict[district] ?? []),
-                            ...(customTaluksByDistrict[district] ?? []),
-                          ])
-                          const districtOpen = cascadeScope.district === district
-                          const districtAffected = centres.filter(
-                            (centre) => String(centre.district ?? '').trim() === district
-                          ).length
-                          return (
-                            <div key={district} className="rounded-lg border border-slate-200 bg-white overflow-hidden">
-                              <div className="px-3 py-2.5 flex items-center justify-between gap-3">
-                                <button
-                                  type="button"
-                                  onClick={() => selectCascadeDistrict(district)}
-                                  className={`text-left min-w-0 ${districtOpen ? 'text-blue-700' : 'text-slate-900'} hover:text-blue-700`}
-                                >
-                                  <span className="font-medium">{district}</span>
-                                </button>
-                                <div className="flex items-center gap-2 shrink-0">
-                                  <span className="text-xs text-slate-500">{districtTaluks.length} taluk(s)</span>
-                                  <span className="text-xs text-slate-500">{districtAffected} records</span>
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      handleCascadeTableRename(
-                                        { level: 'district', value: district, parent: '-', affected: districtAffected },
-                                        { district, taluk: '', panchayat: '' }
-                                      )
-                                    }
-                                    className="text-xs font-medium text-blue-700 hover:text-blue-800"
-                                  >
-                                    Edit
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      handleCascadeTableDelete(
-                                        { level: 'district', value: district, parent: '-', affected: districtAffected },
-                                        { district, taluk: '', panchayat: '' }
-                                      )
-                                    }
-                                    className="text-xs font-medium text-red-600 hover:text-red-700"
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
-                              </div>
-                              {districtOpen && (
-                                <div className="border-t border-slate-200 px-3 py-2.5 bg-slate-50/70 space-y-2">
-                                  {districtTaluks.length === 0 ? (
-                                    <p className="text-sm text-slate-500">No taluks available.</p>
-                                  ) : (
-                                    districtTaluks.map((taluk) => {
-                                      const talukKey = `${district}::${taluk}`
-                                      const talukPanchayats = uniqueSorted([
-                                        ...Array.from(hierarchy.panchayatsByTaluk[talukKey] ?? []),
-                                        ...(customPanchayatsByTaluk[talukKey] ?? []),
-                                      ])
-                                      const talukOpen = districtOpen && cascadeScope.taluk === taluk
-                                      const talukAffected = centres.filter(
-                                        (centre) =>
-                                          String(centre.district ?? '').trim() === district &&
-                                          String(centre.taluk ?? '').trim() === taluk
-                                      ).length
-
-                                      return (
-                                        <div key={taluk} className="ml-4 border-l border-slate-300 pl-3">
-                                          <div className="py-2 flex items-center justify-between gap-3">
-                                            <button
-                                              type="button"
-                                              onClick={() => selectCascadeTaluk(taluk)}
-                                              className={`text-left min-w-0 ${talukOpen ? 'text-blue-700' : 'text-slate-900'} hover:text-blue-700`}
-                                            >
-                                              <span className="font-medium">{taluk}</span>
-                                            </button>
-                                            <div className="flex items-center gap-2 shrink-0">
-                                              <span className="text-xs text-slate-500">{talukPanchayats.length} panchayat(s)</span>
-                                              <span className="text-xs text-slate-500">{talukAffected} records</span>
-                                              <button
-                                                type="button"
-                                                onClick={() =>
-                                                  handleCascadeTableRename(
-                                                    { level: 'taluk', value: taluk, parent: district, affected: talukAffected },
-                                                    { district, taluk, panchayat: '' }
-                                                  )
-                                                }
-                                                className="text-xs font-medium text-blue-700 hover:text-blue-800"
-                                              >
-                                                Edit
-                                              </button>
-                                              <button
-                                                type="button"
-                                                onClick={() =>
-                                                  handleCascadeTableDelete(
-                                                    { level: 'taluk', value: taluk, parent: district, affected: talukAffected },
-                                                    { district, taluk, panchayat: '' }
-                                                  )
-                                                }
-                                                className="text-xs font-medium text-red-600 hover:text-red-700"
-                                              >
-                                                Delete
-                                              </button>
-                                            </div>
-                                          </div>
-                                          {talukOpen && (
-                                            <div className="ml-4 border-l border-slate-300 pl-3 space-y-2 pb-2">
-                                              {talukPanchayats.length === 0 ? (
-                                                <p className="text-sm text-slate-500">No panchayats available.</p>
-                                              ) : (
-                                                talukPanchayats.map((panchayat) => {
-                                                  const panchayatKey = `${district}::${taluk}::${panchayat}`
-                                                  const villages = uniqueSorted([
-                                                    ...Array.from(hierarchy.villagesByPanchayat[panchayatKey] ?? []),
-                                                    ...(customVillagesByPanchayat[panchayatKey] ?? []),
-                                                  ])
-                                                  const panchayatOpen = talukOpen && cascadeScope.panchayat === panchayat
-                                                  const panchayatAffected = centres.filter(
-                                                    (centre) =>
-                                                      String(centre.district ?? '').trim() === district &&
-                                                      String(centre.taluk ?? '').trim() === taluk &&
-                                                      String(centre.panchayat ?? '').trim() === panchayat
-                                                  ).length
-
-                                                  return (
-                                                    <div key={panchayat} className="py-2">
-                                                      <div className="flex items-center justify-between gap-3">
-                                                        <button
-                                                          type="button"
-                                                          onClick={() => selectCascadePanchayat(panchayat)}
-                                                          className={`text-left min-w-0 ${panchayatOpen ? 'text-blue-700' : 'text-slate-900'} hover:text-blue-700`}
-                                                        >
-                                                          <span className="font-medium">{panchayat}</span>
-                                                        </button>
-                                                        <div className="flex items-center gap-2 shrink-0">
-                                                          <span className="text-xs text-slate-500">{villages.length} village(s)</span>
-                                                          <span className="text-xs text-slate-500">{panchayatAffected} records</span>
-                                                          <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                              handleCascadeTableRename(
-                                                                {
-                                                                  level: 'panchayat',
-                                                                  value: panchayat,
-                                                                  parent: `${district} / ${taluk}`,
-                                                                  affected: panchayatAffected,
-                                                                },
-                                                                { district, taluk, panchayat }
-                                                              )
-                                                            }
-                                                            className="text-xs font-medium text-blue-700 hover:text-blue-800"
-                                                          >
-                                                            Edit
-                                                          </button>
-                                                          <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                              handleCascadeTableDelete(
-                                                                {
-                                                                  level: 'panchayat',
-                                                                  value: panchayat,
-                                                                  parent: `${district} / ${taluk}`,
-                                                                  affected: panchayatAffected,
-                                                                },
-                                                                { district, taluk, panchayat }
-                                                              )
-                                                            }
-                                                            className="text-xs font-medium text-red-600 hover:text-red-700"
-                                                          >
-                                                            Delete
-                                                          </button>
-                                                        </div>
-                                                      </div>
-                                                      {panchayatOpen && (
-                                                        <div className="ml-4 border-l border-slate-300 pl-3 mt-2 space-y-1">
-                                                          {villages.length === 0 ? (
-                                                            <p className="text-sm text-slate-500">No villages available.</p>
-                                                          ) : (
-                                                            <ul className="space-y-1">
-                                                              {villages.map((village) => (
-                                                                <li key={village} className="flex items-center justify-between gap-3 rounded-md bg-white px-3 py-2 border border-slate-200">
-                                                                  <span className="text-sm text-slate-700">{village}</span>
-                                                                  <div className="flex items-center gap-2">
-                                                                    <button
-                                                                      type="button"
-                                                                      onClick={() =>
-                                                                        handleCascadeTableRename(
-                                                                          {
-                                                                            level: 'village',
-                                                                            value: village,
-                                                                            parent: `${district} / ${taluk} / ${panchayat}`,
-                                                                            affected: centres.filter(
-                                                                              (centre) =>
-                                                                                String(centre.district ?? '').trim() === district &&
-                                                                                String(centre.taluk ?? '').trim() === taluk &&
-                                                                                String(centre.panchayat ?? '').trim() === panchayat &&
-                                                                                String(centre.village_name ?? '').trim() === village
-                                                                            ).length,
-                                                                          },
-                                                                          { district, taluk, panchayat }
-                                                                        )
-                                                                      }
-                                                                      className="text-xs font-medium text-blue-700 hover:text-blue-800"
-                                                                    >
-                                                                      Edit
-                                                                    </button>
-                                                                    <button
-                                                                      type="button"
-                                                                      onClick={() =>
-                                                                        handleCascadeTableDelete(
-                                                                          {
-                                                                            level: 'village',
-                                                                            value: village,
-                                                                            parent: `${district} / ${taluk} / ${panchayat}`,
-                                                                            affected: centres.filter(
-                                                                              (centre) =>
-                                                                                String(centre.district ?? '').trim() === district &&
-                                                                                String(centre.taluk ?? '').trim() === taluk &&
-                                                                                String(centre.panchayat ?? '').trim() === panchayat &&
-                                                                                String(centre.village_name ?? '').trim() === village
-                                                                            ).length,
-                                                                          },
-                                                                          { district, taluk, panchayat }
-                                                                        )
-                                                                      }
-                                                                      className="text-xs font-medium text-red-600 hover:text-red-700"
-                                                                    >
-                                                                      Delete
-                                                                    </button>
-                                                                  </div>
-                                                                </li>
-                                                              ))}
-                                                            </ul>
-                                                          )}
-                                                        </div>
-                                                      )}
-                                                    </div>
-                                                  )
-                                                })
-                                              )}
-                                            </div>
-                                          )}
-                                        </div>
-                                      )
-                                    })
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          )
-                        })
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-              <button
-                type="button"
-                onClick={() => setShowCentreRecords((prev) => !prev)}
-                className="w-full px-4 py-4 flex items-center justify-between text-left hover:bg-slate-50 transition-colors"
-              >
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">Centre Records</p>
-                  <p className="text-xs text-slate-500">Search, sort, edit, and delete saved centres</p>
-                </div>
-                <span className="text-xs font-medium text-blue-700 rounded-full bg-blue-50 px-3 py-1">
-                  {showCentreRecords ? 'Hide' : 'Open'}
-                </span>
-              </button>
-
-              {showCentreRecords && (
-                <div className="border-t border-slate-200">
-                  <div className="p-3 md:p-4 border-b border-slate-200 bg-slate-50/70 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                    <div>
-                      <p className="text-xs text-slate-500">{sortedCentres.length} result(s)</p>
-                    </div>
-                    <label className="relative w-full md:w-[360px]">
-                      <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="text"
-                        value={tableSearch}
-                        onChange={(e) => setTableSearch(e.target.value)}
-                        placeholder="Search by EAC, village, district, taluk, panchayat, CBV, in-charge"
-                        className="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </label>
-                  </div>
-                  {loading ? (
-                    <div className="p-12 text-center">
-                      <LoadingSpinner size="lg" />
-                    </div>
-                  ) : centres.length === 0 ? (
-                    <div className="p-12 text-center text-slate-500">No centres found</div>
-                  ) : (
-                    <div className="overflow-x-auto overflow-y-auto max-h-[520px]">
-                      <table className="min-w-[2600px] w-full text-sm">
-                        <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
-                          <tr>
-                            <th className="px-6 py-3 text-left font-semibold text-slate-900">Actions</th>
-                            {tableColumns.map((column) => (
-                              <th key={column.key} className="px-6 py-3 text-left font-semibold text-slate-900 whitespace-nowrap">
-                                <div className="flex items-center gap-2">
-                                  <span>{column.label}</span>
-                                  {!nonSortableColumns.has(column.key) && (
-                                    <button
-                                      type="button"
-                                      onClick={() => toggleSort(column.key)}
-                                      className="rounded border border-slate-300 px-2 py-0.5 text-xs font-medium text-slate-700 hover:bg-slate-100"
-                                    >
-                                      {sortColumn === column.key ? (sortDirection === 'asc' ? 'ASC' : 'DESC') : 'Sort'}
-                                    </button>
-                                  )}
-                                </div>
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {sortedCentres.map((centre) => (
-                            <tr key={centre.id} className="border-b border-slate-200 odd:bg-white even:bg-slate-50/30 hover:bg-blue-50/40">
-                              <td className="px-6 py-4">
-                                <div className="flex items-center gap-3">
-                                  <button
-                                    onClick={() => openEditModal(centre)}
-                                    className="text-blue-600 hover:text-blue-700 font-medium"
-                                  >
-                                    Edit
-                                  </button>
-                                  <button
-                                    onClick={() => setDeleteCentre(centre)}
-                                    className="text-red-600 hover:text-red-700 font-medium"
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
-                              </td>
-                              {tableColumns.map((column) => {
-                                const value = centre[column.key as keyof CentreRecord]
-                                return (
-                                  <td
-                                    key={`${centre.id}-${column.key}`}
-                                    className={`px-6 py-4 whitespace-nowrap ${column.key === 'eac_no' ? 'text-slate-900 font-medium' : 'text-slate-700'}`}
-                                  >
-                                    {value || '-'}
-                                  </td>
-                                )
-                              })}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </section>
         </div>
-      </PageContainer>
 
-      {textDialog.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl border border-slate-200">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault()
-                void submitTextDialog()
-              }}
-              className="space-y-4 p-5"
+        {/* Detail */}
+        <div className={`${showDetailOnly ? 'block' : 'hidden'} min-w-0 flex-1 overflow-y-auto md:block`}>
+          <div className="px-4 pb-14 pt-4 sm:px-8 sm:pt-6">
+            {showDetailOnly && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedId(null)
+                  setEditing(null)
+                }}
+                className="mb-3 flex h-9 items-center gap-1.5 rounded-md border border-rule-strong px-2.5 text-[13px] transition-colors hover:bg-surface-hover md:hidden"
+              >
+                <ChevronLeft className="h-4 w-4" /> All centres
+              </button>
+            )}
+            {error && <Alert type="error" message={error} className="mb-4" />}
+            {success && <Alert type="success" message={success} className="mb-4" />}
+
+            {editing ? (
+              <CentreForm
+                form={form}
+                setForm={setForm}
+                creating={editing === 'new'}
+                saving={saving}
+                placeTree={placeTree}
+                placesSetupNeeded={placesSetupNeeded}
+                onSave={save}
+                onCancel={() => {
+                  setEditing(null)
+                  setError('')
+                }}
+              />
+            ) : selected ? (
+              <CentreDetail
+                centre={selected}
+                place={placeFor(selected)}
+                counts={counts[String(selected.eac_no)]}
+                onEdit={() => startEdit(selected)}
+                confirmDelete={confirmDelete}
+                setConfirmDelete={setConfirmDelete}
+                onDelete={remove}
+                saving={saving}
+              />
+            ) : (
+              <Summary
+                centres={centres}
+                counts={counts}
+                loading={loading}
+                placeFor={placeFor}
+                onPick={setSelectedId}
+              />
+            )}
+          </div>
+        </div>
+      </div>
+
+      {showRename && token && (
+        <RenamePlaceDialog
+          centres={centres}
+          token={token}
+          onClose={() => setShowRename(false)}
+          onDone={async (message) => {
+            setShowRename(false)
+            setSuccess(message)
+            await load()
+          }}
+        />
+      )}
+    </AdminShell>
+  )
+}
+
+/* ---------------------------------------------------------------- detail -- */
+
+function CentreDetail({
+  centre,
+  place,
+  counts,
+  onEdit,
+  confirmDelete,
+  setConfirmDelete,
+  onDelete,
+  saving,
+}: {
+  centre: Centre
+  place: ResolvedPlace
+  counts?: CentreCounts
+  onEdit: () => void
+  confirmDelete: boolean
+  setConfirmDelete: (v: boolean) => void
+  onDelete: () => void
+  saving: boolean
+}) {
+  const closed = isClosed(centre)
+  const recorded = contactsRecorded(centre)
+  const address = [place.district?.name, place.taluk?.name, place.panchayat?.name, place.village?.name].filter(
+    Boolean
+  ) as string[]
+
+  return (
+    <div className="max-w-[900px]">
+      <div className="mb-5 flex items-start justify-between gap-4">
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <div className="flex items-center gap-2.5">
+            <span className="rounded bg-surface-hover px-1.5 py-0.5 font-mono text-[12px] text-ink-muted">
+              EAC {centre.eac_no}
+            </span>
+            <span
+              className={`rounded px-1.5 py-0.5 text-[11.5px] font-medium ${
+                closed
+                  ? 'bg-status-inactive-bg text-status-inactive-fg'
+                  : 'bg-status-approved-bg text-status-approved-fg'
+              }`}
             >
-              <div>
-                <h3 className="text-lg font-semibold text-slate-900">{textDialog.title}</h3>
-                <p className="text-sm text-slate-500 mt-1">{textDialog.label}</p>
+              {closed ? 'Closed' : 'Active'}
+            </span>
+          </div>
+          <h1 className="truncate text-[22px] font-semibold tracking-tight">
+            {place.village?.name ?? `EAC ${centre.eac_no}`}
+          </h1>
+          <p className="flex items-center gap-1.5 text-[13px] text-ink-muted">
+            <MapPin className="h-3.5 w-3.5 shrink-0" />
+            {address.length ? address.join(' › ') : 'No village set yet — edit this centre to pick one'}
+          </p>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={onEdit}
+            className="flex h-8 items-center gap-1.5 rounded-md border border-rule-strong px-3 text-[13px] transition-colors hover:bg-surface-hover"
+          >
+            <Pencil className="h-3.5 w-3.5" /> Edit
+          </button>
+          <button
+            type="button"
+            onClick={() => setConfirmDelete(true)}
+            className="flex h-8 w-8 items-center justify-center rounded-md border border-rule-strong text-ink-muted transition-colors hover:bg-status-returned-bg hover:text-status-returned-fg"
+            title="Delete centre"
+            aria-label="Delete centre"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {confirmDelete && (
+        <div className="mb-5 rounded-md border border-status-returned-fg/30 bg-status-returned-bg px-4 py-3.5">
+          <p className="text-[13px] text-status-returned-fg">
+            Delete centre {centre.eac_no}? {counts?.total
+              ? `${counts.total} child record${counts.total === 1 ? '' : 's'} reference this EAC and will be orphaned.`
+              : 'This cannot be undone.'}
+          </p>
+          <div className="mt-3 flex gap-2">
+            <button
+              type="button"
+              onClick={onDelete}
+              disabled={saving}
+              className="flex h-[30px] items-center rounded-md bg-status-returned-fg px-3 text-[12.5px] font-medium text-surface disabled:opacity-60"
+            >
+              {saving ? 'Deleting…' : 'Delete centre'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmDelete(false)}
+              className="flex h-[30px] items-center rounded-md border border-rule-strong bg-surface px-3 text-[12.5px]"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Children at this centre */}
+      {/* Four tiles across on a laptop; two by two on a phone, with the link
+          on its own full-width row rather than squeezed off the edge. */}
+      <div className="mb-6 grid grid-cols-2 gap-px overflow-hidden rounded-md border border-rule bg-rule sm:grid-cols-4 lg:flex lg:items-center">
+        {[
+          { label: 'Children', value: counts?.total ?? 0, tone: '' },
+          { label: 'Enrolled', value: counts?.enrolled ?? 0, tone: '' },
+          { label: 'Left', value: counts?.left ?? 0, tone: 'text-ink-muted' },
+          {
+            label: 'Missing family details',
+            value: counts?.missingFamily ?? 0,
+            tone: counts?.missingFamily ? 'text-status-pending-fg' : '',
+          },
+        ].map((s) => (
+          <div key={s.label} className="flex flex-1 flex-col gap-1 bg-surface px-4 py-3">
+            <span className="text-[11.5px] leading-tight text-ink-muted">{s.label}</span>
+            <span className={`text-lg font-semibold tracking-tight ${s.tone}`}>{s.value}</span>
+          </div>
+        ))}
+        <Link
+          href={`/admin/child-data?eacNo=${encodeURIComponent(String(centre.eac_no))}`}
+          className="col-span-2 flex h-11 items-center gap-1.5 bg-surface px-4 text-[12.5px] font-medium text-blue-600 transition-colors hover:bg-surface-hover sm:col-span-4 lg:h-full lg:w-auto"
+        >
+          <Users className="h-3.5 w-3.5" /> Open children
+        </Link>
+      </div>
+
+      {/* People */}
+      <div className="mb-6">
+        <div className="mb-2.5 flex items-baseline justify-between">
+          <span className="text-xs font-medium text-ink-faint">People at this centre</span>
+          <span className={`text-[11.5px] ${recorded < CONTACTS.length ? 'text-status-pending-fg' : 'text-ink-faint'}`}>
+            {recorded} of {CONTACTS.length} recorded
+          </span>
+        </div>
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+          {CONTACTS.map((c) => {
+            const name = txt(centre[c.name])
+            const mobile = txt(centre[c.mobile])
+            const email = c.email ? txt(centre[c.email]) : ''
+            return (
+              <div
+                key={c.label}
+                className={`flex flex-col gap-1.5 rounded-md border p-3.5 ${
+                  name ? 'border-rule' : 'border-dashed border-rule-strong bg-surface-sunken'
+                }`}
+              >
+                <span className="text-[11px] font-medium uppercase tracking-wide text-ink-faint">{c.label}</span>
+                {name ? (
+                  <>
+                    <span className="truncate text-[13.5px] font-medium">{name}</span>
+                    {mobile ? (
+                      <a
+                        href={`tel:${mobile.replace(/\s+/g, '')}`}
+                        className="flex items-center gap-1.5 font-mono text-[12.5px] text-blue-600"
+                      >
+                        <Phone className="h-3 w-3" /> {mobile}
+                      </a>
+                    ) : (
+                      <span className="text-[12px] text-ink-faint">No number</span>
+                    )}
+                    {email && (
+                      <a
+                        href={`mailto:${email}`}
+                        className="flex items-center gap-1.5 truncate text-[12.5px] text-blue-600"
+                      >
+                        <Mail className="h-3 w-3 shrink-0" /> <span className="truncate">{email}</span>
+                      </a>
+                    )}
+                  </>
+                ) : (
+                  <span className="text-[13px] italic text-ink-faint">Not recorded</span>
+                )}
               </div>
-              <label className="block space-y-2">
-                <span className="text-xs font-medium text-slate-600">{textDialog.label}</span>
-                <input
-                  autoFocus
-                  type="text"
-                  value={textDialog.value}
-                  onChange={(e) => setTextDialog((prev) => ({ ...prev, value: e.target.value }))}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder={textDialog.label}
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Address and dates */}
+      <div>
+        <span className="mb-2.5 block text-xs font-medium text-ink-faint">Location and dates</span>
+        <div className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-rule bg-rule md:grid-cols-3">
+          {[
+            { label: 'District', value: place.district?.name ?? '—' },
+            { label: 'Taluk', value: place.taluk?.name ?? '—' },
+            { label: 'Panchayat', value: place.panchayat?.name ?? '—' },
+            { label: 'Village', value: place.village?.name ?? '—' },
+            { label: 'Started', value: formatDate(centre.start_date) },
+            { label: 'Ended', value: formatDate(centre.end_date) },
+          ].map((f) => (
+            <div key={f.label} className="flex flex-col gap-1 bg-surface px-4 py-3">
+              <span className="text-[11.5px] text-ink-muted">{f.label}</span>
+              <span className="truncate text-[13.5px]">{f.value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------ form -- */
+
+const inputClass =
+  'h-8 w-full rounded-md border border-rule bg-surface px-2.5 text-[13px] outline-none placeholder:text-ink-faint focus:border-blue-500'
+
+function Field({
+  label,
+  value,
+  onChange,
+  type = 'text',
+  placeholder,
+  list,
+  required,
+}: {
+  label: string
+  value: string
+  onChange: (v: string) => void
+  type?: string
+  placeholder?: string
+  list?: string
+  required?: boolean
+}) {
+  return (
+    <label className="flex flex-col gap-1.5">
+      <span className="text-[11.5px] font-medium text-ink-muted">
+        {label}
+        {required && <span className="text-status-returned-fg"> *</span>}
+      </span>
+      <input
+        type={type}
+        value={value}
+        list={list}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+        className={inputClass}
+      />
+    </label>
+  )
+}
+
+function CentreForm({
+  form,
+  setForm,
+  creating,
+  saving,
+  placeTree,
+  placesSetupNeeded,
+  onSave,
+  onCancel,
+}: {
+  form: FormState
+  setForm: (f: FormState) => void
+  creating: boolean
+  saving: boolean
+  placeTree: PlaceTree
+  placesSetupNeeded: boolean
+  onSave: () => void
+  onCancel: () => void
+}) {
+  const set = (key: string) => (v: string) => setForm({ ...form, [key]: v })
+
+  return (
+    <div className="max-w-[900px]">
+      <div className="mb-5 flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-[22px] font-semibold tracking-tight">
+            {creating ? 'New centre' : `Edit EAC ${form.eac_no}`}
+          </h1>
+          <p className="text-[13px] text-ink-muted">
+            {creating
+              ? 'EAC number and village name are required; everything else can be filled in later.'
+              : 'Changes apply to this centre only.'}
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex h-8 items-center gap-1.5 rounded-md border border-rule-strong px-3 text-[13px] transition-colors hover:bg-surface-hover"
+          >
+            <X className="h-3.5 w-3.5" /> Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={saving}
+            className="flex h-8 items-center gap-1.5 rounded-md bg-blue-600 px-3.5 text-[13px] font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-60"
+          >
+            <Check className="h-3.5 w-3.5" /> {saving ? 'Saving…' : creating ? 'Create centre' : 'Save changes'}
+          </button>
+        </div>
+      </div>
+
+      <section className="mb-6">
+        <span className="mb-2.5 block text-xs font-medium text-ink-faint">Identity and location</span>
+        <div className="flex flex-col gap-4 rounded-md border border-rule p-4">
+          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
+            <Field label="EAC number" value={form.eac_no} onChange={set('eac_no')} required />
+            <Field label="Start date" type="date" value={form.start_date} onChange={set('start_date')} />
+            <Field
+              label="End date"
+              type="date"
+              value={form.end_date}
+              onChange={set('end_date')}
+              placeholder="Leave blank while active"
+            />
+          </div>
+
+          <div className="border-t border-rule pt-4">
+            {placesSetupNeeded ? (
+              <Alert
+                type="warning"
+                message="The place list has not been set up yet. Run sql/002_place_hierarchy.sql then sql/003_place_seed.sql, and the district, taluk and village dropdowns will fill in."
+              />
+            ) : (
+              <>
+                {/* No inline creation here on purpose: a place typed while
+                    filling in a centre is how a typo becomes a permanent
+                    village. Adding one is its own screen. */}
+                <PlacePicker
+                  tree={placeTree}
+                  villageId={form.village_id || null}
+                  onChange={(villageId) => setForm({ ...form, village_id: villageId ?? '' })}
+                  showPanchayat
+                  required
                 />
-              </label>
-              <div className="flex gap-3 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setTextDialog((prev) => ({ ...prev, open: false }))}
-                  className="flex-1 rounded-lg bg-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-300"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={cascadeLoading}
-                  className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {textDialog.confirmText}
-                </button>
-              </div>
-            </form>
+                <p className="mt-2 text-[11.5px] text-ink-faint">
+                  Village not on the list?{' '}
+                  <Link href="/admin/places" className="underline hover:text-ink">
+                    Add it under Places
+                  </Link>
+                  , then come back.
+                </p>
+              </>
+            )}
           </div>
         </div>
-      )}
+      </section>
 
-      {cascadeDeleteDialog.open && cascadeDeleteDialog.row && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl border border-slate-200 p-5 space-y-4">
-            <div>
-              <h3 className="text-lg font-semibold text-slate-900">Delete {cascadeDeleteDialog.row.level}</h3>
-              <p className="text-sm text-slate-600 mt-1">
-                Remove <span className="font-semibold">{cascadeDeleteDialog.row.value}</span> from the current scope. This will clear the value from matching centre rows.
-              </p>
+      <section>
+        <span className="mb-2.5 block text-xs font-medium text-ink-faint">People at this centre</span>
+        <div className="flex flex-col gap-px overflow-hidden rounded-md border border-rule bg-rule">
+          {CONTACTS.map((c) => (
+            <div
+              key={c.label}
+              className="grid grid-cols-1 gap-3.5 bg-surface px-4 py-3.5 sm:grid-cols-[1fr_1fr] lg:grid-cols-[140px_1fr_180px_1fr]"
+            >
+              <span className="self-center text-[12.5px] font-medium">{c.label}</span>
+              <Field label="Name" value={form[c.name as string]} onChange={set(c.name as string)} />
+              <Field label="Mobile" value={form[c.mobile as string]} onChange={set(c.mobile as string)} />
+              {c.email ? (
+                <Field label="Email" type="email" value={form[c.email as string]} onChange={set(c.email as string)} />
+              ) : (
+                <div />
+              )}
             </div>
-            <div className="flex gap-3 pt-1">
+          ))}
+        </div>
+      </section>
+    </div>
+  )
+}
+
+/* --------------------------------------------------------------- summary -- */
+
+function Summary({
+  centres,
+  counts,
+  loading,
+  placeFor,
+  onPick,
+}: {
+  centres: Centre[]
+  counts: Record<string, CentreCounts>
+  loading: boolean
+  placeFor: (c: Centre) => ResolvedPlace
+  onPick: (id: string) => void
+}) {
+  const stats = useMemo(() => {
+    const districts = new Set(
+      centres.map((c) => placeFor(c).district?.name).filter(Boolean) as string[]
+    )
+    const active = centres.filter((c) => !isClosed(c)).length
+    const children = Object.values(counts).reduce((n, c) => n + c.total, 0)
+    return { total: centres.length, districts: districts.size, active, children }
+  }, [centres, counts, placeFor])
+
+  /** Fewest contacts first — those are the centres nobody can actually reach. */
+  const gaps = useMemo(
+    () =>
+      centres
+        .map((c) => ({ centre: c, place: placeFor(c), recorded: contactsRecorded(c) }))
+        .filter((r) => r.recorded < CONTACTS.length)
+        .sort((a, b) => a.recorded - b.recorded)
+        .slice(0, 8),
+    [centres, placeFor]
+  )
+
+  return (
+    <div className="max-w-[820px]">
+      <div className="mb-6 flex flex-col gap-1.5">
+        <h1 className="text-[22px] font-semibold tracking-tight">Centre data</h1>
+        <p className="text-[13.5px] leading-relaxed text-ink-muted">
+          Pick a centre on the left to see its people and address. Every centre is one EAC number.
+        </p>
+      </div>
+
+      <div className="mb-7 grid grid-cols-2 gap-px overflow-hidden rounded-md border border-rule bg-rule md:grid-cols-4">
+        {[
+          { label: 'Centres', value: stats.total },
+          { label: 'Active', value: stats.active },
+          { label: 'Districts', value: stats.districts },
+          { label: 'Children', value: stats.children },
+        ].map((s) => (
+          <div key={s.label} className="flex flex-col gap-1.5 bg-surface px-[18px] py-4">
+            <span className="text-xs text-ink-muted">{s.label}</span>
+            <span className="text-2xl font-semibold tracking-tight">
+              {loading ? '—' : s.value.toLocaleString()}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {!loading && gaps.length > 0 && (
+        <div className="flex flex-col gap-2.5">
+          <div className="flex items-center gap-1.5">
+            <AlertCircle className="h-3.5 w-3.5 text-status-pending-fg" />
+            <span className="text-xs font-medium text-ink-faint">Centres with contacts missing</span>
+          </div>
+          <div className="overflow-hidden rounded-md border border-rule">
+            {gaps.map((g, i) => (
               <button
+                key={g.centre.id}
                 type="button"
-                onClick={() => setCascadeDeleteDialog({ open: false })}
-                className="flex-1 rounded-lg bg-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-300"
+                onClick={() => onPick(g.centre.id)}
+                className={`flex h-10 w-full items-center gap-3.5 px-4 text-left transition-colors hover:bg-surface-hover ${
+                  i < gaps.length - 1 ? 'border-b border-rule' : ''
+                }`}
               >
-                Cancel
+                <span className="w-9 font-mono text-[12.5px] text-ink-muted">{g.centre.eac_no}</span>
+                <span className={`flex-1 truncate text-[13px] ${g.place.village ? '' : 'text-ink-faint'}`}>
+                  {g.place.village?.name ?? 'No village set'}
+                </span>
+                <span className="truncate text-[12px] text-ink-faint">{g.place.taluk?.name ?? ''}</span>
+                <span className="w-24 text-right text-[12px] text-status-pending-fg">
+                  {CONTACTS.length - g.recorded} missing
+                </span>
               </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ---------------------------------------------------------------- rename -- */
+
+/**
+ * Place names arrive from Access with spelling drift ("Uthiramerur" vs
+ * "Uthiramerure"), which splits one taluk into two branches of the tree. This
+ * repairs the name everywhere at once.
+ *
+ * Deliberately rename-only: the old page also offered a cascade *delete*, which
+ * blanked district, taluk, panchayat and village on every centre in the branch.
+ * That is not a delete anyone means to run.
+ */
+function RenamePlaceDialog({
+  centres,
+  token,
+  onClose,
+  onDone,
+}: {
+  centres: Centre[]
+  token: string
+  onClose: () => void
+  onDone: (message: string) => void
+}) {
+  const [level, setLevel] = useState<'district' | 'taluk'>('district')
+  const [oldValue, setOldValue] = useState('')
+  const [newValue, setNewValue] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+
+  /** Taluk names aren't unique across districts, so each option carries its district. */
+  const options = useMemo(() => {
+    const seen = new Map<string, { label: string; value: string; district: string; count: number }>()
+    for (const c of centres) {
+      const district = txt(c.district)
+      const value = level === 'district' ? district : txt(c.taluk)
+      if (!value) continue
+      const key = level === 'district' ? value : `${district}::${value}`
+      const entry =
+        seen.get(key) ||
+        seen
+          .set(key, {
+            label: level === 'district' ? value : `${value} — ${district || 'no district'}`,
+            value,
+            district,
+            count: 0,
+          })
+          .get(key)!
+      entry.count += 1
+    }
+    return Array.from(seen.entries())
+      .map(([key, v]) => ({ key, ...v }))
+      .sort((a, b) => a.label.localeCompare(b.label))
+  }, [centres, level])
+
+  const chosen = options.find((o) => o.key === oldValue)
+
+  const submit = async () => {
+    if (!chosen || !newValue.trim() || newValue.trim() === chosen.value) return
+    setBusy(true)
+    setErr('')
+    try {
+      const res = await fetch('/api/admin/centres/cascade-update', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          level,
+          oldValue: chosen.value,
+          newValue: newValue.trim(),
+          district: level === 'taluk' ? chosen.district : '',
+          taluk: '',
+          panchayat: '',
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Could not rename')
+      onDone(
+        `Renamed ${chosen.value} to ${newValue.trim()}${
+          json.updatedCount ? ` across ${json.updatedCount} centres` : ''
+        }.`
+      )
+    } catch (e: unknown) {
+      setErr(getErrorMessage(e, 'Could not rename.'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/20 p-4" onClick={onClose}>
+      <div
+        className="w-full max-w-[460px] rounded-lg border border-rule bg-surface shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-rule px-5 py-3.5">
+          <span className="text-[14px] font-semibold">Fix a place name</span>
+          <button type="button" onClick={onClose} aria-label="Close" className="text-ink-faint hover:text-ink">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="flex flex-col gap-4 px-5 py-4">
+          <p className="text-[12.5px] leading-relaxed text-ink-muted">
+            Corrects a spelling on every centre that uses it. Use this when the same place appears twice in the
+            tree under slightly different names.
+          </p>
+
+          {err && <Alert type="error" message={err} />}
+
+          <div className="flex gap-1.5">
+            {(['district', 'taluk'] as const).map((l) => (
               <button
+                key={l}
                 type="button"
-                onClick={confirmCascadeDelete}
-                disabled={cascadeLoading}
-                className="flex-1 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                onClick={() => {
+                  setLevel(l)
+                  setOldValue('')
+                }}
+                className={`h-7 rounded-md px-3 text-[12.5px] capitalize transition-colors ${
+                  level === l ? 'bg-ink text-surface' : 'border border-rule-strong hover:bg-surface-hover'
+                }`}
               >
-                {cascadeLoading ? 'Deleting…' : 'Delete'}
+                {l}
               </button>
-            </div>
+            ))}
           </div>
-        </div>
-      )}
 
-      {editCentre && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full p-6 space-y-4">
-            <h3 className="text-lg font-semibold text-slate-900">Edit Centre</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[70vh] overflow-y-auto pr-1">
-              <input
-                type="number"
-                placeholder="EAC No"
-                value={editForm.eac_no}
-                onChange={e => setEditForm({ ...editForm, eac_no: e.target.value })}
-                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-              <input
-                type="text"
-                placeholder="Village Name"
-                value={editForm.village_name}
-                onChange={e => setEditForm({ ...editForm, village_name: e.target.value })}
-                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-              <input
-                type="text"
-                placeholder="District"
-                value={editForm.district}
-                onChange={e => setEditForm({ ...editForm, district: e.target.value })}
-                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-              <input
-                type="text"
-                placeholder="Taluk"
-                value={editForm.taluk}
-                onChange={e => setEditForm({ ...editForm, taluk: e.target.value })}
-                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-              <input
-                type="text"
-                placeholder="Panchayat"
-                value={editForm.panchayat}
-                onChange={e => setEditForm({ ...editForm, panchayat: e.target.value })}
-                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-              <input
-                type="date"
-                placeholder="Start Date"
-                value={editForm.start_date}
-                onChange={e => setEditForm({ ...editForm, start_date: e.target.value })}
-                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                type="date"
-                placeholder="End Date"
-                value={editForm.end_date}
-                onChange={e => setEditForm({ ...editForm, end_date: e.target.value })}
-                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                type="text"
-                placeholder="CBV Name"
-                value={editForm.cbv_name}
-                onChange={e => setEditForm({ ...editForm, cbv_name: e.target.value })}
-                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                type="text"
-                placeholder="In Charge"
-                value={editForm.in_charge}
-                onChange={e => setEditForm({ ...editForm, in_charge: e.target.value })}
-                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                type="text"
-                placeholder="Panchayat Member"
-                value={editForm.panchayat_member}
-                onChange={e => setEditForm({ ...editForm, panchayat_member: e.target.value })}
-                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                type="text"
-                placeholder="Head Master"
-                value={editForm.head_master}
-                onChange={e => setEditForm({ ...editForm, head_master: e.target.value })}
-                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                type="text"
-                placeholder="Anganvadi"
-                value={editForm.anganvadi}
-                onChange={e => setEditForm({ ...editForm, anganvadi: e.target.value })}
-                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                type="text"
-                placeholder="ASHA Worker"
-                value={editForm.asha_worker}
-                onChange={e => setEditForm({ ...editForm, asha_worker: e.target.value })}
-                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                type="text"
-                placeholder="Head Master Mobile"
-                value={editForm.head_master_mobile}
-                onChange={e => setEditForm({ ...editForm, head_master_mobile: e.target.value })}
-                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                type="text"
-                placeholder="In Charge Mobile"
-                value={editForm.in_charge_mobile}
-                onChange={e => setEditForm({ ...editForm, in_charge_mobile: e.target.value })}
-                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                type="text"
-                placeholder="CBV Mobile"
-                value={editForm.cbv_mobile}
-                onChange={e => setEditForm({ ...editForm, cbv_mobile: e.target.value })}
-                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                type="text"
-                placeholder="Panchayat Member Mobile"
-                value={editForm.panchayat_member_mobile}
-                onChange={e => setEditForm({ ...editForm, panchayat_member_mobile: e.target.value })}
-                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                type="text"
-                placeholder="Anganvadi Mobile"
-                value={editForm.anganvadi_mobile}
-                onChange={e => setEditForm({ ...editForm, anganvadi_mobile: e.target.value })}
-                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                type="text"
-                placeholder="ASHA Worker Mobile"
-                value={editForm.asha_worker_mobile}
-                onChange={e => setEditForm({ ...editForm, asha_worker_mobile: e.target.value })}
-                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                type="email"
-                placeholder="CBV Email"
-                value={editForm.cbv_email}
-                onChange={e => setEditForm({ ...editForm, cbv_email: e.target.value })}
-                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 md:col-span-2"
-              />
-            </div>
-            <div className="flex gap-3 pt-2">
-              <button
-                onClick={() => setEditCentre(null)}
-                className="flex-1 px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleUpdate}
-                disabled={actionLoading}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-              >
-                {actionLoading ? 'Saving…' : 'Save Changes'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          <label className="flex flex-col gap-1.5">
+            <span className="text-[11.5px] font-medium text-ink-muted">Current name</span>
+            <select
+              value={oldValue}
+              onChange={(e) => {
+                setOldValue(e.target.value)
+                const opt = options.find((o) => o.key === e.target.value)
+                setNewValue(opt?.value ?? '')
+              }}
+              className={inputClass}
+            >
+              <option value="">Choose a {level}…</option>
+              {options.map((o) => (
+                <option key={o.key} value={o.key}>
+                  {o.label} ({o.count})
+                </option>
+              ))}
+            </select>
+          </label>
 
-      {deleteCentre && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 space-y-4">
-            <h3 className="text-lg font-semibold text-slate-900">Delete Centre</h3>
-            <p className="text-sm text-slate-600">
-              Are you sure you want to delete centre <span className="font-semibold">EAC {deleteCentre.eac_no}</span>? This action cannot be undone.
+          <Field label="Corrected name" value={newValue} onChange={setNewValue} />
+
+          {chosen && (
+            <p className="text-[12px] text-ink-muted">
+              This updates {chosen.count} centre{chosen.count === 1 ? '' : 's'}.
             </p>
-            <div className="flex gap-3 pt-2">
-              <button
-                onClick={() => setDeleteCentre(null)}
-                className="flex-1 px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={actionLoading}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
-              >
-                {actionLoading ? 'Deleting…' : 'Delete'}
-              </button>
-            </div>
-          </div>
+          )}
         </div>
-      )}
-    </main>
+
+        <div className="flex justify-end gap-2 border-t border-rule px-5 py-3.5">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-8 items-center rounded-md border border-rule-strong px-3 text-[13px] hover:bg-surface-hover"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={submit}
+            disabled={busy || !chosen || !newValue.trim() || newValue.trim() === chosen?.value}
+            className="flex h-8 items-center rounded-md bg-blue-600 px-3.5 text-[13px] font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            {busy ? 'Renaming…' : 'Rename everywhere'}
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }

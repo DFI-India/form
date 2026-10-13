@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { placeColumnsFor } from '../../../../../lib/placesServer'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -58,7 +59,12 @@ export async function PUT(req: Request) {
             return NextResponse.json({ error: 'Missing id' }, { status: 400 })
         }
 
-        if (!eac_no || !village_name) {
+        // A village_id wins over anything typed: the master row is the truth and
+        // the text columns are only a copy of it.
+        const place = await placeColumnsFor(supabase, body?.village_id)
+        const resolvedVillageName = place?.village_name ?? village_name
+
+        if (!eac_no || !resolvedVillageName) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
         }
 
@@ -81,10 +87,11 @@ export async function PUT(req: Request) {
             .from('centre_data')
             .update({
                 eac_no,
-                village_name,
-                district,
-                taluk,
-                panchayat,
+                village_name: resolvedVillageName,
+                village_id: place?.village_id ?? null,
+                district: place?.district ?? district,
+                taluk: place?.taluk ?? taluk,
+                panchayat: place?.panchayat ?? panchayat,
                 start_date,
                 end_date,
                 cbv_name,
