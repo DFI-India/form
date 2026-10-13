@@ -2,11 +2,11 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import AppShell from '../../components/AppShell'
 import { useRequireRole } from '../../../lib/hooks'
 import { supabase } from '../../../lib/supabase'
 import { getStandardColumnLabel } from '../../../lib/columnLabels'
 import { LoadingSpinner, Alert } from '../../components/UI'
-import { Navbar, Sidebar, PageContainer } from '../../components/Navbar'
 import { ROLE_CONFIG } from '../../../lib/types'
 import { Search, Pencil, RefreshCw, ArrowLeft, X } from 'lucide-react'
 
@@ -353,7 +353,7 @@ export default function DFIStaffAllRecordsPage() {
 
     if (authLoading) {
         return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+            <div className="min-h-screen bg-surface-sunken flex items-center justify-center">
                 <LoadingSpinner size="lg" />
             </div>
         )
@@ -361,10 +361,10 @@ export default function DFIStaffAllRecordsPage() {
 
     if (!isAuthorized || !profile) {
         return (
-            <main className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-                <div className="bg-white rounded-lg shadow-lg p-6 max-w-md text-center">
-                    <h1 className="text-2xl font-bold text-slate-900 mb-2">Access Denied</h1>
-                    <p className="text-slate-600">You don&apos;t have permission to access this page.</p>
+            <main className="min-h-screen bg-surface-sunken flex items-center justify-center p-4">
+                <div className="bg-surface rounded-lg shadow-lg p-6 max-w-md text-center">
+                    <h1 className="text-xl font-bold sm:text-2xl text-ink mb-2">Access Denied</h1>
+                    <p className="text-ink-muted">You don&apos;t have permission to access this page.</p>
                 </div>
             </main>
         )
@@ -373,25 +373,21 @@ export default function DFIStaffAllRecordsPage() {
     const roleInfo = ROLE_CONFIG.find((r) => r.value === profile.role)!
 
     return (
-        <main className="min-h-screen bg-slate-50">
-            <Navbar
-                username={profile.username}
-                role={profile.role as any}
-                roleLabel={roleInfo.label}
-                roleColor={roleInfo.color}
-            />
-            <Sidebar role={profile.role as any} />
-
-            <PageContainer>
-                <div className="p-8">
-                    <div className="mb-8 flex items-center justify-between">
+      <AppShell
+        role="dfi_staff"
+        active="/dfi-staff/all-records"
+        breadcrumb={['Review', 'All records']}
+        username={profile.username}
+      >
+                <div className="px-4 py-5 sm:px-6 sm:py-8">
+                    <div className="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
                         <div>
-                            <h2 className="text-3xl font-bold text-slate-900">All Records</h2>
-                            <p className="text-slate-600 mt-2">View and edit records across all tables</p>
+                            <h2 className="text-2xl font-bold sm:text-3xl text-ink">All Records</h2>
+                            <p className="text-ink-muted mt-2">View and edit records across all tables</p>
                         </div>
                         <button
                             onClick={() => router.push('/dfi-staff')}
-                            className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors inline-flex items-center gap-2"
+                            className="min-h-[40px] px-4 py-2 bg-surface-hover text-ink rounded-lg hover:bg-rule transition-colors inline-flex items-center gap-2"
                         >
                             <ArrowLeft className="w-4 h-4" /> Back to Dashboard
                         </button>
@@ -400,7 +396,7 @@ export default function DFIStaffAllRecordsPage() {
                     {error && <Alert type="error" message={error} className="mb-6" onDismiss={() => setError('')} />}
                     {success && <Alert type="success" message={success} className="mb-6" onDismiss={() => setSuccess('')} />}
 
-                    <div className="bg-white rounded-lg border border-slate-200 mb-6">
+                    <div className="bg-surface rounded-lg border border-rule mb-6">
                         <div className="flex overflow-x-auto">
                             {VISIBLE_ENTITY_TABS.map((type) => (
                                 <button
@@ -408,7 +404,7 @@ export default function DFIStaffAllRecordsPage() {
                                     onClick={() => setActiveTab(type)}
                                     className={`flex-1 min-w-[150px] px-4 py-4 text-sm font-medium transition-colors border-b-2 ${activeTab === type
                                         ? 'border-purple-600 text-purple-600 bg-purple-50'
-                                        : 'border-transparent text-slate-600 hover:bg-slate-50'
+                                        : 'border-transparent text-ink-muted hover:bg-surface-hover'
                                         }`}
                                 >
                                     {ENTITY_LABELS[type]}
@@ -417,10 +413,10 @@ export default function DFIStaffAllRecordsPage() {
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-lg border border-slate-200 mb-6 p-4">
+                    <div className="bg-surface rounded-lg border border-rule mb-6 p-4">
                         <div className="flex flex-col md:flex-row gap-3">
                             <div className="flex-1 relative">
-                                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint" />
                                 <input
                                     value={searchByTab[activeTab]}
                                     onChange={(e) =>
@@ -433,7 +429,7 @@ export default function DFIStaffAllRecordsPage() {
                                         if (e.key === 'Enter') onSearch()
                                     }}
                                     placeholder={`Search ${ENTITY_LABELS[activeTab]} by ${searchTypeByTab[activeTab]}`}
-                                    className="w-full rounded-lg border border-slate-300 pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    className="w-full rounded-lg border border-rule-strong pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                                 />
                             </div>
 
@@ -445,7 +441,7 @@ export default function DFIStaffAllRecordsPage() {
                                         [activeTab]: e.target.value as SearchType,
                                     }))
                                 }
-                                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                                className="rounded-lg border border-rule-strong px-3 py-2 text-sm"
                             >
                                 <option value="name">Search by name</option>
                                 <option value="reg_no">Search by reg_no</option>
@@ -453,14 +449,14 @@ export default function DFIStaffAllRecordsPage() {
 
                             <button
                                 onClick={onSearch}
-                                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
+                                className="min-h-[40px] px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
                             >
                                 Search
                             </button>
 
                             <button
                                 onClick={() => fetchTabRecords(activeTab)}
-                                className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors text-sm font-medium inline-flex items-center gap-2"
+                                className="min-h-[40px] px-4 py-2 bg-surface-hover text-ink rounded-lg hover:bg-rule transition-colors text-sm font-medium inline-flex items-center gap-2"
                             >
                                 <RefreshCw className="w-4 h-4" />
                                 Refresh
@@ -468,18 +464,18 @@ export default function DFIStaffAllRecordsPage() {
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+                    <div className="bg-surface rounded-lg border border-rule overflow-hidden">
                         {currentLoading ? (
                             <div className="p-12 text-center">
                                 <LoadingSpinner size="lg" />
-                                <p className="mt-4 text-slate-600">Loading records...</p>
+                                <p className="mt-4 text-ink-muted">Loading records...</p>
                             </div>
                         ) : currentRows.length === 0 ? (
-                            <div className="p-12 text-center text-slate-600">No records found in this table.</div>
+                            <div className="p-12 text-center text-ink-muted">No records found in this table.</div>
                         ) : (
                             <div className="overflow-x-auto">
                                 <table className="w-full text-sm">
-                                    <thead className="bg-slate-100 text-slate-700">
+                                    <thead className="bg-surface-hover text-ink">
                                         <tr>
                                             <th className="px-4 py-3 text-left font-semibold">Action</th>
                                             {visibleColumns.map((column) => (
@@ -493,7 +489,7 @@ export default function DFIStaffAllRecordsPage() {
                                         {currentRows.map((row, index) => (
                                             <tr
                                                 key={`${String(getEntityIdentity(activeTab, row)?.value ?? index)}`}
-                                                className="border-t border-slate-200 hover:bg-slate-50"
+                                                className="border-t border-rule hover:bg-surface-hover"
                                             >
                                                 <td className="px-4 py-3 align-top">
                                                     <button
@@ -507,7 +503,7 @@ export default function DFIStaffAllRecordsPage() {
                                                 {visibleColumns.map((column) => (
                                                     <td
                                                         key={`${String(getEntityIdentity(activeTab, row)?.value ?? index)}-${column}`}
-                                                        className="px-4 py-3 text-slate-700 whitespace-nowrap"
+                                                        className="px-4 py-3 text-ink whitespace-nowrap"
                                                     >
                                                         {column === 'photo_link' ? (
                                                             row[column] ? (
@@ -539,7 +535,7 @@ export default function DFIStaffAllRecordsPage() {
                     </div>
 
                     <div className="mt-4 flex items-center justify-between">
-                        <p className="text-sm text-slate-600">
+                        <p className="text-sm text-ink-muted">
                             Showing page {currentPage} of {totalPages} • {totalRows} total records
                         </p>
                         <div className="flex gap-2">
@@ -551,7 +547,7 @@ export default function DFIStaffAllRecordsPage() {
                                         [activeTab]: Math.max(1, prev[activeTab] - 1),
                                     }))
                                 }
-                                className="px-3 py-1.5 rounded-md border border-slate-300 text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="px-3 py-1.5 rounded-md border border-rule-strong text-ink disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 Previous
                             </button>
@@ -563,23 +559,22 @@ export default function DFIStaffAllRecordsPage() {
                                         [activeTab]: Math.min(totalPages, prev[activeTab] + 1),
                                     }))
                                 }
-                                className="px-3 py-1.5 rounded-md border border-slate-300 text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="px-3 py-1.5 rounded-md border border-rule-strong text-ink disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 Next
                             </button>
                         </div>
                     </div>
                 </div>
-            </PageContainer>
 
             {editingRecord && (
                 <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden">
-                        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
-                            <h3 className="text-lg font-bold text-slate-900">
+                    <div className="bg-surface rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden">
+                        <div className="px-6 py-4 border-b border-rule flex items-center justify-between">
+                            <h3 className="text-lg font-bold text-ink">
                                 Edit {ENTITY_LABELS[activeTab]} record #{String(getEntityIdentity(activeTab, editingRecord)?.value ?? 'N/A')}
                             </h3>
-                            <button onClick={closeEditModal} className="text-slate-600 hover:text-slate-900">
+                            <button onClick={closeEditModal} className="text-ink-muted hover:text-ink">
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
@@ -590,7 +585,7 @@ export default function DFIStaffAllRecordsPage() {
                                     .filter(([key]) => !NON_EDITABLE_FIELDS.has(key))
                                     .map(([key, value]) => (
                                         <div key={key}>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1" title={key}>{getStandardColumnLabel(key)}</label>
+                                            <label className="block text-sm font-medium text-ink mb-1" title={key}>{getStandardColumnLabel(key)}</label>
                                             {key === 'photo_link' ? (
                                                 <div className="space-y-2">
                                                     <input
@@ -600,10 +595,10 @@ export default function DFIStaffAllRecordsPage() {
                                                             const file = e.target.files?.[0]
                                                             if (file) handlePhotoUpload(file)
                                                         }}
-                                                        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                                                        className="w-full rounded-lg border border-rule-strong px-3 py-2 text-sm"
                                                     />
                                                     {uploadingPhoto && (
-                                                        <p className="text-xs text-slate-500">Uploading image...</p>
+                                                        <p className="text-xs text-ink-faint">Uploading image...</p>
                                                     )}
                                                     {value ? (
                                                         <a
@@ -625,7 +620,7 @@ export default function DFIStaffAllRecordsPage() {
                                                             [key]: e.target.value,
                                                         }))
                                                     }
-                                                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                    className="w-full rounded-lg border border-rule-strong px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                                                 />
                                             )}
                                         </div>
@@ -633,10 +628,10 @@ export default function DFIStaffAllRecordsPage() {
                             </div>
                         </div>
 
-                        <div className="px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
+                        <div className="px-6 py-4 border-t border-rule flex justify-end gap-3">
                             <button
                                 onClick={closeEditModal}
-                                className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50"
+                                className="px-4 py-2 rounded-lg border border-rule-strong text-ink hover:bg-surface-hover"
                             >
                                 Cancel
                             </button>
@@ -654,26 +649,26 @@ export default function DFIStaffAllRecordsPage() {
 
             {photoPreviewModal.isOpen && (
                 <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl overflow-hidden">
-                        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
-                            <h3 className="text-lg font-bold text-slate-900">Photo Preview</h3>
+                    <div className="bg-surface rounded-xl shadow-2xl w-full max-w-3xl overflow-hidden">
+                        <div className="px-6 py-4 border-b border-rule flex items-center justify-between">
+                            <h3 className="text-lg font-bold text-ink">Photo Preview</h3>
                             <button
                                 onClick={() => setPhotoPreviewModal({ isOpen: false, url: '' })}
-                                className="text-slate-600 hover:text-slate-900"
+                                className="text-ink-muted hover:text-ink"
                             >
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
-                        <div className="p-6 flex justify-center bg-slate-50">
+                        <div className="p-6 flex justify-center bg-surface-sunken">
                             <img
                                 src={photoPreviewModal.url}
                                 alt="Child photo"
-                                className="max-h-[70vh] w-auto rounded-lg border border-slate-200 bg-white"
+                                className="max-h-[70vh] w-auto rounded-lg border border-rule bg-surface"
                             />
                         </div>
                     </div>
                 </div>
             )}
-        </main>
+        </AppShell>
     )
 }

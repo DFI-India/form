@@ -2,11 +2,11 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import AppShell from '../../components/AppShell'
 import { useRequireRole } from '../../../lib/hooks'
 import { supabase } from '../../../lib/supabase'
 import { getStandardColumnLabel } from '../../../lib/columnLabels'
 import { LoadingSpinner, Alert } from '../../components/UI'
-import { Navbar, Sidebar, PageContainer } from '../../components/Navbar'
 import { ROLE_CONFIG } from '../../../lib/types'
 import { ArrowLeft } from 'lucide-react'
 
@@ -285,7 +285,7 @@ export default function DFIStaffPersonalActivityPage() {
 
     if (authLoading) {
         return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+            <div className="min-h-screen bg-surface-sunken flex items-center justify-center">
                 <LoadingSpinner size="lg" />
             </div>
         )
@@ -293,10 +293,10 @@ export default function DFIStaffPersonalActivityPage() {
 
     if (!isAuthorized || !profile) {
         return (
-            <main className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-                <div className="bg-white rounded-lg shadow-lg p-6 max-w-md text-center">
-                    <h1 className="text-2xl font-bold text-slate-900 mb-2">Access Denied</h1>
-                    <p className="text-slate-600">You don't have permission to access this page.</p>
+            <main className="min-h-screen bg-surface-sunken flex items-center justify-center p-4">
+                <div className="bg-surface rounded-lg shadow-lg p-6 max-w-md text-center">
+                    <h1 className="text-xl font-bold sm:text-2xl text-ink mb-2">Access Denied</h1>
+                    <p className="text-ink-muted">You don't have permission to access this page.</p>
                 </div>
             </main>
         )
@@ -306,30 +306,26 @@ export default function DFIStaffPersonalActivityPage() {
     const totalRecords = Object.values(counts).reduce((sum, item) => sum + (item?.total || 0), 0)
 
     return (
-        <main className="min-h-screen bg-slate-50">
-            <Navbar
-                username={profile.username}
-                role="dfi_staff"
-                roleLabel={roleInfo.label}
-                roleColor={roleInfo.color}
-            />
-            <Sidebar role="dfi_staff" />
-
-            <PageContainer>
-                <div className="p-8">
-                    <div className="mb-8 flex items-center justify-between">
+      <AppShell
+        role="dfi_staff"
+        active="/dfi-staff/history"
+        breadcrumb={['Review', 'History']}
+        username={profile.username}
+      >
+                <div className="px-4 py-5 sm:px-6 sm:py-8">
+                    <div className="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
                         <div>
-                            <h2 className="text-3xl font-bold text-slate-900">Personal Activity</h2>
-                            <p className="text-slate-600 mt-2">
+                            <h2 className="text-2xl font-bold sm:text-3xl text-ink">Personal Activity</h2>
+                            <p className="text-ink-muted mt-2">
                                 Approved and rejected records acted on by you
-                                <span className="ml-2 px-2 py-1 bg-slate-100 text-slate-700 rounded-full text-sm font-medium">
+                                <span className="ml-2 px-2 py-1 bg-surface-hover text-ink rounded-full text-sm font-medium">
                                     {totalRecords} total
                                 </span>
                             </p>
                         </div>
                         <button
                             onClick={() => router.push('/dfi-staff')}
-                            className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors inline-flex items-center gap-2"
+                            className="min-h-[40px] px-4 py-2 bg-surface-hover text-ink rounded-lg hover:bg-rule transition-colors inline-flex items-center gap-2"
                         >
                             <ArrowLeft className="w-4 h-4" /> Dashboard
                         </button>
@@ -337,14 +333,14 @@ export default function DFIStaffPersonalActivityPage() {
 
                     {error && <Alert type="error" message={error} className="mb-6" />}
 
-                    <div className="bg-white rounded-lg border border-slate-200 p-4 mb-6">
+                    <div className="bg-surface rounded-lg border border-rule p-4 mb-6">
                         <div className="flex flex-wrap items-end gap-4">
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Filter By Date Field</label>
+                                <label className="block text-sm font-medium text-ink mb-1">Filter By Date Field</label>
                                 <select
                                     value={dateField}
                                     onChange={(e) => setDateField(e.target.value as DateField)}
-                                    className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                                    className="rounded-lg border border-rule-strong px-3 py-2 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                                 >
                                     <option value="all">Approved At or Verified At</option>
                                     <option value="approved_at">Approved At</option>
@@ -352,21 +348,21 @@ export default function DFIStaffPersonalActivityPage() {
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">From Date</label>
+                                <label className="block text-sm font-medium text-ink mb-1">From Date</label>
                                 <input
                                     type="date"
                                     value={fromDate}
                                     onChange={(e) => setFromDate(e.target.value)}
-                                    className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                                    className="rounded-lg border border-rule-strong px-3 py-2 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">To Date</label>
+                                <label className="block text-sm font-medium text-ink mb-1">To Date</label>
                                 <input
                                     type="date"
                                     value={toDate}
                                     onChange={(e) => setToDate(e.target.value)}
-                                    className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                                    className="rounded-lg border border-rule-strong px-3 py-2 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                                 />
                             </div>
                             <button
@@ -375,14 +371,14 @@ export default function DFIStaffPersonalActivityPage() {
                                     setFromDate('')
                                     setToDate('')
                                 }}
-                                className="px-3 py-2 text-sm bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
+                                className="px-3 py-2 text-sm bg-surface-hover text-ink rounded-lg hover:bg-rule transition-colors"
                             >
                                 Clear Filters
                             </button>
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-lg border border-slate-200 mb-6">
+                    <div className="bg-surface rounded-lg border border-rule mb-6">
                         <div className="flex overflow-x-auto">
                             {TABS.map((tab) => (
                                 <button
@@ -390,11 +386,11 @@ export default function DFIStaffPersonalActivityPage() {
                                     onClick={() => setActiveTab(tab.key)}
                                     className={`flex-1 min-w-[160px] px-4 py-4 text-sm font-medium transition-colors border-b-2 ${activeTab === tab.key
                                         ? 'border-purple-600 text-purple-600 bg-purple-50'
-                                        : 'border-transparent text-slate-600 hover:bg-slate-50'
+                                        : 'border-transparent text-ink-muted hover:bg-surface-hover'
                                         }`}
                                 >
                                     {tab.label}
-                                    <span className="ml-2 px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-700">
+                                    <span className="ml-2 px-2 py-0.5 rounded-full text-xs bg-surface-hover text-ink">
                                         {counts[tab.key]?.total || 0}
                                     </span>
                                 </button>
@@ -402,25 +398,25 @@ export default function DFIStaffPersonalActivityPage() {
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+                    <div className="bg-surface rounded-lg border border-rule overflow-hidden">
                         {loading ? (
                             <div className="p-12 text-center">
                                 <LoadingSpinner size="lg" />
-                                <p className="mt-4 text-slate-600">Loading your activity...</p>
+                                <p className="mt-4 text-ink-muted">Loading your activity...</p>
                             </div>
                         ) : currentRecords.length === 0 ? (
                             <div className="p-12 text-center">
-                                <p className="text-slate-600 font-medium">No records found for this tab and date filter.</p>
+                                <p className="text-ink-muted font-medium">No records found for this tab and date filter.</p>
                             </div>
                         ) : (
                             <div className="overflow-x-auto overflow-y-auto max-h-[70vh]">
                                 <table className="w-full text-sm">
-                                    <thead className="sticky top-0 bg-slate-50 border-b border-slate-200 z-10">
+                                    <thead className="sticky top-0 bg-surface-sunken border-b border-rule z-10">
                                         <tr>
                                             {visibleColumns.map((column) => (
                                                 <th
                                                     key={column}
-                                                    className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap"
+                                                    className="px-4 py-3 text-left font-semibold text-ink whitespace-nowrap"
                                                     title={column}
                                                 >
                                                     {getStandardColumnLabel(column)}
@@ -430,9 +426,9 @@ export default function DFIStaffPersonalActivityPage() {
                                     </thead>
                                     <tbody>
                                         {currentRecords.map((row, index) => (
-                                            <tr key={String(row.record_id || row.id || index)} className="border-b border-slate-200 hover:bg-slate-50">
+                                            <tr key={String(row.record_id || row.id || index)} className="border-b border-rule hover:bg-surface-hover">
                                                 {visibleColumns.map((column) => (
-                                                    <td key={`${String(row.record_id || row.id || index)}-${column}`} className="px-4 py-3 text-slate-700 whitespace-nowrap align-top">
+                                                    <td key={`${String(row.record_id || row.id || index)}-${column}`} className="px-4 py-3 text-ink whitespace-nowrap align-top">
                                                         {renderCellValue(column, row[column])}
                                                     </td>
                                                 ))}
@@ -444,7 +440,6 @@ export default function DFIStaffPersonalActivityPage() {
                         )}
                     </div>
                 </div>
-            </PageContainer>
-        </main>
+            </AppShell>
     )
 }

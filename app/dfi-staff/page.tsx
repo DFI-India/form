@@ -1,9 +1,9 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import AppShell from '../components/AppShell'
 import { useRequireRole } from '../../lib/hooks'
 import { LoadingSpinner } from '../components/UI'
-import { Navbar, Sidebar, PageContainer } from '../components/Navbar'
 import { ROLE_CONFIG, getRoleCapabilities } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import { BarChart3, Search, Check } from 'lucide-react'
@@ -113,7 +113,7 @@ export default function DFIStaffPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-surface-sunken flex items-center justify-center">
         <LoadingSpinner size="lg" />
       </div>
     )
@@ -121,10 +121,10 @@ export default function DFIStaffPage() {
 
   if (!isAuthorized || !profile) {
     return (
-      <main className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-lg p-6 max-w-md text-center">
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">Access Denied</h1>
-          <p className="text-slate-600">You don't have permission to access this page.</p>
+      <main className="min-h-screen bg-surface-sunken flex items-center justify-center p-4">
+        <div className="bg-surface rounded-lg shadow-lg p-6 max-w-md text-center">
+          <h1 className="text-xl font-bold sm:text-2xl text-ink mb-2">Access Denied</h1>
+          <p className="text-ink-muted">You don't have permission to access this page.</p>
         </div>
       </main>
     )
@@ -137,20 +137,16 @@ export default function DFIStaffPage() {
   )
 
   return (
-    <main className="min-h-screen bg-slate-50">
-      <Navbar
-        username={profile.username}
+      <AppShell
         role="dfi_staff"
-        roleLabel={roleInfo.label}
-        roleColor={roleInfo.color}
-      />
-      <Sidebar role="dfi_staff" />
-
-      <PageContainer>
-        <div className="p-8">
+        active="/dfi-staff"
+        breadcrumb={['Review', 'Overview']}
+        username={profile.username}
+      >
+        <div className="px-4 py-5 sm:px-6 sm:py-8">
           <div className="mb-8">
-            <h2 className="text-3xl font-bold text-slate-900">DFI Staff Dashboard</h2>
-            <p className="text-slate-600 mt-2">{roleInfo.description}</p>
+            <h2 className="text-2xl font-bold sm:text-3xl text-ink">DFI Staff Dashboard</h2>
+            <p className="text-ink-muted mt-2">{roleInfo.description}</p>
           </div>
 
           {dataError && (
@@ -161,36 +157,36 @@ export default function DFIStaffPage() {
 
           {/* SECTION 1: Data Review Stats */}
           <div className="mb-12">
-            <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+            <h3 className="text-xl font-bold text-ink mb-4 flex items-center gap-2">
               <BarChart3 className="w-5 h-5" /> Overview
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
-                <p className="text-slate-600 text-sm font-medium mb-2">Total EACs</p>
+              <div className="bg-surface rounded-lg border border-rule p-6 shadow-sm">
+                <p className="text-ink-muted text-sm font-medium mb-2">Total EACs</p>
                 <p className="text-4xl font-bold text-indigo-600">{analytics?.summary.totalEacs ?? 0}</p>
-                <p className="text-xs text-slate-500 mt-2">From centre_data</p>
+                <p className="text-xs text-ink-faint mt-2">From centre_data</p>
               </div>
-              <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
-                <p className="text-slate-600 text-sm font-medium mb-2">Total Children</p>
+              <div className="bg-surface rounded-lg border border-rule p-6 shadow-sm">
+                <p className="text-ink-muted text-sm font-medium mb-2">Total Children</p>
                 <p className="text-4xl font-bold text-blue-600">{analytics?.summary.totalApprovedChildren ?? 0}</p>
-                <p className="text-xs text-slate-500 mt-2">Approved rows in Child_Data</p>
+                <p className="text-xs text-ink-faint mt-2">Approved rows in Child_Data</p>
               </div>
-              <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
-                <p className="text-slate-600 text-sm font-medium mb-2">Vocational Students</p>
+              <div className="bg-surface rounded-lg border border-rule p-6 shadow-sm">
+                <p className="text-ink-muted text-sm font-medium mb-2">Vocational Students</p>
                 <p className="text-4xl font-bold text-emerald-600">{analytics?.summary.totalApprovedVocationalStudents ?? 0}</p>
-                <p className="text-xs text-slate-500 mt-2">Approved rows in vocational_course</p>
+                <p className="text-xs text-ink-faint mt-2">Approved rows in vocational_course</p>
               </div>
             </div>
           </div>
 
-          <div className="mb-12 bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-900 mb-4">Children Distribution by EAC</h3>
+          <div className="mb-12 bg-surface rounded-lg border border-rule p-6 shadow-sm">
+            <h3 className="text-lg font-bold text-ink mb-4">Children Distribution by EAC</h3>
             {dataLoading ? (
               <div className="py-8 flex justify-center">
                 <LoadingSpinner size="lg" />
               </div>
             ) : pieData.length === 0 ? (
-              <p className="text-slate-600">No data available.</p>
+              <p className="text-ink-muted">No data available.</p>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
                 <div className="flex justify-center">
@@ -207,9 +203,9 @@ export default function DFIStaffPage() {
                     <div key={`legend-${slice.key}`} className="flex items-center justify-between text-sm">
                       <div className="flex items-center gap-2">
                         <span className="inline-block w-3 h-3 rounded-sm" style={{ backgroundColor: slice.color }} />
-                        <span className="text-slate-700">EAC {String(slice.eac)}</span>
+                        <span className="text-ink">EAC {String(slice.eac)}</span>
                       </div>
-                      <span className="font-medium text-slate-900">{slice.count} ({slice.percentage.toFixed(1)}%)</span>
+                      <span className="font-medium text-ink">{slice.count} ({slice.percentage.toFixed(1)}%)</span>
                     </div>
                   ))}
                 </div>
@@ -219,38 +215,37 @@ export default function DFIStaffPage() {
 
           {/* SECTION 2: Data Review Actions */}
           <div className="mb-12">
-            <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+            <h3 className="text-lg font-bold text-ink mb-4 flex items-center gap-2">
               <Search className="w-5 h-5" /> Data Verification
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <a href="/dfi-staff/approvals" className="bg-white border border-slate-200 text-slate-900 px-6 py-4 rounded-lg hover:bg-slate-50 transition-colors font-medium text-center">
+              <a href="/dfi-staff/approvals" className="bg-surface border border-rule text-ink px-6 py-4 rounded-lg hover:bg-surface-hover transition-colors font-medium text-center">
                 Approve Data
               </a>
-              <a href="/dfi-staff/all-records" className="bg-white border border-slate-200 text-slate-900 px-6 py-4 rounded-lg hover:bg-slate-50 transition-colors font-medium text-center">
+              <a href="/dfi-staff/all-records" className="bg-surface border border-rule text-ink px-6 py-4 rounded-lg hover:bg-surface-hover transition-colors font-medium text-center">
                 Manage Data
               </a>
-              <a href="/dfi-staff/history" className="bg-white border border-slate-200 text-slate-900 px-6 py-4 rounded-lg hover:bg-slate-50 transition-colors font-medium text-center">
+              <a href="/dfi-staff/history" className="bg-surface border border-rule text-ink px-6 py-4 rounded-lg hover:bg-surface-hover transition-colors font-medium text-center">
                 View Approval History
               </a>
             </div>
           </div>
 
           {/* Capabilities List */}
-          <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-900 mb-4">Your Full Capabilities</h3>
+          <div className="bg-surface rounded-lg border border-rule p-6 shadow-sm">
+            <h3 className="text-lg font-bold text-ink mb-4">Your Full Capabilities</h3>
             <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {visibleCapabilities.map((capability, i) => (
                 <li key={i} className="flex items-start gap-3">
                   <span className="w-5 h-5 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-sm flex-shrink-0 mt-0.5 font-bold">
                     <Check className="w-3 h-3" />
                   </span>
-                  <span className="text-slate-700">{capability}</span>
+                  <span className="text-ink">{capability}</span>
                 </li>
               ))}
             </ul>
           </div>
         </div>
-      </PageContainer>
-    </main>
+      </AppShell>
   )
 }

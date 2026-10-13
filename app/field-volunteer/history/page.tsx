@@ -3,9 +3,9 @@
 import { useState, useEffect, type ChangeEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../../lib/supabase'
-import { Navbar, Sidebar, PageContainer } from '../../components/Navbar'
 import { LoadingSpinner } from '../../components/UI'
 import { ROLE_CONFIG } from '../../../lib/types'
+import AppShell from '../../components/AppShell'
 import { useRequireRole } from '../../../lib/hooks'
 import { getErrorMessage } from '../../../lib/errors'
 
@@ -329,7 +329,7 @@ export default function ActivityHistoryPage() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-surface-sunken flex items-center justify-center">
         <LoadingSpinner size="lg" />
       </div>
     )
@@ -337,10 +337,10 @@ export default function ActivityHistoryPage() {
 
   if (!isAuthorized || !profile) {
     return (
-      <main className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-lg p-6 max-w-md text-center">
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">Access Denied</h1>
-          <p className="text-slate-600">You don't have permission to access this page.</p>
+      <main className="min-h-screen bg-surface-sunken flex items-center justify-center p-4">
+        <div className="bg-surface rounded-lg shadow-lg p-6 max-w-md text-center">
+          <h1 className="text-xl font-bold sm:text-2xl text-ink mb-2">Access Denied</h1>
+          <p className="text-ink-muted">You don't have permission to access this page.</p>
         </div>
       </main>
     )
@@ -349,30 +349,28 @@ export default function ActivityHistoryPage() {
   const roleInfo = ROLE_CONFIG.find(r => r.value === 'field_volunteer')!
 
   return (
-    <main className="min-h-screen bg-slate-50/50">
-      <Navbar
-        username={profile.username}
+      <AppShell
         role="field_volunteer"
-        roleLabel={roleInfo.label}
-        roleColor={roleInfo.color} />
-      <Sidebar role="field_volunteer" />
-      <PageContainer>
-        <div className="py-8">
+        active="/field-volunteer/history"
+        breadcrumb={['My work', 'My submissions']}
+        username={profile.username}
+      >
+        <div className="px-4 py-5 sm:px-6 sm:py-8">
           <div className="space-y-8">
-            <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h2 className="mb-4 text-lg font-semibold text-slate-900">Personal History</h2>
-              <p className="text-sm text-slate-600 mb-6">Track all updates and changes to child records.</p>
+            <section className="rounded-xl border border-rule bg-surface p-6 shadow-sm">
+              <h2 className="mb-4 text-lg font-semibold text-ink">Personal History</h2>
+              <p className="text-sm text-ink-muted mb-6">Track all updates and changes to child records.</p>
 
               {/* History Subtabs */}
               <div className="mb-6">
-                <div className="flex gap-2 flex-wrap border-b border-slate-200">
+                <div className="flex gap-2 flex-wrap border-b border-rule">
                   {(['child', 'family', 'sibling', 'uniform', 'leaving', 'vocational', 'computer'] as HistorySubTabType[]).map((subTab) => (
                     <button
                       key={subTab}
                       onClick={() => handleHistorySubTabChange(subTab)}
                       className={`px-4 py-2 font-medium text-sm transition-colors ${activeHistorySubTab === subTab
                         ? 'text-blue-600 border-b-2 border-blue-600'
-                        : 'text-slate-600 hover:text-slate-900'
+                        : 'text-ink-muted hover:text-ink'
                         }`}
                     >
                       {subTab === 'child' && 'Child Data'}
@@ -390,7 +388,7 @@ export default function ActivityHistoryPage() {
               {/* Date Range Filter */}
               <div className="mb-6 flex gap-4 items-end">
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">From Date</label>
+                  <label className="mb-1 block text-sm font-medium text-ink">From Date</label>
                   <input
                     type="date"
                     value={
@@ -403,11 +401,11 @@ export default function ActivityHistoryPage() {
                                   historyComputerDateRange.start
                     }
                     onChange={(e) => handleHistoryDateRangeChange(activeHistorySubTab, 'start', e.target.value)}
-                    className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                    className="rounded-lg border border-rule px-3 py-2 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">To Date</label>
+                  <label className="mb-1 block text-sm font-medium text-ink">To Date</label>
                   <input
                     type="date"
                     value={
@@ -420,25 +418,25 @@ export default function ActivityHistoryPage() {
                                   historyComputerDateRange.end
                     }
                     onChange={(e) => handleHistoryDateRangeChange(activeHistorySubTab, 'end', e.target.value)}
-                    className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                    className="rounded-lg border border-rule px-3 py-2 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                   />
                 </div>
               </div>
 
               {/* History Tables */}
-              <div className="rounded border border-slate-100 bg-white overflow-hidden">
+              <div className="rounded border border-rule-faint bg-surface overflow-hidden">
                 {/* Child Data Table */}
                 {activeHistorySubTab === 'child' && (
                   <div>
                     {historyChildLoading ? (
-                      <div className="p-4 text-sm text-slate-600">Loading data…</div>
+                      <div className="p-4 text-sm text-ink-muted">Loading data…</div>
                     ) : historyChildData.length === 0 ? (
-                      <div className="p-4 text-sm text-slate-600">No child data history found.</div>
+                      <div className="p-4 text-sm text-ink-muted">No child data history found.</div>
                     ) : (
                       <div className="overflow-x-auto overflow-y-auto max-h-[60vh]">
                         <table className="min-w-full table-auto text-sm">
                           <thead className="sticky top-0">
-                            <tr className="bg-slate-50 text-left text-slate-700">
+                            <tr className="bg-surface-sunken text-left text-ink">
                               <th className="px-4 py-3 whitespace-nowrap">Record ID</th>
                               <th className="px-4 py-3 whitespace-nowrap">EAC No</th>
                               <th className="px-4 py-3 whitespace-nowrap">Reg No</th>
@@ -463,27 +461,27 @@ export default function ActivityHistoryPage() {
                           </thead>
                           <tbody>
                             {historyChildData.map((row) => (
-                              <tr key={row.record_id} className="border-t border-slate-200 hover:bg-slate-50">
-                                <td className="px-4 py-3 text-slate-700">{row.record_id}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.eac_no}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.reg_no}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.first_name}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.last_name}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.gender}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.aadhar_no}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.birth_place}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.height}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.weight}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.blood_group}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.health}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.caste}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.mother_tongue}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.class_std_text}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.school_name}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.school_category}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.life_ambition}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.fav_subject}</td>
-                                <td className="px-4 py-3 text-slate-700 whitespace-nowrap">{row.created_at ? new Date(row.created_at).toLocaleDateString() : ''}</td>
+                              <tr key={row.record_id} className="border-t border-rule hover:bg-surface-hover">
+                                <td className="px-4 py-3 text-ink">{row.record_id}</td>
+                                <td className="px-4 py-3 text-ink">{row.eac_no}</td>
+                                <td className="px-4 py-3 text-ink">{row.reg_no}</td>
+                                <td className="px-4 py-3 text-ink">{row.first_name}</td>
+                                <td className="px-4 py-3 text-ink">{row.last_name}</td>
+                                <td className="px-4 py-3 text-ink">{row.gender}</td>
+                                <td className="px-4 py-3 text-ink">{row.aadhar_no}</td>
+                                <td className="px-4 py-3 text-ink">{row.birth_place}</td>
+                                <td className="px-4 py-3 text-ink">{row.height}</td>
+                                <td className="px-4 py-3 text-ink">{row.weight}</td>
+                                <td className="px-4 py-3 text-ink">{row.blood_group}</td>
+                                <td className="px-4 py-3 text-ink">{row.health}</td>
+                                <td className="px-4 py-3 text-ink">{row.caste}</td>
+                                <td className="px-4 py-3 text-ink">{row.mother_tongue}</td>
+                                <td className="px-4 py-3 text-ink">{row.class_std_text}</td>
+                                <td className="px-4 py-3 text-ink">{row.school_name}</td>
+                                <td className="px-4 py-3 text-ink">{row.school_category}</td>
+                                <td className="px-4 py-3 text-ink">{row.life_ambition}</td>
+                                <td className="px-4 py-3 text-ink">{row.fav_subject}</td>
+                                <td className="px-4 py-3 text-ink whitespace-nowrap">{row.created_at ? new Date(row.created_at).toLocaleDateString() : ''}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -497,14 +495,14 @@ export default function ActivityHistoryPage() {
                 {activeHistorySubTab === 'family' && (
                   <div>
                     {historyFamilyLoading ? (
-                      <div className="p-4 text-sm text-slate-600">Loading data…</div>
+                      <div className="p-4 text-sm text-ink-muted">Loading data…</div>
                     ) : historyFamilyData.length === 0 ? (
-                      <div className="p-4 text-sm text-slate-600">No family data history found.</div>
+                      <div className="p-4 text-sm text-ink-muted">No family data history found.</div>
                     ) : (
                       <div className="overflow-x-auto overflow-y-auto max-h-[60vh]">
                         <table className="min-w-full table-auto text-sm">
                           <thead className="sticky top-0">
-                            <tr className="bg-slate-50 text-left text-slate-700">
+                            <tr className="bg-surface-sunken text-left text-ink">
                               <th className="px-4 py-3 whitespace-nowrap">Record ID</th>
                               <th className="px-4 py-3 whitespace-nowrap">EAC No</th>
                               <th className="px-4 py-3 whitespace-nowrap">Reg No</th>
@@ -528,26 +526,26 @@ export default function ActivityHistoryPage() {
                           </thead>
                           <tbody>
                             {historyFamilyData.map((row) => (
-                              <tr key={row.record_id} className="border-t border-slate-200 hover:bg-slate-50">
-                                <td className="px-4 py-3 text-slate-700">{row.record_id}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.eac_no}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.reg_no}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.f_name}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.f_occup}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.f_inc ?? row.f_inc_int ?? ''}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.f_aadhar}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.f_mobile}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.m_name}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.m_occup}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.m_inc ?? row.m_inc_int ?? ''}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.m_aadhar}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.m_mobile}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.fmly_addr1}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.fmly_addr2}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.fmly_addr3}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.fmly_pincode}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.fmly_remarks}</td>
-                                <td className="px-4 py-3 text-slate-700 whitespace-nowrap">{row.created_at ? new Date(row.created_at).toLocaleDateString() : ''}</td>
+                              <tr key={row.record_id} className="border-t border-rule hover:bg-surface-hover">
+                                <td className="px-4 py-3 text-ink">{row.record_id}</td>
+                                <td className="px-4 py-3 text-ink">{row.eac_no}</td>
+                                <td className="px-4 py-3 text-ink">{row.reg_no}</td>
+                                <td className="px-4 py-3 text-ink">{row.f_name}</td>
+                                <td className="px-4 py-3 text-ink">{row.f_occup}</td>
+                                <td className="px-4 py-3 text-ink">{row.f_inc ?? row.f_inc_int ?? ''}</td>
+                                <td className="px-4 py-3 text-ink">{row.f_aadhar}</td>
+                                <td className="px-4 py-3 text-ink">{row.f_mobile}</td>
+                                <td className="px-4 py-3 text-ink">{row.m_name}</td>
+                                <td className="px-4 py-3 text-ink">{row.m_occup}</td>
+                                <td className="px-4 py-3 text-ink">{row.m_inc ?? row.m_inc_int ?? ''}</td>
+                                <td className="px-4 py-3 text-ink">{row.m_aadhar}</td>
+                                <td className="px-4 py-3 text-ink">{row.m_mobile}</td>
+                                <td className="px-4 py-3 text-ink">{row.fmly_addr1}</td>
+                                <td className="px-4 py-3 text-ink">{row.fmly_addr2}</td>
+                                <td className="px-4 py-3 text-ink">{row.fmly_addr3}</td>
+                                <td className="px-4 py-3 text-ink">{row.fmly_pincode}</td>
+                                <td className="px-4 py-3 text-ink">{row.fmly_remarks}</td>
+                                <td className="px-4 py-3 text-ink whitespace-nowrap">{row.created_at ? new Date(row.created_at).toLocaleDateString() : ''}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -561,14 +559,14 @@ export default function ActivityHistoryPage() {
                 {activeHistorySubTab === 'sibling' && (
                   <div>
                     {historySiblingLoading ? (
-                      <div className="p-4 text-sm text-slate-600">Loading data…</div>
+                      <div className="p-4 text-sm text-ink-muted">Loading data…</div>
                     ) : historySiblingData.length === 0 ? (
-                      <div className="p-4 text-sm text-slate-600">No sibling data history found.</div>
+                      <div className="p-4 text-sm text-ink-muted">No sibling data history found.</div>
                     ) : (
                       <div className="overflow-x-auto overflow-y-auto max-h-[60vh]">
                         <table className="min-w-full table-auto text-sm">
                           <thead className="sticky top-0">
-                            <tr className="bg-slate-50 text-left text-slate-700">
+                            <tr className="bg-surface-sunken text-left text-ink">
                               <th className="px-4 py-3 whitespace-nowrap">Record ID</th>
                               <th className="px-4 py-3 whitespace-nowrap">EAC No</th>
                               <th className="px-4 py-3 whitespace-nowrap">Reg No</th>
@@ -594,28 +592,28 @@ export default function ActivityHistoryPage() {
                           </thead>
                           <tbody>
                             {historySiblingData.map((row) => (
-                              <tr key={row.record_id} className="border-t border-slate-200 hover:bg-slate-50">
-                                <td className="px-4 py-3 text-slate-700">{row.record_id}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.eac_no}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.reg_no}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.names_1}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.ages_1}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.genders_1}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.class_occup_1}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.names_2}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.ages_2}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.genders_2}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.class_occup_2}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.names_3}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.ages_3}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.genders_3}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.class_occup_3}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.names_4}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.ages_4}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.genders_4}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.class_occup_4}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.sibling_remarks}</td>
-                                <td className="px-4 py-3 text-slate-700 whitespace-nowrap">{row.created_at ? new Date(row.created_at).toLocaleDateString() : ''}</td>
+                              <tr key={row.record_id} className="border-t border-rule hover:bg-surface-hover">
+                                <td className="px-4 py-3 text-ink">{row.record_id}</td>
+                                <td className="px-4 py-3 text-ink">{row.eac_no}</td>
+                                <td className="px-4 py-3 text-ink">{row.reg_no}</td>
+                                <td className="px-4 py-3 text-ink">{row.names_1}</td>
+                                <td className="px-4 py-3 text-ink">{row.ages_1}</td>
+                                <td className="px-4 py-3 text-ink">{row.genders_1}</td>
+                                <td className="px-4 py-3 text-ink">{row.class_occup_1}</td>
+                                <td className="px-4 py-3 text-ink">{row.names_2}</td>
+                                <td className="px-4 py-3 text-ink">{row.ages_2}</td>
+                                <td className="px-4 py-3 text-ink">{row.genders_2}</td>
+                                <td className="px-4 py-3 text-ink">{row.class_occup_2}</td>
+                                <td className="px-4 py-3 text-ink">{row.names_3}</td>
+                                <td className="px-4 py-3 text-ink">{row.ages_3}</td>
+                                <td className="px-4 py-3 text-ink">{row.genders_3}</td>
+                                <td className="px-4 py-3 text-ink">{row.class_occup_3}</td>
+                                <td className="px-4 py-3 text-ink">{row.names_4}</td>
+                                <td className="px-4 py-3 text-ink">{row.ages_4}</td>
+                                <td className="px-4 py-3 text-ink">{row.genders_4}</td>
+                                <td className="px-4 py-3 text-ink">{row.class_occup_4}</td>
+                                <td className="px-4 py-3 text-ink">{row.sibling_remarks}</td>
+                                <td className="px-4 py-3 text-ink whitespace-nowrap">{row.created_at ? new Date(row.created_at).toLocaleDateString() : ''}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -629,14 +627,14 @@ export default function ActivityHistoryPage() {
                 {activeHistorySubTab === 'uniform' && (
                   <div>
                     {historyUniformLoading ? (
-                      <div className="p-4 text-sm text-slate-600">Loading data…</div>
+                      <div className="p-4 text-sm text-ink-muted">Loading data…</div>
                     ) : historyUniformData.length === 0 ? (
-                      <div className="p-4 text-sm text-slate-600">No uniform data history found.</div>
+                      <div className="p-4 text-sm text-ink-muted">No uniform data history found.</div>
                     ) : (
                       <div className="overflow-x-auto overflow-y-auto max-h-[60vh]">
                         <table className="min-w-full table-auto text-sm">
                           <thead className="sticky top-0">
-                            <tr className="bg-slate-50 text-left text-slate-700">
+                            <tr className="bg-surface-sunken text-left text-ink">
                               <th className="px-4 py-3 whitespace-nowrap">Record ID</th>
                               <th className="px-4 py-3 whitespace-nowrap">EAC No</th>
                               <th className="px-4 py-3 whitespace-nowrap">Reg No</th>
@@ -652,18 +650,18 @@ export default function ActivityHistoryPage() {
                           </thead>
                           <tbody>
                             {historyUniformData.map((row) => (
-                              <tr key={row.record_id} className="border-t border-slate-200 hover:bg-slate-50">
-                                <td className="px-4 py-3 text-slate-700">{row.record_id}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.eac_no}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.reg_no}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.shirtsize}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.knickersize}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.pant_skirtsize}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.chudidharsize}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.top_pantsize}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.footwearsize}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.uniform_updated ? new Date(row.uniform_updated).toLocaleDateString() : ''}</td>
-                                <td className="px-4 py-3 text-slate-700 whitespace-nowrap">{row.created_at ? new Date(row.created_at).toLocaleDateString() : ''}</td>
+                              <tr key={row.record_id} className="border-t border-rule hover:bg-surface-hover">
+                                <td className="px-4 py-3 text-ink">{row.record_id}</td>
+                                <td className="px-4 py-3 text-ink">{row.eac_no}</td>
+                                <td className="px-4 py-3 text-ink">{row.reg_no}</td>
+                                <td className="px-4 py-3 text-ink">{row.shirtsize}</td>
+                                <td className="px-4 py-3 text-ink">{row.knickersize}</td>
+                                <td className="px-4 py-3 text-ink">{row.pant_skirtsize}</td>
+                                <td className="px-4 py-3 text-ink">{row.chudidharsize}</td>
+                                <td className="px-4 py-3 text-ink">{row.top_pantsize}</td>
+                                <td className="px-4 py-3 text-ink">{row.footwearsize}</td>
+                                <td className="px-4 py-3 text-ink">{row.uniform_updated ? new Date(row.uniform_updated).toLocaleDateString() : ''}</td>
+                                <td className="px-4 py-3 text-ink whitespace-nowrap">{row.created_at ? new Date(row.created_at).toLocaleDateString() : ''}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -677,14 +675,14 @@ export default function ActivityHistoryPage() {
                 {activeHistorySubTab === 'leaving' && (
                   <div>
                     {historyLeavingLoading ? (
-                      <div className="p-4 text-sm text-slate-600">Loading data…</div>
+                      <div className="p-4 text-sm text-ink-muted">Loading data…</div>
                     ) : historyLeavingData.length === 0 ? (
-                      <div className="p-4 text-sm text-slate-600">No leaving data history found.</div>
+                      <div className="p-4 text-sm text-ink-muted">No leaving data history found.</div>
                     ) : (
                       <div className="overflow-x-auto overflow-y-auto max-h-[60vh]">
                         <table className="min-w-full table-auto text-sm">
                           <thead className="sticky top-0">
-                            <tr className="bg-slate-50 text-left text-slate-700">
+                            <tr className="bg-surface-sunken text-left text-ink">
                               <th className="px-4 py-3 whitespace-nowrap">Record ID</th>
                               <th className="px-4 py-3 whitespace-nowrap">EAC No</th>
                               <th className="px-4 py-3 whitespace-nowrap">Reg No</th>
@@ -701,19 +699,19 @@ export default function ActivityHistoryPage() {
                           </thead>
                           <tbody>
                             {historyLeavingData.map((row) => (
-                              <tr key={row.record_id} className="border-t border-slate-200 hover:bg-slate-50">
-                                <td className="px-4 py-3 text-slate-700">{row.record_id}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.eac_no}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.reg_no}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.reason}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.leav_class}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.leav_date ? new Date(row.leav_date).toLocaleDateString() : ''}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.leav_addr1}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.leav_addr2}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.leav_addr3}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.leav_pincode}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.leav_remarks}</td>
-                                <td className="px-4 py-3 text-slate-700 whitespace-nowrap">{row.created_at ? new Date(row.created_at).toLocaleDateString() : ''}</td>
+                              <tr key={row.record_id} className="border-t border-rule hover:bg-surface-hover">
+                                <td className="px-4 py-3 text-ink">{row.record_id}</td>
+                                <td className="px-4 py-3 text-ink">{row.eac_no}</td>
+                                <td className="px-4 py-3 text-ink">{row.reg_no}</td>
+                                <td className="px-4 py-3 text-ink">{row.reason}</td>
+                                <td className="px-4 py-3 text-ink">{row.leav_class}</td>
+                                <td className="px-4 py-3 text-ink">{row.leav_date ? new Date(row.leav_date).toLocaleDateString() : ''}</td>
+                                <td className="px-4 py-3 text-ink">{row.leav_addr1}</td>
+                                <td className="px-4 py-3 text-ink">{row.leav_addr2}</td>
+                                <td className="px-4 py-3 text-ink">{row.leav_addr3}</td>
+                                <td className="px-4 py-3 text-ink">{row.leav_pincode}</td>
+                                <td className="px-4 py-3 text-ink">{row.leav_remarks}</td>
+                                <td className="px-4 py-3 text-ink whitespace-nowrap">{row.created_at ? new Date(row.created_at).toLocaleDateString() : ''}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -727,14 +725,14 @@ export default function ActivityHistoryPage() {
                 {activeHistorySubTab === 'vocational' && (
                   <div>
                     {historyVocationalLoading ? (
-                      <div className="p-4 text-sm text-slate-600">Loading data…</div>
+                      <div className="p-4 text-sm text-ink-muted">Loading data…</div>
                     ) : historyVocationalData.length === 0 ? (
-                      <div className="p-4 text-sm text-slate-600">No vocational data history found.</div>
+                      <div className="p-4 text-sm text-ink-muted">No vocational data history found.</div>
                     ) : (
                       <div className="overflow-x-auto overflow-y-auto max-h-[60vh]">
                         <table className="min-w-full table-auto text-sm">
                           <thead className="sticky top-0">
-                            <tr className="bg-slate-50 text-left text-slate-700">
+                            <tr className="bg-surface-sunken text-left text-ink">
                               <th className="px-4 py-3 whitespace-nowrap">Record ID</th>
                               <th className="px-4 py-3 whitespace-nowrap">Trainee Name</th>
                               <th className="px-4 py-3 whitespace-nowrap">Batch No</th>
@@ -754,22 +752,22 @@ export default function ActivityHistoryPage() {
                           </thead>
                           <tbody>
                             {historyVocationalData.map((row) => (
-                              <tr key={row.record_id ?? row.id} className="border-t border-slate-200 hover:bg-slate-50">
-                                <td className="px-4 py-3 text-slate-700">{row.record_id ?? row.id}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.trainee_name}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.batch_no}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.enrolled_course}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.date_of_admission ? new Date(row.date_of_admission).toLocaleDateString() : ''}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.gender}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.aadhar_no}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.date_of_birth ? new Date(row.date_of_birth).toLocaleDateString() : ''}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.blood_group}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.mother_tongue}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.marital_status}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.father_or_husband_name}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.mother_name}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.present_status}</td>
-                                <td className="px-4 py-3 text-slate-700 whitespace-nowrap">{row.created_at ? new Date(row.created_at).toLocaleDateString() : ''}</td>
+                              <tr key={row.record_id ?? row.id} className="border-t border-rule hover:bg-surface-hover">
+                                <td className="px-4 py-3 text-ink">{row.record_id ?? row.id}</td>
+                                <td className="px-4 py-3 text-ink">{row.trainee_name}</td>
+                                <td className="px-4 py-3 text-ink">{row.batch_no}</td>
+                                <td className="px-4 py-3 text-ink">{row.enrolled_course}</td>
+                                <td className="px-4 py-3 text-ink">{row.date_of_admission ? new Date(row.date_of_admission).toLocaleDateString() : ''}</td>
+                                <td className="px-4 py-3 text-ink">{row.gender}</td>
+                                <td className="px-4 py-3 text-ink">{row.aadhar_no}</td>
+                                <td className="px-4 py-3 text-ink">{row.date_of_birth ? new Date(row.date_of_birth).toLocaleDateString() : ''}</td>
+                                <td className="px-4 py-3 text-ink">{row.blood_group}</td>
+                                <td className="px-4 py-3 text-ink">{row.mother_tongue}</td>
+                                <td className="px-4 py-3 text-ink">{row.marital_status}</td>
+                                <td className="px-4 py-3 text-ink">{row.father_or_husband_name}</td>
+                                <td className="px-4 py-3 text-ink">{row.mother_name}</td>
+                                <td className="px-4 py-3 text-ink">{row.present_status}</td>
+                                <td className="px-4 py-3 text-ink whitespace-nowrap">{row.created_at ? new Date(row.created_at).toLocaleDateString() : ''}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -783,14 +781,14 @@ export default function ActivityHistoryPage() {
                 {activeHistorySubTab === 'computer' && (
                   <div>
                     {historyComputerLoading ? (
-                      <div className="p-4 text-sm text-slate-600">Loading data…</div>
+                      <div className="p-4 text-sm text-ink-muted">Loading data…</div>
                     ) : historyComputerData.length === 0 ? (
-                      <div className="p-4 text-sm text-slate-600">No computer data history found.</div>
+                      <div className="p-4 text-sm text-ink-muted">No computer data history found.</div>
                     ) : (
                       <div className="overflow-x-auto overflow-y-auto max-h-[60vh]">
                         <table className="min-w-full table-auto text-sm">
                           <thead className="sticky top-0">
-                            <tr className="bg-slate-50 text-left text-slate-700">
+                            <tr className="bg-surface-sunken text-left text-ink">
                               <th className="px-4 py-3 whitespace-nowrap">Record ID</th>
                               <th className="px-4 py-3 whitespace-nowrap">Child Name</th>
                               <th className="px-4 py-3 whitespace-nowrap">Batch No</th>
@@ -811,23 +809,23 @@ export default function ActivityHistoryPage() {
                           </thead>
                           <tbody>
                             {historyComputerData.map((row) => (
-                              <tr key={row.record_id ?? row.id} className="border-t border-slate-200 hover:bg-slate-50">
-                                <td className="px-4 py-3 text-slate-700">{row.record_id ?? row.id}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.child_name}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.batch_no}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.date_of_admission ? new Date(row.date_of_admission).toLocaleDateString() : ''}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.reg_no}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.gender}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.aadhar_no}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.date_of_birth ? new Date(row.date_of_birth).toLocaleDateString() : ''}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.class_standard}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.school_name}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.course_name}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.completion_date ? new Date(row.completion_date).toLocaleDateString() : ''}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.attendance_percentage}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.final_assessment_score}</td>
-                                <td className="px-4 py-3 text-slate-700">{row.certificate_issued_on ? new Date(row.certificate_issued_on).toLocaleDateString() : ''}</td>
-                                <td className="px-4 py-3 text-slate-700 whitespace-nowrap">{row.created_at ? new Date(row.created_at).toLocaleDateString() : ''}</td>
+                              <tr key={row.record_id ?? row.id} className="border-t border-rule hover:bg-surface-hover">
+                                <td className="px-4 py-3 text-ink">{row.record_id ?? row.id}</td>
+                                <td className="px-4 py-3 text-ink">{row.child_name}</td>
+                                <td className="px-4 py-3 text-ink">{row.batch_no}</td>
+                                <td className="px-4 py-3 text-ink">{row.date_of_admission ? new Date(row.date_of_admission).toLocaleDateString() : ''}</td>
+                                <td className="px-4 py-3 text-ink">{row.reg_no}</td>
+                                <td className="px-4 py-3 text-ink">{row.gender}</td>
+                                <td className="px-4 py-3 text-ink">{row.aadhar_no}</td>
+                                <td className="px-4 py-3 text-ink">{row.date_of_birth ? new Date(row.date_of_birth).toLocaleDateString() : ''}</td>
+                                <td className="px-4 py-3 text-ink">{row.class_standard}</td>
+                                <td className="px-4 py-3 text-ink">{row.school_name}</td>
+                                <td className="px-4 py-3 text-ink">{row.course_name}</td>
+                                <td className="px-4 py-3 text-ink">{row.completion_date ? new Date(row.completion_date).toLocaleDateString() : ''}</td>
+                                <td className="px-4 py-3 text-ink">{row.attendance_percentage}</td>
+                                <td className="px-4 py-3 text-ink">{row.final_assessment_score}</td>
+                                <td className="px-4 py-3 text-ink">{row.certificate_issued_on ? new Date(row.certificate_issued_on).toLocaleDateString() : ''}</td>
+                                <td className="px-4 py-3 text-ink whitespace-nowrap">{row.created_at ? new Date(row.created_at).toLocaleDateString() : ''}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -840,7 +838,6 @@ export default function ActivityHistoryPage() {
             </section>
           </div>
         </div>
-      </PageContainer>
-    </main>
+      </AppShell>
   )
 }

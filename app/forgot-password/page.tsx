@@ -42,11 +42,11 @@ export default function ForgotPasswordPage() {
     }
 
     return (
-        <main className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
-            <div className="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
+        <main className="flex min-h-screen items-center justify-center bg-surface-hover px-4">
+            <div className="w-full max-w-sm rounded-xl border border-rule bg-surface p-8 shadow-sm">
                 <div className="mb-6 text-center">
-                    <h1 className="text-2xl font-semibold text-slate-900">Forgot Password</h1>
-                    <p className="mt-2 text-sm text-slate-600">
+                    <h1 className="text-2xl font-semibold text-ink">Forgot Password</h1>
+                    <p className="mt-2 text-sm text-ink-muted">
                         Enter your email and we will send a reset link.
                     </p>
                 </div>
@@ -55,7 +55,7 @@ export default function ForgotPasswordPage() {
                     <div>
                         <label
                             htmlFor="email"
-                            className="mb-1 block text-sm font-medium text-slate-700"
+                            className="mb-1 block text-sm font-medium text-ink"
                         >
                             Email
                         </label>
@@ -70,7 +70,7 @@ export default function ForgotPasswordPage() {
                             }}
                             autoComplete="email"
                             required
-                            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                            className="w-full rounded-lg border border-rule px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                         />
                     </div>
 
@@ -86,7 +86,7 @@ export default function ForgotPasswordPage() {
                     </button>
                 </form>
 
-                <p className="mt-6 text-center text-sm text-slate-600">
+                <p className="mt-6 text-center text-sm text-ink-muted">
                     <Link href="/sign-in" className="font-medium text-blue-700 underline-offset-2 hover:underline">
                         Back to sign in
                     </Link>

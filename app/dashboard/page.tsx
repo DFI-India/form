@@ -86,7 +86,7 @@ export default function DashboardPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-slate-50 p-4 flex items-center justify-center">
+      <div className="min-h-screen bg-surface-sunken p-4 flex items-center justify-center">
         <div className="max-w-md w-full">
           <Alert type="error" message={error} />
           <button
@@ -101,7 +101,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+    <div className="min-h-screen bg-surface-sunken flex items-center justify-center">
       <LoadingSpinner size="lg" />
     </div>
   )

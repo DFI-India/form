@@ -1,10 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import AppShell from '../../components/AppShell'
 import { useRequireRole } from '../../../lib/hooks'
 import { supabase } from '../../../lib/supabase'
 import { LoadingSpinner, Alert } from '../../components/UI'
-import { Navbar, Sidebar, PageContainer } from '../../components/Navbar'
 import { FileText, Columns, Search, Download, Lightbulb } from 'lucide-react'
 
 interface ColumnDef {
@@ -230,7 +230,7 @@ export default function EnhancedReportsPage() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-surface-sunken flex items-center justify-center">
         <LoadingSpinner size="lg" />
       </div>
     )
@@ -238,10 +238,10 @@ export default function EnhancedReportsPage() {
 
   if (!isAuthorized || !profile) {
     return (
-      <main className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-lg p-6 max-w-md text-center">
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">Access Denied</h1>
-          <p className="text-slate-600">You don't have permission to access this page.</p>
+      <main className="min-h-screen bg-surface-sunken flex items-center justify-center p-4">
+        <div className="bg-surface rounded-lg shadow-lg p-6 max-w-md text-center">
+          <h1 className="text-xl font-bold sm:text-2xl text-ink mb-2">Access Denied</h1>
+          <p className="text-ink-muted">You don't have permission to access this page.</p>
         </div>
       </main>
     )
@@ -254,31 +254,27 @@ export default function EnhancedReportsPage() {
   }, {} as Record<string, ColumnDef[]>)
 
   return (
-    <main className="min-h-screen bg-slate-50">
-      <Navbar
+      <AppShell
+        role="tech_support"
+        active="/tech-support/reports"
+        breadcrumb={['Support', 'Reports']}
         username={profile.username}
-        role={profile.role!}
-        roleLabel={profile.role === 'tech_support' ? 'Tech Support' : 'Admin'}
-        roleColor={profile.role === 'tech_support' ? 'bg-orange-100 text-orange-800' : 'bg-indigo-100 text-indigo-800'}
-      />
-      <Sidebar role={profile.role!} />
-
-      <PageContainer>
-        <div className="p-8">
+      >
+        <div className="px-4 py-5 sm:px-6 sm:py-8">
           <div className="mx-auto max-w-7xl space-y-8">
             {/* Header */}
             <div>
-              <h1 className="text-4xl font-bold text-slate-900">Advanced Report Builder</h1>
-              <p className="mt-2 text-slate-600">Create custom reports with dynamic filters and column selection</p>
+              <h1 className="text-4xl font-bold text-ink">Advanced Report Builder</h1>
+              <p className="mt-2 text-ink-muted">Create custom reports with dynamic filters and column selection</p>
             </div>
 
             {error && <Alert type="error" message={error} onDismiss={() => setError('')} />}
             {success && <Alert type="success" message={success} onDismiss={() => setSuccess('')} />}
 
             {/* Filters Section */}
-            <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm space-y-6">
+            <div className="bg-surface rounded-lg border border-rule p-6 shadow-sm space-y-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <h2 className="text-xl font-bold text-ink flex items-center gap-2">
                   <FileText className="w-6 h-6" /> Data Filters
                 </h2>
                 <button
@@ -300,28 +296,28 @@ export default function EnhancedReportsPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {/* Date Range */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">From Date</label>
+                  <label className="block text-sm font-medium text-ink mb-2">From Date</label>
                   <input
                     type="date"
                     value={dateFrom}
                     onChange={e => setDateFrom(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full min-h-[44px] sm:min-h-0 px-3 py-2 rounded-lg border border-rule-strong text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">To Date</label>
+                  <label className="block text-sm font-medium text-ink mb-2">To Date</label>
                   <input
                     type="date"
                     value={dateTo}
                     onChange={e => setDateTo(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full min-h-[44px] sm:min-h-0 px-3 py-2 rounded-lg border border-rule-strong text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
                 {/* EAC Number */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">EAC Number</label>
+                  <label className="block text-sm font-medium text-ink mb-2">EAC Number</label>
                   <select
                     value={selectedEac}
                     onChange={e => {
@@ -329,7 +325,7 @@ export default function EnhancedReportsPage() {
                       const centre = centres.find(c => c.eac_no === e.target.value)
                       if (centre) setSelectedVillage(centre.village_name)
                     }}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full min-h-[44px] sm:min-h-0 px-3 py-2 rounded-lg border border-rule-strong text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">All EACs</option>
                     {centres.map(c => (
@@ -340,11 +336,11 @@ export default function EnhancedReportsPage() {
 
                 {/* Village */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Village</label>
+                  <label className="block text-sm font-medium text-ink mb-2">Village</label>
                   <select
                     value={selectedVillage}
                     onChange={e => setSelectedVillage(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full min-h-[44px] sm:min-h-0 px-3 py-2 rounded-lg border border-rule-strong text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">All Villages</option>
                     {centres.map(c => (
@@ -355,11 +351,11 @@ export default function EnhancedReportsPage() {
 
                 {/* Status */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Status</label>
+                  <label className="block text-sm font-medium text-ink mb-2">Status</label>
                   <select
                     value={selectedStatus}
                     onChange={e => setSelectedStatus(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full min-h-[44px] sm:min-h-0 px-3 py-2 rounded-lg border border-rule-strong text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">All Statuses</option>
                     <option value="Pending">Pending</option>
@@ -370,11 +366,11 @@ export default function EnhancedReportsPage() {
 
                 {/* Gender */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Gender</label>
+                  <label className="block text-sm font-medium text-ink mb-2">Gender</label>
                   <select
                     value={selectedGender}
                     onChange={e => setSelectedGender(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full min-h-[44px] sm:min-h-0 px-3 py-2 rounded-lg border border-rule-strong text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">All Genders</option>
                     <option value="Male">Male</option>
@@ -384,22 +380,22 @@ export default function EnhancedReportsPage() {
 
                 {/* Grade */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Class/Standard</label>
+                  <label className="block text-sm font-medium text-ink mb-2">Class/Standard</label>
                   <input
                     type="text"
                     value={selectedGrade}
                     onChange={e => setSelectedGrade(e.target.value)}
                     placeholder="e.g., 1st std, 10th std"
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full min-h-[44px] sm:min-h-0 px-3 py-2 rounded-lg border border-rule-strong text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
             </div>
 
             {/* Column Selection */}
-            <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm space-y-4">
+            <div className="bg-surface rounded-lg border border-rule p-6 shadow-sm space-y-4">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <h2 className="text-xl font-bold text-ink flex items-center gap-2">
                   <Columns className="w-6 h-6" /> Column Selection
                 </h2>
                 <div className="flex gap-2">
@@ -409,7 +405,7 @@ export default function EnhancedReportsPage() {
                   >
                     Select All
                   </button>
-                  <span className="text-slate-300">|</span>
+                  <span className="text-ink-faint">|</span>
                   <button
                     onClick={deselectAllColumns}
                     className="text-sm text-blue-600 hover:text-blue-700 font-medium"
@@ -419,8 +415,8 @@ export default function EnhancedReportsPage() {
                 </div>
               </div>
 
-              <div className="text-sm text-slate-600 mb-4">
-                Selected: <span className="font-semibold text-slate-900">{selectedColumns.length}</span> columns
+              <div className="text-sm text-ink-muted mb-4">
+                Selected: <span className="font-semibold text-ink">{selectedColumns.length}</span> columns
               </div>
 
               {/* Quick category selection */}
@@ -429,7 +425,7 @@ export default function EnhancedReportsPage() {
                   <button
                     key={category}
                     onClick={() => selectCategory(category)}
-                    className="px-3 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-full hover:bg-blue-100 transition-colors"
+                    className="px-3 py-1 bg-accent-bg text-accent-fg text-xs font-medium rounded-full hover:bg-blue-100 transition-colors"
                   >
                     Select {category.charAt(0).toUpperCase() + category.slice(1)}
                   </button>
@@ -439,19 +435,19 @@ export default function EnhancedReportsPage() {
               {/* Column checkboxes by category */}
               {Object.entries(columnsByCategory).map(([category, cols]) => (
                 <div key={category} className="mb-6">
-                  <h3 className="text-sm font-semibold text-slate-700 mb-3 uppercase tracking-wide">
+                  <h3 className="text-sm font-semibold text-ink mb-3 uppercase tracking-wide">
                     {category.charAt(0).toUpperCase() + category.slice(1)}
                   </h3>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                     {cols.map(col => (
-                      <label key={col.key} className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-2 rounded">
+                      <label key={col.key} className="flex items-center gap-2 cursor-pointer hover:bg-surface-hover p-2 rounded">
                         <input
                           type="checkbox"
                           checked={selectedColumns.includes(col.key)}
                           onChange={() => toggleColumn(col.key)}
-                          className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-2 focus:ring-blue-500"
+                          className="w-4 h-4 text-blue-600 border-rule-strong rounded focus:ring-2 focus:ring-blue-500"
                         />
-                        <span className="text-sm text-slate-700">{col.label}</span>
+                        <span className="text-sm text-ink">{col.label}</span>
                       </label>
                     ))}
                   </div>
@@ -483,33 +479,33 @@ export default function EnhancedReportsPage() {
 
             {/* Preview Section */}
             {showPreview && (
-              <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
-                <div className="border-b border-slate-200 px-6 py-4 bg-slate-50">
-                  <h2 className="text-lg font-bold text-slate-900">
+              <div className="bg-surface rounded-lg border border-rule shadow-sm overflow-hidden">
+                <div className="border-b border-rule px-6 py-4 bg-surface-sunken">
+                  <h2 className="text-lg font-bold text-ink">
                     Data Preview ({previewData.length} records, limited to 100)
                   </h2>
                 </div>
                 <div className="overflow-x-auto">
                   {previewData.length === 0 ? (
-                    <div className="px-6 py-12 text-center text-slate-500">
+                    <div className="px-6 py-12 text-center text-ink-faint">
                       No records found matching your filters
                     </div>
                   ) : (
                     <table className="w-full text-sm">
-                      <thead className="bg-slate-50 border-b border-slate-200">
+                      <thead className="bg-surface-sunken border-b border-rule">
                         <tr>
                           {selectedColumns.map(col => (
-                            <th key={col} className="px-4 py-3 text-left font-semibold text-slate-700">
+                            <th key={col} className="px-4 py-3 text-left font-semibold text-ink">
                               {ALL_COLUMNS.find(c => c.key === col)?.label || col}
                             </th>
                           ))}
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-200">
+                      <tbody className="divide-y divide-rule">
                         {previewData.map((row, idx) => (
-                          <tr key={idx} className="hover:bg-slate-50">
+                          <tr key={idx} className="hover:bg-surface-hover">
                             {selectedColumns.map(col => (
-                              <td key={col} className="px-4 py-3 text-slate-700">
+                              <td key={col} className="px-4 py-3 text-ink">
                                 {row[col] !== null && row[col] !== undefined ? String(row[col]) : '-'}
                               </td>
                             ))}
@@ -537,7 +533,6 @@ export default function EnhancedReportsPage() {
             </div>
           </div>
         </div>
-      </PageContainer>
-    </main>
+      </AppShell>
   )
 }

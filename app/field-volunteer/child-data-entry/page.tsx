@@ -14,7 +14,7 @@ import Image from 'next/image'
 import { supabase } from '../../../lib/supabase'
 import { useRequireRole } from '../../../lib/hooks'
 import { getErrorMessage } from '../../../lib/errors'
-import { Navbar, Sidebar, PageContainer } from '../../components/Navbar'
+import AppShell from '../../components/AppShell'
 import { LoadingSpinner } from '../../components/UI'
 import { User, Users, Shirt, LogOut, BookOpen, Laptop, AlertCircle, History, ChevronRight, Check, X } from 'lucide-react'
 import { ROLE_CONFIG } from '../../../lib/types'
@@ -2944,7 +2944,7 @@ export default function ChildForm() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-surface-sunken flex items-center justify-center">
         <LoadingSpinner size="lg" />
       </div>
     )
@@ -2952,10 +2952,10 @@ export default function ChildForm() {
 
   if (!isAuthorized || !profile) {
     return (
-      <main className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-lg p-6 max-w-md text-center">
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">Access Denied</h1>
-          <p className="text-slate-600">You don't have permission to access this page.</p>
+      <main className="min-h-screen bg-surface-sunken flex items-center justify-center p-4">
+        <div className="bg-surface rounded-lg shadow-lg p-6 max-w-md text-center">
+          <h1 className="text-xl font-bold sm:text-2xl text-ink mb-2">Access Denied</h1>
+          <p className="text-ink-muted">You don't have permission to access this page.</p>
         </div>
       </main>
     )
@@ -2971,49 +2971,46 @@ export default function ChildForm() {
   ]
 
   return (
-    <main className="min-h-screen bg-slate-50">
-      <Navbar
-        username={profile.username}
+      <AppShell
         role="field_volunteer"
-        roleLabel={roleInfo.label}
-        roleColor={roleInfo.color}
-      />
-      <Sidebar role="field_volunteer" />
-
-      <PageContainer>
-        <div className="p-8">
-          {/* Header */}
-          <div className="mb-8">
-            <h2 className="text-3xl font-bold text-slate-900">Child Data Entry</h2>
-            <p className="text-slate-600 mt-2">Manage child information and course registrations</p>
-          </div>
-
+        active="/field-volunteer/child-data-entry"
+        breadcrumb={['My work', 'New child']}
+        username={profile.username}
+      >
+        <div className="px-4 pb-24 pt-4 sm:px-6 sm:pb-10">
           {/* Messages */}
           {message && (
             <div
-              className={`rounded-lg border px-4 py-3 text-sm font-medium mb-6 flex items-center gap-2 ${message.type === 'success'
-                ? 'border-green-200 bg-green-50 text-green-700'
-                : 'border-red-200 bg-red-50 text-red-700'
-                }`}
+              className={`mb-4 flex items-start gap-2 rounded-lg border px-3.5 py-3 text-[13.5px] font-medium ${
+                message.type === 'success'
+                  ? 'border-status-approved-fg/30 bg-status-approved-bg text-status-approved-fg'
+                  : 'border-status-returned-fg/30 bg-status-returned-bg text-status-returned-fg'
+              }`}
             >
-              {message.type === 'success' ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
+              {message.type === 'success' ? (
+                <Check className="mt-0.5 h-4 w-4 shrink-0" />
+              ) : (
+                <X className="mt-0.5 h-4 w-4 shrink-0" />
+              )}
               {message.text}
             </div>
           )}
 
-          {/* Data Type Selection Tabs */}
-          <div className="bg-white rounded-lg border border-slate-200 overflow-hidden mb-8">
-            <div className="flex overflow-x-auto">
+          {/* What am I entering. Scrolls sideways on a phone rather than
+              squeezing five labels into 375px. */}
+          <div className="-mx-4 mb-5 overflow-x-auto border-b border-rule px-4 sm:mx-0 sm:px-0">
+            <div className="flex w-max gap-1">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => handleTabSelection(tab.id as TabType)}
-                  className={`flex-1 min-w-[140px] px-4 py-4 text-sm font-medium transition-colors border-b-2 ${activeTab === tab.id
-                    ? 'border-blue-600 text-blue-600 bg-blue-50'
-                    : 'border-transparent text-slate-600 hover:bg-slate-50'
-                    }`}
+                  className={`-mb-px h-11 whitespace-nowrap border-b-2 px-3 text-[13.5px] font-medium transition-colors ${
+                    activeTab === tab.id
+                      ? 'border-ink text-ink'
+                      : 'border-transparent text-ink-muted hover:text-ink'
+                  }`}
                 >
-                  <span className="whitespace-nowrap">{tab.label}</span>
+                  {tab.label}
                 </button>
               ))}
             </div>
@@ -3022,20 +3019,20 @@ export default function ChildForm() {
           {/* Tab Content - All forms display here */}
           <div>
             {!activeTab && (
-              <section className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-                <h3 className="text-xl font-semibold text-slate-900">Select a data type to begin</h3>
-                <p className="mt-2 text-sm text-slate-600">
+              <section className="rounded-xl border border-rule bg-surface p-8 text-center shadow-sm">
+                <h3 className="text-xl font-semibold text-ink">Select a data type to begin</h3>
+                <p className="mt-2 text-sm text-ink-muted">
                   Click Child Data, Child Leaving, Vocational Course, Computer Course, or Rejected Data to continue.
                 </p>
               </section>
             )}
 
             {activeTab === 'child' && entryGate === 'chooser' && (
-              <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+              <section className="rounded-xl border border-rule bg-surface p-6 shadow-sm">
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                   <div>
-                    <h3 className="text-lg font-semibold text-slate-900">Your Child Data Drafts</h3>
-                    <p className="mt-1 text-sm text-slate-600">Continue an unfinished draft or start a new entry.</p>
+                    <h3 className="text-lg font-semibold text-ink">Your Child Data Drafts</h3>
+                    <p className="mt-1 text-sm text-ink-muted">Continue an unfinished draft or start a new entry.</p>
                   </div>
                   <button
                     type="button"
@@ -3048,11 +3045,11 @@ export default function ChildForm() {
 
                 <div className="mt-5 space-y-3">
                   {childDraftSummaries.map((draft) => (
-                    <div key={draft.regNo} className="rounded-lg border border-slate-200 p-4">
+                    <div key={draft.regNo} className="rounded-lg border border-rule p-4">
                       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                         <div>
-                          <p className="text-sm font-semibold text-slate-900">Registration No: {draft.regNo}</p>
-                          <p className="text-xs text-slate-500">
+                          <p className="text-sm font-semibold text-ink">Registration No: {draft.regNo}</p>
+                          <p className="text-xs text-ink-faint">
                             Last saved: {draft.savedAt ? new Date(draft.savedAt).toLocaleString() : 'Unknown'}
                           </p>
                         </div>
@@ -3060,7 +3057,7 @@ export default function ChildForm() {
                           <button
                             type="button"
                             onClick={() => loadChildDraftByRegistrationNo(draft.regNo)}
-                            className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400"
+                            className="inline-flex items-center justify-center rounded-lg border border-rule-strong px-4 py-2 text-sm font-semibold text-ink transition hover:border-rule-strong"
                           >
                             Continue
                           </button>
@@ -3083,11 +3080,11 @@ export default function ChildForm() {
             {activeTab === 'child' && entryGate === 'form' && (
               <div className="space-y-8">
                 <form onSubmit={handleUnifiedSubmit} className="space-y-8">
-                  <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                  <section className="rounded-xl border border-rule bg-surface p-6 shadow-sm">
                     <div className="mb-4 flex items-center justify-between gap-4">
                       <div>
-                        <h2 className="text-lg font-semibold text-slate-900">Unified Child Profile Form</h2>
-                        <p className="mt-1 text-sm text-slate-500">
+                        <h2 className="text-lg font-semibold text-ink">Unified Child Profile Form</h2>
+                        <p className="mt-1 text-sm text-ink-faint">
                           Step {wizardStep + 1} of {wizardSteps.length}: {wizardSteps[wizardStep].label}
                         </p>
                       </div>
@@ -3096,7 +3093,7 @@ export default function ChildForm() {
                       </span>
                     </div>
 
-                    <div className="mb-5 h-2 w-full rounded-full bg-slate-100">
+                    <div className="mb-5 h-2 w-full rounded-full bg-surface-hover">
                       <div
                         className="h-2 rounded-full bg-blue-600 transition-all"
                         style={{ width: `${((wizardStep + 1) / wizardSteps.length) * 100}%` }}
@@ -3108,8 +3105,8 @@ export default function ChildForm() {
                         <div
                           key={step.id}
                           className={`rounded-lg border px-3 py-2 text-xs font-semibold ${index <= wizardStep
-                            ? 'border-blue-200 bg-blue-50 text-blue-700'
-                            : 'border-slate-200 bg-white text-slate-500'
+                            ? 'border-blue-200 bg-accent-bg text-accent-fg'
+                            : 'border-rule bg-surface text-ink-faint'
                             }`}
                         >
                           {index + 1}. {step.label}
@@ -3121,13 +3118,13 @@ export default function ChildForm() {
                       <div className="space-y-8">
                         <div className="grid gap-4 md:grid-cols-2">
                           <div>
-                            <label className="mb-1 block text-sm font-medium text-slate-700">EAC No *</label>
+                            <label className="mb-1 block text-sm font-medium text-ink">EAC No *</label>
                             <select
                               name="eac_no"
                               value={formData.eac_no}
                               onChange={handleEacChange}
                               required
-                              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                              className={baseInputClass}
                             >
                               <option value="">Select EAC No</option>
                               {visibleEacOptions.map((eac) => (
@@ -3155,7 +3152,7 @@ export default function ChildForm() {
                           <TextInput label="Last Name" name="last_name" value={formData.last_name} onChange={handleChange} />
 
                           <div>
-                            <label className="mb-1 block text-sm font-medium text-slate-700">Gender *</label>
+                            <label className="mb-1 block text-sm font-medium text-ink">Gender *</label>
                             <select
                               name="gender"
                               value={formData.gender}
@@ -3171,7 +3168,7 @@ export default function ChildForm() {
                           </div>
 
                           <div>
-                            <label className="mb-1 block text-sm font-medium text-slate-700">Religion</label>
+                            <label className="mb-1 block text-sm font-medium text-ink">Religion</label>
                             <select
                               name="religion"
                               value={formData.religion}
@@ -3191,7 +3188,7 @@ export default function ChildForm() {
                           <NumberInput label="Weight (kg)" name="weight" value={formData.weight} onChange={handleChange} />
 
                           <div>
-                            <label className="mb-1 block text-sm font-medium text-slate-700">Blood Group</label>
+                            <label className="mb-1 block text-sm font-medium text-ink">Blood Group</label>
                             <select
                               name="blood_group"
                               value={formData.blood_group}
@@ -3209,7 +3206,7 @@ export default function ChildForm() {
                           <TextInput label="Caste" name="caste" value={formData.caste} onChange={handleChange} />
                           <TextInput label="Mother Tongue" name="mother_tongue" value={formData.mother_tongue} onChange={handleChange} />
                           <div>
-                            <label className="mb-1 block text-sm font-medium text-slate-700">Class/Standard</label>
+                            <label className="mb-1 block text-sm font-medium text-ink">Class/Standard</label>
                             <select
                               name="class_std_text"
                               value={formData.class_std_text}
@@ -3227,7 +3224,7 @@ export default function ChildForm() {
                           <NumberInput label="SATS No" name="sats_no" value={formData.sats_no} onChange={handleChange} />
                           <NumberInput label="PEN No" name="pen_no" value={formData.pen_no} onChange={handleChange} />
                           <div>
-                            <label className="mb-1 block text-sm font-medium text-slate-700">Medium of Study</label>
+                            <label className="mb-1 block text-sm font-medium text-ink">Medium of Study</label>
                             <select
                               name="medium_of_study"
                               value={formData.medium_of_study}
@@ -3242,7 +3239,7 @@ export default function ChildForm() {
                           </div>
 
                           <div>
-                            <label className="mb-1 block text-sm font-medium text-slate-700">Life Ambition</label>
+                            <label className="mb-1 block text-sm font-medium text-ink">Life Ambition</label>
                             <select
                               name="life_ambition"
                               value={formData.life_ambition}
@@ -3257,7 +3254,7 @@ export default function ChildForm() {
                           </div>
 
                           <div>
-                            <label className="mb-1 block text-sm font-medium text-slate-700">Favorite Subject</label>
+                            <label className="mb-1 block text-sm font-medium text-ink">Favorite Subject</label>
                             <select
                               name="fav_subject"
                               value={formData.fav_subject}
@@ -3272,7 +3269,7 @@ export default function ChildForm() {
                           </div>
 
                           <div>
-                            <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="photoUploadWizard">
+                            <label className="mb-1 block text-sm font-medium text-ink" htmlFor="photoUploadWizard">
                               Child Photo
                             </label>
                             <input
@@ -3282,27 +3279,27 @@ export default function ChildForm() {
                               accept="image/*"
                               capture="environment"
                               onChange={handlePhotoChange}
-                              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition file:mr-3 file:rounded-md file:border-none file:bg-blue-600 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-blue-700 focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                              className="w-full rounded-lg border border-rule-strong bg-surface px-3 py-2.5 text-base text-ink outline-none transition file:mr-3 file:h-9 file:rounded-md file:border-none file:bg-blue-600 file:px-3 file:text-sm file:font-medium file:text-white hover:file:bg-blue-700 focus:border-blue-500 sm:text-sm"
                             />
-                            {photoFile && <p className="mt-1 text-xs text-slate-600">Selected: {photoFile.name}</p>}
+                            {photoFile && <p className="mt-1 text-xs text-ink-muted">Selected: {photoFile.name}</p>}
                             {photoPreview && (
                               <img
                                 src={photoPreview}
                                 alt="Selected child preview"
-                                className="mt-3 h-28 w-28 rounded-lg border border-slate-200 object-cover"
+                                className="mt-3 h-28 w-28 rounded-lg border border-rule object-cover"
                               />
                             )}
                           </div>
                         </div>
 
                         <div>
-                          <label className="mb-1 block text-sm font-medium text-slate-700">Other Information</label>
+                          <label className="mb-1 block text-sm font-medium text-ink">Other Information</label>
                           <textarea
                             name="child_other_info"
                             value={formData.child_other_info}
                             onChange={handleChange}
                             rows={4}
-                            className={baseInputClass}
+                            className={baseTextareaClass}
                           />
                         </div>
                       </div>
@@ -3312,7 +3309,7 @@ export default function ChildForm() {
                       <div className="grid gap-4 md:grid-cols-2">
                         <TextInput label="Father's Name" name="f_name" value={familyData.f_name} onChange={(e) => setFamilyData({ ...familyData, f_name: e.target.value })} />
                         <div>
-                          <label className="mb-1 block text-sm font-medium text-slate-700">Father's Occupation</label>
+                          <label className="mb-1 block text-sm font-medium text-ink">Father's Occupation</label>
                           <select
                             name="f_occup"
                             value={familyData.f_occup}
@@ -3336,22 +3333,22 @@ export default function ChildForm() {
                         <TextInput label="Mother's Mobile" name="m_mobile" value={familyData.m_mobile} onChange={(e) => setFamilyData({ ...familyData, m_mobile: e.target.value })} />
 
                         <div className="md:col-span-2">
-                          <label className="mb-1 block text-sm font-medium text-slate-700">Address Line 1</label>
-                          <textarea name="fmly_addr1" value={familyData.fmly_addr1} onChange={(e) => setFamilyData({ ...familyData, fmly_addr1: e.target.value })} rows={2} className={baseInputClass} />
+                          <label className="mb-1 block text-sm font-medium text-ink">Address Line 1</label>
+                          <textarea name="fmly_addr1" value={familyData.fmly_addr1} onChange={(e) => setFamilyData({ ...familyData, fmly_addr1: e.target.value })} rows={2} className={baseTextareaClass} />
                         </div>
                         <div className="md:col-span-2">
-                          <label className="mb-1 block text-sm font-medium text-slate-700">Address Line 2</label>
-                          <textarea name="fmly_addr2" value={familyData.fmly_addr2} onChange={(e) => setFamilyData({ ...familyData, fmly_addr2: e.target.value })} rows={2} className={baseInputClass} />
+                          <label className="mb-1 block text-sm font-medium text-ink">Address Line 2</label>
+                          <textarea name="fmly_addr2" value={familyData.fmly_addr2} onChange={(e) => setFamilyData({ ...familyData, fmly_addr2: e.target.value })} rows={2} className={baseTextareaClass} />
                         </div>
                         <div className="md:col-span-2">
-                          <label className="mb-1 block text-sm font-medium text-slate-700">Address Line 3</label>
-                          <textarea name="fmly_addr3" value={familyData.fmly_addr3} onChange={(e) => setFamilyData({ ...familyData, fmly_addr3: e.target.value })} rows={2} className={baseInputClass} />
+                          <label className="mb-1 block text-sm font-medium text-ink">Address Line 3</label>
+                          <textarea name="fmly_addr3" value={familyData.fmly_addr3} onChange={(e) => setFamilyData({ ...familyData, fmly_addr3: e.target.value })} rows={2} className={baseTextareaClass} />
                         </div>
                         <TextInput label="Pincode" name="fmly_pincode" value={familyData.fmly_pincode} onChange={(e) => setFamilyData({ ...familyData, fmly_pincode: e.target.value })} />
 
                         <div className="md:col-span-2">
-                          <label className="mb-1 block text-sm font-medium text-slate-700">Remarks</label>
-                          <textarea name="fmly_remarks" value={familyData.fmly_remarks} onChange={(e) => setFamilyData({ ...familyData, fmly_remarks: e.target.value })} rows={3} className={baseInputClass} />
+                          <label className="mb-1 block text-sm font-medium text-ink">Remarks</label>
+                          <textarea name="fmly_remarks" value={familyData.fmly_remarks} onChange={(e) => setFamilyData({ ...familyData, fmly_remarks: e.target.value })} rows={3} className={baseTextareaClass} />
                         </div>
                       </div>
                     )}
@@ -3359,8 +3356,8 @@ export default function ChildForm() {
                     {wizardStep === 2 && (
                       <div className="space-y-4">
                         {[1, 2, 3, 4, 5].map((num) => (
-                          <div key={num} className="rounded-lg border border-slate-200 p-4">
-                            <h3 className="mb-3 text-sm font-semibold text-slate-900">Sibling {num}</h3>
+                          <div key={num} className="rounded-lg border border-rule p-4">
+                            <h3 className="mb-3 text-sm font-semibold text-ink">Sibling {num}</h3>
                             <div className="grid gap-4 md:grid-cols-4">
                               <TextInput
                                 label={`Sibling ${num} Name`}
@@ -3375,7 +3372,7 @@ export default function ChildForm() {
                                 onChange={(e) => setSiblingData({ ...siblingData, [`ages_${num}`]: e.target.value })}
                               />
                               <div>
-                                <label className="mb-1 block text-sm font-medium text-slate-700">Gender</label>
+                                <label className="mb-1 block text-sm font-medium text-ink">Gender</label>
                                 <select
                                   name={`genders_${num}`}
                                   value={siblingData[`genders_${num}` as keyof ChildSiblingState]}
@@ -3398,13 +3395,13 @@ export default function ChildForm() {
                           </div>
                         ))}
                         <div>
-                          <label className="mb-1 block text-sm font-medium text-slate-700">Sibling Remarks</label>
+                          <label className="mb-1 block text-sm font-medium text-ink">Sibling Remarks</label>
                           <textarea
                             name="sibling_remarks"
                             value={siblingData.sibling_remarks}
                             onChange={(e) => setSiblingData({ ...siblingData, sibling_remarks: e.target.value })}
                             rows={3}
-                            className={baseInputClass}
+                            className={baseTextareaClass}
                           />
                         </div>
                       </div>
@@ -3429,63 +3426,24 @@ export default function ChildForm() {
                     )}
                   </section>
 
-                  <div className="flex items-center justify-between gap-3 pt-2">
-                    <div className="flex items-center gap-2">
-                      {childDraftSummaries.length > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            refreshChildDraftSummaries()
-                            setEntryGate('chooser')
-                          }}
-                          disabled={loading || isSubmittingUnified}
-                          className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          Show My Drafts
-                        </button>
-                      )}
+                  <div className="flex flex-col gap-3 pt-2 sm:flex-row-reverse sm:items-center sm:justify-between">
+                    {/* Two thumb-sized actions on a phone, side by side; the
+                        draft actions sit above as quiet text. */}
+                    <div className="flex items-center gap-2.5">
                       <button
                         type="button"
                         onClick={handleWizardBack}
                         disabled={wizardStep === 0 || loading}
-                        className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="inline-flex h-11 flex-1 items-center justify-center rounded-lg border border-rule-strong text-[14px] font-medium text-ink transition-colors hover:bg-surface-hover disabled:opacity-40 sm:h-10 sm:flex-none sm:px-5"
                       >
                         Back
                       </button>
-                      <button
-                        type="button"
-                        onClick={saveChildDraft}
-                        disabled={loading || isSubmittingUnified}
-                        className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        Save Draft
-                      </button>
-                      <button
-                        type="button"
-                        onClick={loadChildDraft}
-                        disabled={loading || isSubmittingUnified || !formData.reg_no.trim()}
-                        className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        Continue Entry
-                      </button>
-                      {draftExistsForRegNo && (
-                        <button
-                          type="button"
-                          onClick={() => clearChildDraft()}
-                          disabled={loading || isSubmittingUnified}
-                          className="inline-flex items-center justify-center rounded-lg border border-red-200 px-5 py-3 text-sm font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          Clear Draft
-                        </button>
-                      )}
-                    </div>
-
                     {wizardStep < wizardSteps.length - 1 ? (
                       <button
                         type="button"
                         onClick={handleWizardNext}
                         disabled={loading}
-                        className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+                        className="inline-flex h-11 flex-1 items-center justify-center rounded-lg bg-blue-600 text-[14px] font-semibold text-white transition hover:bg-blue-700 disabled:bg-blue-300 sm:h-10 sm:flex-none sm:px-5"
                       >
                         Next
                       </button>
@@ -3496,11 +3454,54 @@ export default function ChildForm() {
                           finalSubmitArmedRef.current = true
                         }}
                         disabled={loading || isSubmittingUnified}
-                        className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+                        className="inline-flex h-11 flex-1 items-center justify-center rounded-lg bg-blue-600 text-[14px] font-semibold text-white transition hover:bg-blue-700 disabled:bg-blue-300 sm:h-10 sm:flex-none sm:px-5"
                       >
                         {loading ? 'Submitting...' : 'Submit Complete Form'}
                       </button>
                     )}
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {childDraftSummaries.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            refreshChildDraftSummaries()
+                            setEntryGate('chooser')
+                          }}
+                          disabled={loading || isSubmittingUnified}
+                          className="inline-flex h-9 items-center justify-center rounded-md px-2.5 text-[13px] font-medium text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink disabled:opacity-40"
+                        >
+                          Show My Drafts
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={saveChildDraft}
+                        disabled={loading || isSubmittingUnified}
+                        className="inline-flex h-9 items-center justify-center rounded-md px-2.5 text-[13px] font-medium text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink disabled:opacity-40"
+                      >
+                        Save Draft
+                      </button>
+                      <button
+                        type="button"
+                        onClick={loadChildDraft}
+                        disabled={loading || isSubmittingUnified || !formData.reg_no.trim()}
+                        className="inline-flex h-9 items-center justify-center rounded-md px-2.5 text-[13px] font-medium text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink disabled:opacity-40"
+                      >
+                        Continue Entry
+                      </button>
+                      {draftExistsForRegNo && (
+                        <button
+                          type="button"
+                          onClick={() => clearChildDraft()}
+                          disabled={loading || isSubmittingUnified}
+                          className="inline-flex h-9 items-center justify-center rounded-md px-2.5 text-[13px] font-medium text-status-returned-fg transition-colors hover:bg-status-returned-bg disabled:opacity-40"
+                        >
+                          Clear Draft
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </form>
               </div>
@@ -3512,16 +3513,16 @@ export default function ChildForm() {
                 {familyMessage && (
                   <div
                     className={`rounded-lg border px-4 py-3 text-sm font-medium ${familyMessage.type === 'success'
-                      ? 'border-green-200 bg-green-50 text-green-700'
-                      : 'border-red-200 bg-red-50 text-red-700'
+                      ? 'border-status-approved-fg/30 bg-status-approved-bg text-status-approved-fg'
+                      : 'border-status-returned-fg/30 bg-status-returned-bg text-status-returned-fg'
                       }`}
                   >
                     {familyMessage.text}
                   </div>
                 )}
                 <form onSubmit={handleFamilySubmit} className="space-y-8">
-                  <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <h2 className="mb-4 text-lg font-semibold text-slate-900">Family Information</h2>
+                  <section className="rounded-xl border border-rule bg-surface p-6 shadow-sm">
+                    <h2 className="mb-4 text-lg font-semibold text-ink">Family Information</h2>
                     <div className="grid gap-4 md:grid-cols-2">
                       <TextInput
                         label="Village Name"
@@ -3537,7 +3538,7 @@ export default function ChildForm() {
                       />
 
                       <div className="md:col-span-2 border-t pt-4">
-                        <h3 className="font-semibold text-slate-900 mb-4">Father's Information</h3>
+                        <h3 className="font-semibold text-ink mb-4">Father's Information</h3>
                       </div>
                       <TextInput
                         label="Father's Name"
@@ -3572,7 +3573,7 @@ export default function ChildForm() {
                       />
 
                       <div className="md:col-span-2 border-t pt-4">
-                        <h3 className="font-semibold text-slate-900 mb-4">Mother's Information</h3>
+                        <h3 className="font-semibold text-ink mb-4">Mother's Information</h3>
                       </div>
                       <TextInput
                         label="Mother's Name"
@@ -3607,36 +3608,36 @@ export default function ChildForm() {
                       />
 
                       <div className="md:col-span-2 border-t pt-4">
-                        <h3 className="font-semibold text-slate-900 mb-4">Family Address</h3>
+                        <h3 className="font-semibold text-ink mb-4">Family Address</h3>
                       </div>
                       <div className="md:col-span-2">
-                        <label className="mb-1 block text-sm font-medium text-slate-700">Address Line 1</label>
+                        <label className="mb-1 block text-sm font-medium text-ink">Address Line 1</label>
                         <textarea
                           name="fmly_addr1"
                           value={familyData.fmly_addr1}
                           onChange={(e) => setFamilyData({ ...familyData, fmly_addr1: e.target.value })}
                           rows={2}
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                          className={baseInputClass}
                         />
                       </div>
                       <div className="md:col-span-2">
-                        <label className="mb-1 block text-sm font-medium text-slate-700">Address Line 2</label>
+                        <label className="mb-1 block text-sm font-medium text-ink">Address Line 2</label>
                         <textarea
                           name="fmly_addr2"
                           value={familyData.fmly_addr2}
                           onChange={(e) => setFamilyData({ ...familyData, fmly_addr2: e.target.value })}
                           rows={2}
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                          className={baseInputClass}
                         />
                       </div>
                       <div className="md:col-span-2">
-                        <label className="mb-1 block text-sm font-medium text-slate-700">Address Line 3</label>
+                        <label className="mb-1 block text-sm font-medium text-ink">Address Line 3</label>
                         <textarea
                           name="fmly_addr3"
                           value={familyData.fmly_addr3}
                           onChange={(e) => setFamilyData({ ...familyData, fmly_addr3: e.target.value })}
                           rows={2}
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                          className={baseInputClass}
                         />
                       </div>
                       <TextInput
@@ -3647,13 +3648,13 @@ export default function ChildForm() {
                       />
 
                       <div className="md:col-span-2 border-t pt-4">
-                        <label className="mb-1 block text-sm font-medium text-slate-700">Remarks</label>
+                        <label className="mb-1 block text-sm font-medium text-ink">Remarks</label>
                         <textarea
                           name="fmly_remarks"
                           value={familyData.fmly_remarks}
                           onChange={(e) => setFamilyData({ ...familyData, fmly_remarks: e.target.value })}
                           rows={3}
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                          className={baseInputClass}
                         />
                       </div>
                     </div>
@@ -3662,7 +3663,7 @@ export default function ChildForm() {
                     <button
                       type="submit"
                       disabled={familyLoading}
-                      className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+                      className="inline-flex h-11 flex-1 items-center justify-center rounded-lg bg-blue-600 text-[14px] font-semibold text-white transition hover:bg-blue-700 disabled:bg-blue-300 sm:h-10 sm:flex-none sm:px-5"
                     >
                       {familyLoading ? 'Saving...' : 'Save Family Data'}
                     </button>
@@ -3677,16 +3678,16 @@ export default function ChildForm() {
                 {siblingMessage && (
                   <div
                     className={`rounded-lg border px-4 py-3 text-sm font-medium ${siblingMessage.type === 'success'
-                      ? 'border-green-200 bg-green-50 text-green-700'
-                      : 'border-red-200 bg-red-50 text-red-700'
+                      ? 'border-status-approved-fg/30 bg-status-approved-bg text-status-approved-fg'
+                      : 'border-status-returned-fg/30 bg-status-returned-bg text-status-returned-fg'
                       }`}
                   >
                     {siblingMessage.text}
                   </div>
                 )}
                 <form onSubmit={handleSiblingSubmit} className="space-y-8">
-                  <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <h2 className="mb-4 text-lg font-semibold text-slate-900">Sibling Information</h2>
+                  <section className="rounded-xl border border-rule bg-surface p-6 shadow-sm">
+                    <h2 className="mb-4 text-lg font-semibold text-ink">Sibling Information</h2>
                     <div className="grid gap-4 md:grid-cols-2">
                       <TextInput
                         label="Village Name"
@@ -3703,7 +3704,7 @@ export default function ChildForm() {
 
                       {[1, 2, 3, 4, 5].map((num) => (
                         <div key={num} className="md:col-span-2 border-t pt-4">
-                          <h3 className="font-semibold text-slate-900 mb-4">Sibling {num}</h3>
+                          <h3 className="font-semibold text-ink mb-4">Sibling {num}</h3>
                           <div className="grid gap-4 md:grid-cols-4">
                             <TextInput
                               label={`Sibling ${num} Name`}
@@ -3718,12 +3719,12 @@ export default function ChildForm() {
                               onChange={(e) => setSiblingData({ ...siblingData, [`ages_${num}`]: e.target.value })}
                             />
                             <div>
-                              <label className="mb-1 block text-sm font-medium text-slate-700">Gender</label>
+                              <label className="mb-1 block text-sm font-medium text-ink">Gender</label>
                               <select
                                 name={`genders_${num}`}
                                 value={siblingData[`genders_${num}` as keyof ChildSiblingState]}
                                 onChange={(e) => setSiblingData({ ...siblingData, [`genders_${num}`]: e.target.value })}
-                                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                                className={baseInputClass}
                               >
                                 <option value="">Select</option>
                                 {genderOptions.map((option) => (
@@ -3742,13 +3743,13 @@ export default function ChildForm() {
                       ))}
 
                       <div className="md:col-span-2 border-t pt-4">
-                        <label className="mb-1 block text-sm font-medium text-slate-700">Sibling Remarks</label>
+                        <label className="mb-1 block text-sm font-medium text-ink">Sibling Remarks</label>
                         <textarea
                           name="sibling_remarks"
                           value={siblingData.sibling_remarks}
                           onChange={(e) => setSiblingData({ ...siblingData, sibling_remarks: e.target.value })}
                           rows={3}
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                          className={baseInputClass}
                         />
                       </div>
                     </div>
@@ -3757,7 +3758,7 @@ export default function ChildForm() {
                     <button
                       type="submit"
                       disabled={siblingLoading}
-                      className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+                      className="inline-flex h-11 flex-1 items-center justify-center rounded-lg bg-blue-600 text-[14px] font-semibold text-white transition hover:bg-blue-700 disabled:bg-blue-300 sm:h-10 sm:flex-none sm:px-5"
                     >
                       {siblingLoading ? 'Saving...' : 'Save Sibling Data'}
                     </button>
@@ -3772,16 +3773,16 @@ export default function ChildForm() {
                 {uniformMessage && (
                   <div
                     className={`rounded-lg border px-4 py-3 text-sm font-medium ${uniformMessage.type === 'success'
-                      ? 'border-green-200 bg-green-50 text-green-700'
-                      : 'border-red-200 bg-red-50 text-red-700'
+                      ? 'border-status-approved-fg/30 bg-status-approved-bg text-status-approved-fg'
+                      : 'border-status-returned-fg/30 bg-status-returned-bg text-status-returned-fg'
                       }`}
                   >
                     {uniformMessage.text}
                   </div>
                 )}
                 <form onSubmit={handleUniformSubmit} className="space-y-8">
-                  <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <h2 className="mb-4 text-lg font-semibold text-slate-900">Uniform Information</h2>
+                  <section className="rounded-xl border border-rule bg-surface p-6 shadow-sm">
+                    <h2 className="mb-4 text-lg font-semibold text-ink">Uniform Information</h2>
                     <div className="grid gap-4 md:grid-cols-2">
                       <TextInput
                         label="Village Name"
@@ -3797,7 +3798,7 @@ export default function ChildForm() {
                       />
 
                       <div className="md:col-span-2 border-t pt-4">
-                        <h3 className="font-semibold text-slate-900 mb-4">Uniform Sizes</h3>
+                        <h3 className="font-semibold text-ink mb-4">Uniform Sizes</h3>
                       </div>
                       <TextInput
                         label="Shirt Size"
@@ -3848,7 +3849,7 @@ export default function ChildForm() {
                     <button
                       type="submit"
                       disabled={uniformLoading}
-                      className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+                      className="inline-flex h-11 flex-1 items-center justify-center rounded-lg bg-blue-600 text-[14px] font-semibold text-white transition hover:bg-blue-700 disabled:bg-blue-300 sm:h-10 sm:flex-none sm:px-5"
                     >
                       {uniformLoading ? 'Saving...' : 'Save Uniform Data'}
                     </button>
@@ -3863,16 +3864,16 @@ export default function ChildForm() {
                 {leavingMessage && (
                   <div
                     className={`rounded-lg border px-4 py-3 text-sm font-medium ${leavingMessage.type === 'success'
-                      ? 'border-green-200 bg-green-50 text-green-700'
-                      : 'border-red-200 bg-red-50 text-red-700'
+                      ? 'border-status-approved-fg/30 bg-status-approved-bg text-status-approved-fg'
+                      : 'border-status-returned-fg/30 bg-status-returned-bg text-status-returned-fg'
                       }`}
                   >
                     {leavingMessage.text}
                   </div>
                 )}
                 <form onSubmit={handleLeavingSubmit} className="space-y-8">
-                  <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <h2 className="mb-4 text-lg font-semibold text-slate-900">Child Leaving Record</h2>
+                  <section className="rounded-xl border border-rule bg-surface p-6 shadow-sm">
+                    <h2 className="mb-4 text-lg font-semibold text-ink">Child Leaving Record</h2>
                     <div className="grid gap-4 md:grid-cols-2">
                       <TextInput
                         label="EAC No"
@@ -3893,12 +3894,12 @@ export default function ChildForm() {
                         onChange={(e) => setLeavingData({ ...leavingData, reason: e.target.value })}
                       />
                       <div>
-                        <label className="mb-1 block text-sm font-medium text-slate-700">Pass Status</label>
+                        <label className="mb-1 block text-sm font-medium text-ink">Pass Status</label>
                         <select
                           name="pass_status"
                           value={leavingData.pass_status}
                           onChange={(e) => setLeavingData({ ...leavingData, pass_status: e.target.value })}
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                          className={baseInputClass}
                         >
                           <option value="">Select Pass Status</option>
                           {passStatusOptions.map((option) => (
@@ -3921,36 +3922,36 @@ export default function ChildForm() {
                       />
 
                       <div className="md:col-span-2 border-t pt-4">
-                        <h3 className="font-semibold text-slate-900 mb-4">Forwarding Address</h3>
+                        <h3 className="font-semibold text-ink mb-4">Forwarding Address</h3>
                       </div>
                       <div className="md:col-span-2">
-                        <label className="mb-1 block text-sm font-medium text-slate-700">Address Line 1</label>
+                        <label className="mb-1 block text-sm font-medium text-ink">Address Line 1</label>
                         <textarea
                           name="leav_addr1"
                           value={leavingData.leav_addr1}
                           onChange={(e) => setLeavingData({ ...leavingData, leav_addr1: e.target.value })}
                           rows={2}
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                          className={baseInputClass}
                         />
                       </div>
                       <div className="md:col-span-2">
-                        <label className="mb-1 block text-sm font-medium text-slate-700">Address Line 2</label>
+                        <label className="mb-1 block text-sm font-medium text-ink">Address Line 2</label>
                         <textarea
                           name="leav_addr2"
                           value={leavingData.leav_addr2}
                           onChange={(e) => setLeavingData({ ...leavingData, leav_addr2: e.target.value })}
                           rows={2}
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                          className={baseInputClass}
                         />
                       </div>
                       <div className="md:col-span-2">
-                        <label className="mb-1 block text-sm font-medium text-slate-700">Address Line 3</label>
+                        <label className="mb-1 block text-sm font-medium text-ink">Address Line 3</label>
                         <textarea
                           name="leav_addr3"
                           value={leavingData.leav_addr3}
                           onChange={(e) => setLeavingData({ ...leavingData, leav_addr3: e.target.value })}
                           rows={2}
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                          className={baseInputClass}
                         />
                       </div>
                       <TextInput
@@ -3961,13 +3962,13 @@ export default function ChildForm() {
                       />
 
                       <div className="md:col-span-2 border-t pt-4">
-                        <label className="mb-1 block text-sm font-medium text-slate-700">Remarks</label>
+                        <label className="mb-1 block text-sm font-medium text-ink">Remarks</label>
                         <textarea
                           name="leav_remarks"
                           value={leavingData.leav_remarks}
                           onChange={(e) => setLeavingData({ ...leavingData, leav_remarks: e.target.value })}
                           rows={3}
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                          className={baseInputClass}
                         />
                       </div>
                     </div>
@@ -3976,7 +3977,7 @@ export default function ChildForm() {
                     <button
                       type="submit"
                       disabled={leavingLoading}
-                      className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+                      className="inline-flex h-11 flex-1 items-center justify-center rounded-lg bg-blue-600 text-[14px] font-semibold text-white transition hover:bg-blue-700 disabled:bg-blue-300 sm:h-10 sm:flex-none sm:px-5"
                     >
                       {leavingLoading ? 'Saving...' : 'Save Leaving Data'}
                     </button>
@@ -3991,8 +3992,8 @@ export default function ChildForm() {
                 {vocationalMessage && (
                   <div
                     className={`rounded-lg border px-4 py-3 text-sm font-medium ${vocationalMessage.type === 'success'
-                      ? 'border-green-200 bg-green-50 text-green-700'
-                      : 'border-red-200 bg-red-50 text-red-700'
+                      ? 'border-status-approved-fg/30 bg-status-approved-bg text-status-approved-fg'
+                      : 'border-status-returned-fg/30 bg-status-returned-bg text-status-returned-fg'
                       }`}
                   >
                     {vocationalMessage.text}
@@ -4000,11 +4001,11 @@ export default function ChildForm() {
                 )}
                 <form onSubmit={handleVocationalSubmit} className="space-y-8">
                   {/* Photo Section */}
-                  <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <h2 className="mb-4 text-lg font-semibold text-slate-900">Photo</h2>
+                  <section className="rounded-xl border border-rule bg-surface p-6 shadow-sm">
+                    <h2 className="mb-4 text-lg font-semibold text-ink">Photo</h2>
                     <div className="space-y-4">
                       <div>
-                        <label className="mb-2 block text-sm font-medium text-slate-700">
+                        <label className="mb-2 block text-sm font-medium text-ink">
                           Upload Photo
                         </label>
                         <input
@@ -4012,16 +4013,16 @@ export default function ChildForm() {
                           accept="image/*"
                           onChange={handleVocationalPhotoChange}
                           disabled={vocationalPhotoUploading}
-                          className="block w-full text-sm text-slate-500 file:mr-4 file:rounded-lg file:border file:border-slate-200 file:bg-slate-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-slate-700 hover:file:bg-slate-100"
+                          className="block w-full text-sm text-ink-faint file:mr-4 file:rounded-lg file:border file:border-rule file:bg-surface-sunken file:px-4 file:py-2 file:text-sm file:font-semibold file:text-ink hover:file:bg-surface-hover"
                         />
-                        <p className="mt-1 text-xs text-slate-500">JPG, PNG or GIF (max. 5MB)</p>
+                        <p className="mt-1 text-xs text-ink-faint">JPG, PNG or GIF (max. 5MB)</p>
                       </div>
                       {vocationalPhotoPreview && (
                         <div className="flex flex-col items-center gap-4">
                           <img
                             src={vocationalPhotoPreview}
                             alt="Preview"
-                            className="h-32 w-32 rounded-lg border border-slate-200 object-cover"
+                            className="h-32 w-32 rounded-lg border border-rule object-cover"
                           />
                           <button
                             type="button"
@@ -4039,8 +4040,8 @@ export default function ChildForm() {
                   </section>
 
                   {/* Registration & Admission Section */}
-                  <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <h2 className="mb-4 text-lg font-semibold text-slate-900">Registration & Admission</h2>
+                  <section className="rounded-xl border border-rule bg-surface p-6 shadow-sm">
+                    <h2 className="mb-4 text-lg font-semibold text-ink">Registration & Admission</h2>
                     <div className="grid gap-4 md:grid-cols-2">
                       <TextInput
                         label="Date of Admission"
@@ -4107,8 +4108,8 @@ export default function ChildForm() {
                   </section>
 
                   {/* Personal Information Section */}
-                  <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <h2 className="mb-4 text-lg font-semibold text-slate-900">Personal Information</h2>
+                  <section className="rounded-xl border border-rule bg-surface p-6 shadow-sm">
+                    <h2 className="mb-4 text-lg font-semibold text-ink">Personal Information</h2>
                     <div className="grid gap-4 md:grid-cols-2">
                       <TextInput
                         label="Trainee Name *"
@@ -4117,12 +4118,12 @@ export default function ChildForm() {
                         onChange={handleVocationalChange}
                       />
                       <div>
-                        <label className="mb-1 block text-sm font-medium text-slate-700">Gender</label>
+                        <label className="mb-1 block text-sm font-medium text-ink">Gender</label>
                         <select
                           name="gender"
                           value={vocationalData.gender}
                           onChange={handleVocationalChange}
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                          className={baseInputClass}
                         >
                           <option value="">Select gender</option>
                           <option value="Male">Male</option>
@@ -4149,12 +4150,12 @@ export default function ChildForm() {
                         onChange={handleVocationalChange}
                       />
                       <div>
-                        <label className="mb-1 block text-sm font-medium text-slate-700">Blood Group</label>
+                        <label className="mb-1 block text-sm font-medium text-ink">Blood Group</label>
                         <select
                           name="blood_group"
                           value={vocationalData.blood_group}
                           onChange={handleVocationalChange}
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                          className={baseInputClass}
                         >
                           <option value="">Select blood group</option>
                           {bloodGroupOptions.map((option) => (
@@ -4165,12 +4166,12 @@ export default function ChildForm() {
                         </select>
                       </div>
                       <div>
-                        <label className="mb-1 block text-sm font-medium text-slate-700">Marital Status</label>
+                        <label className="mb-1 block text-sm font-medium text-ink">Marital Status</label>
                         <select
                           name="marital_status"
                           value={vocationalData.marital_status}
                           onChange={handleVocationalChange}
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                          className={baseInputClass}
                         >
                           <option value="">Select status</option>
                           <option value="Unmarried">Unmarried</option>
@@ -4201,8 +4202,8 @@ export default function ChildForm() {
                   </section>
 
                   {/* Educational Background Section */}
-                  <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <h2 className="mb-4 text-lg font-semibold text-slate-900">Educational Background</h2>
+                  <section className="rounded-xl border border-rule bg-surface p-6 shadow-sm">
+                    <h2 className="mb-4 text-lg font-semibold text-ink">Educational Background</h2>
                     <div className="grid gap-4 md:grid-cols-2">
                       <TextInput
                         label="Class/Standard Studied"
@@ -4235,21 +4236,21 @@ export default function ChildForm() {
                         onChange={handleVocationalChange}
                       />
                       <div className="md:col-span-2">
-                        <label className="mb-1 block text-sm font-medium text-slate-700">Other Information</label>
+                        <label className="mb-1 block text-sm font-medium text-ink">Other Information</label>
                         <textarea
                           name="other_information"
                           value={vocationalData.other_information}
                           onChange={handleVocationalChange}
                           rows={3}
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                          className={baseInputClass}
                         />
                       </div>
                     </div>
                   </section>
 
                   {/* Family Information Section */}
-                  <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <h2 className="mb-4 text-lg font-semibold text-slate-900">Family Information</h2>
+                  <section className="rounded-xl border border-rule bg-surface p-6 shadow-sm">
+                    <h2 className="mb-4 text-lg font-semibold text-ink">Family Information</h2>
                     <div className="grid gap-4 md:grid-cols-2">
                       <TextInput
                         label="Father/Husband Name"
@@ -4314,29 +4315,29 @@ export default function ChildForm() {
                         onChange={handleVocationalChange}
                       />
                       <div className="md:col-span-2">
-                        <label className="mb-1 block text-sm font-medium text-slate-700">Parent/Guardian Address</label>
+                        <label className="mb-1 block text-sm font-medium text-ink">Parent/Guardian Address</label>
                         <textarea
                           name="parent_guardian_address"
                           value={vocationalData.parent_guardian_address}
                           onChange={handleVocationalChange}
                           rows={3}
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                          className={baseInputClass}
                         />
                       </div>
                     </div>
                   </section>
 
                   {/* Course & Training Section */}
-                  <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <h2 className="mb-4 text-lg font-semibold text-slate-900">Course & Training Details</h2>
+                  <section className="rounded-xl border border-rule bg-surface p-6 shadow-sm">
+                    <h2 className="mb-4 text-lg font-semibold text-ink">Course & Training Details</h2>
                     <div className="grid gap-4 md:grid-cols-2">
                       <div>
-                        <label className="mb-1 block text-sm font-medium text-slate-700">Enrolled Course</label>
+                        <label className="mb-1 block text-sm font-medium text-ink">Enrolled Course</label>
                         <select
                           name="enrolled_course"
                           value={vocationalData.enrolled_course}
                           onChange={handleVocationalChange}
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                          className={baseInputClass}
                         >
                           <option value="">Select a course</option>
                           {vocationalCourseOptions.map((option) => (
@@ -4347,12 +4348,12 @@ export default function ChildForm() {
                         </select>
                       </div>
                       <div>
-                        <label className="mb-1 block text-sm font-medium text-slate-700">Attended Other Training</label>
+                        <label className="mb-1 block text-sm font-medium text-ink">Attended Other Training</label>
                         <select
                           name="attended_other_training"
                           value={vocationalData.attended_other_training}
                           onChange={handleVocationalChange}
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                          className={baseInputClass}
                         >
                           <option value="">Select</option>
                           <option value="true">Yes</option>
@@ -4360,13 +4361,13 @@ export default function ChildForm() {
                         </select>
                       </div>
                       <div className="md:col-span-2">
-                        <label className="mb-1 block text-sm font-medium text-slate-700">Previous Training Details</label>
+                        <label className="mb-1 block text-sm font-medium text-ink">Previous Training Details</label>
                         <textarea
                           name="previous_training_details"
                           value={vocationalData.previous_training_details}
                           onChange={handleVocationalChange}
                           rows={3}
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                          className={baseInputClass}
                         />
                       </div>
                       <TextInput
@@ -4391,8 +4392,8 @@ export default function ChildForm() {
                   </section>
 
                   {/* Leaving & Follow-up Section */}
-                  <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <h2 className="mb-4 text-lg font-semibold text-slate-900">Leaving & Follow-up</h2>
+                  <section className="rounded-xl border border-rule bg-surface p-6 shadow-sm">
+                    <h2 className="mb-4 text-lg font-semibold text-ink">Leaving & Follow-up</h2>
                     <div className="grid gap-4 md:grid-cols-2">
                       <TextInput
                         label="Reason for Leaving"
@@ -4408,13 +4409,13 @@ export default function ChildForm() {
                         type="date"
                       />
                       <div className="md:col-span-2">
-                        <label className="mb-1 block text-sm font-medium text-slate-700">Present Address</label>
+                        <label className="mb-1 block text-sm font-medium text-ink">Present Address</label>
                         <textarea
                           name="present_address"
                           value={vocationalData.present_address}
                           onChange={handleVocationalChange}
                           rows={3}
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                          className={baseInputClass}
                         />
                       </div>
                       <TextInput
@@ -4434,8 +4435,8 @@ export default function ChildForm() {
                   </section>
 
                   {/* Signatures & Verification Section */}
-                  <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <h2 className="mb-4 text-lg font-semibold text-slate-900">Signatures & Verification</h2>
+                  <section className="rounded-xl border border-rule bg-surface p-6 shadow-sm">
+                    <h2 className="mb-4 text-lg font-semibold text-ink">Signatures & Verification</h2>
                     <div className="grid gap-4 md:grid-cols-2">
                       <TextInput
                         label="Trainee Signature Date"
@@ -4476,7 +4477,7 @@ export default function ChildForm() {
                     <button
                       type="submit"
                       disabled={vocationalLoading}
-                      className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+                      className="inline-flex h-11 flex-1 items-center justify-center rounded-lg bg-blue-600 text-[14px] font-semibold text-white transition hover:bg-blue-700 disabled:bg-blue-300 sm:h-10 sm:flex-none sm:px-5"
                     >
                       {vocationalLoading ? 'Saving...' : 'Submit Vocational Course Data'}
                     </button>
@@ -4491,8 +4492,8 @@ export default function ChildForm() {
                 {computerMessage && (
                   <div
                     className={`rounded-lg border px-4 py-3 text-sm font-medium ${computerMessage.type === 'success'
-                      ? 'border-green-200 bg-green-50 text-green-700'
-                      : 'border-red-200 bg-red-50 text-red-700'
+                      ? 'border-status-approved-fg/30 bg-status-approved-bg text-status-approved-fg'
+                      : 'border-status-returned-fg/30 bg-status-returned-bg text-status-returned-fg'
                       }`}
                   >
                     {computerMessage.text}
@@ -4500,11 +4501,11 @@ export default function ChildForm() {
                 )}
                 <form onSubmit={handleComputerSubmit} className="space-y-8">
                   {/* Photo Section */}
-                  <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <h2 className="mb-4 text-lg font-semibold text-slate-900">Photo</h2>
+                  <section className="rounded-xl border border-rule bg-surface p-6 shadow-sm">
+                    <h2 className="mb-4 text-lg font-semibold text-ink">Photo</h2>
                     <div className="space-y-4">
                       <div>
-                        <label className="mb-2 block text-sm font-medium text-slate-700">
+                        <label className="mb-2 block text-sm font-medium text-ink">
                           Upload Photo
                         </label>
                         <input
@@ -4512,16 +4513,16 @@ export default function ChildForm() {
                           accept="image/*"
                           onChange={handleComputerPhotoChange}
                           disabled={computerPhotoUploading}
-                          className="block w-full text-sm text-slate-500 file:mr-4 file:rounded-lg file:border file:border-slate-200 file:bg-slate-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-slate-700 hover:file:bg-slate-100"
+                          className="block w-full text-sm text-ink-faint file:mr-4 file:rounded-lg file:border file:border-rule file:bg-surface-sunken file:px-4 file:py-2 file:text-sm file:font-semibold file:text-ink hover:file:bg-surface-hover"
                         />
-                        <p className="mt-1 text-xs text-slate-500">JPG, PNG or GIF (max. 5MB)</p>
+                        <p className="mt-1 text-xs text-ink-faint">JPG, PNG or GIF (max. 5MB)</p>
                       </div>
                       {computerPhotoPreview && (
                         <div className="flex flex-col items-center gap-4">
                           <img
                             src={computerPhotoPreview}
                             alt="Preview"
-                            className="h-32 w-32 rounded-lg border border-slate-200 object-cover"
+                            className="h-32 w-32 rounded-lg border border-rule object-cover"
                           />
                           <button
                             type="button"
@@ -4539,8 +4540,8 @@ export default function ChildForm() {
                   </section>
 
                   {/* Batch & Registration Section */}
-                  <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <h2 className="mb-4 text-lg font-semibold text-slate-900">Batch & Registration</h2>
+                  <section className="rounded-xl border border-rule bg-surface p-6 shadow-sm">
+                    <h2 className="mb-4 text-lg font-semibold text-ink">Batch & Registration</h2>
                     <div className="grid gap-4 md:grid-cols-2">
                       <TextInput
                         label="Batch No"
@@ -4577,8 +4578,8 @@ export default function ChildForm() {
                   </section>
 
                   {/* Child Information Section */}
-                  <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <h2 className="mb-4 text-lg font-semibold text-slate-900">Child Information</h2>
+                  <section className="rounded-xl border border-rule bg-surface p-6 shadow-sm">
+                    <h2 className="mb-4 text-lg font-semibold text-ink">Child Information</h2>
                     <div className="grid gap-4 md:grid-cols-2">
                       <TextInput
                         label="Child Name *"
@@ -4587,12 +4588,12 @@ export default function ChildForm() {
                         onChange={handleComputerChange}
                       />
                       <div>
-                        <label className="mb-1 block text-sm font-medium text-slate-700">Gender</label>
+                        <label className="mb-1 block text-sm font-medium text-ink">Gender</label>
                         <select
                           name="gender"
                           value={computerData.gender}
                           onChange={handleComputerChange}
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                          className={baseInputClass}
                         >
                           <option value="">Select gender</option>
                           <option value="Male">Male</option>
@@ -4625,12 +4626,12 @@ export default function ChildForm() {
                         onChange={handleComputerChange}
                       />
                       <div>
-                        <label className="mb-1 block text-sm font-medium text-slate-700">School Type</label>
+                        <label className="mb-1 block text-sm font-medium text-ink">School Type</label>
                         <select
                           name="school_type"
                           value={computerData.school_type}
                           onChange={handleComputerChange}
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                          className={baseInputClass}
                         >
                           <option value="">Select type</option>
                           <option value="Govt">Govt</option>
@@ -4638,12 +4639,12 @@ export default function ChildForm() {
                         </select>
                       </div>
                       <div>
-                        <label className="mb-1 block text-sm font-medium text-slate-700">Prior Computer Knowledge</label>
+                        <label className="mb-1 block text-sm font-medium text-ink">Prior Computer Knowledge</label>
                         <select
                           name="prior_computer_knowledge"
                           value={computerData.prior_computer_knowledge}
                           onChange={handleComputerChange}
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                          className={baseInputClass}
                         >
                           <option value="">Select</option>
                           <option value="true">Yes</option>
@@ -4654,8 +4655,8 @@ export default function ChildForm() {
                   </section>
 
                   {/* Family Information Section */}
-                  <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <h2 className="mb-4 text-lg font-semibold text-slate-900">Family Information</h2>
+                  <section className="rounded-xl border border-rule bg-surface p-6 shadow-sm">
+                    <h2 className="mb-4 text-lg font-semibold text-ink">Family Information</h2>
                     <div className="grid gap-4 md:grid-cols-2">
                       <TextInput
                         label="Father Occupation"
@@ -4696,29 +4697,29 @@ export default function ChildForm() {
                         onChange={handleComputerChange}
                       />
                       <div className="md:col-span-2">
-                        <label className="mb-1 block text-sm font-medium text-slate-700">Guardian Address</label>
+                        <label className="mb-1 block text-sm font-medium text-ink">Guardian Address</label>
                         <textarea
                           name="guardian_address"
                           value={computerData.guardian_address}
                           onChange={handleComputerChange}
                           rows={3}
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                          className={baseInputClass}
                         />
                       </div>
                     </div>
                   </section>
 
                   {/* Consent & Verification Section */}
-                  <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <h2 className="mb-4 text-lg font-semibold text-slate-900">Consent & Verification</h2>
+                  <section className="rounded-xl border border-rule bg-surface p-6 shadow-sm">
+                    <h2 className="mb-4 text-lg font-semibold text-ink">Consent & Verification</h2>
                     <div className="grid gap-4 md:grid-cols-2">
                       <div>
-                        <label className="mb-1 block text-sm font-medium text-slate-700">Consent Details Confirmed</label>
+                        <label className="mb-1 block text-sm font-medium text-ink">Consent Details Confirmed</label>
                         <select
                           name="consent_details_confirmed"
                           value={computerData.consent_details_confirmed}
                           onChange={handleComputerChange}
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                          className={baseInputClass}
                         >
                           <option value="">Select</option>
                           <option value="true">Yes</option>
@@ -4726,12 +4727,12 @@ export default function ChildForm() {
                         </select>
                       </div>
                       <div>
-                        <label className="mb-1 block text-sm font-medium text-slate-700">Consent Course Participation</label>
+                        <label className="mb-1 block text-sm font-medium text-ink">Consent Course Participation</label>
                         <select
                           name="consent_course_participation"
                           value={computerData.consent_course_participation}
                           onChange={handleComputerChange}
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                          className={baseInputClass}
                         >
                           <option value="">Select</option>
                           <option value="true">Yes</option>
@@ -4739,12 +4740,12 @@ export default function ChildForm() {
                         </select>
                       </div>
                       <div>
-                        <label className="mb-1 block text-sm font-medium text-slate-700">Consent Pickup/Drop</label>
+                        <label className="mb-1 block text-sm font-medium text-ink">Consent Pickup/Drop</label>
                         <select
                           name="consent_pickup_drop"
                           value={computerData.consent_pickup_drop}
                           onChange={handleComputerChange}
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                          className={baseInputClass}
                         >
                           <option value="">Select</option>
                           <option value="true">Yes</option>
@@ -4781,8 +4782,8 @@ export default function ChildForm() {
                   </section>
 
                   {/* Course Details Section */}
-                  <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <h2 className="mb-4 text-lg font-semibold text-slate-900">Course Details</h2>
+                  <section className="rounded-xl border border-rule bg-surface p-6 shadow-sm">
+                    <h2 className="mb-4 text-lg font-semibold text-ink">Course Details</h2>
                     <div className="grid gap-4 md:grid-cols-2">
                       <TextInput
                         label="Course Name"
@@ -4814,12 +4815,12 @@ export default function ChildForm() {
                         step="0.01"
                       />
                       <div>
-                        <label className="mb-1 block text-sm font-medium text-slate-700">Overall Performance</label>
+                        <label className="mb-1 block text-sm font-medium text-ink">Overall Performance</label>
                         <select
                           name="overall_performance"
                           value={computerData.overall_performance}
                           onChange={handleComputerChange}
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                          className={baseInputClass}
                         >
                           <option value="">Select performance</option>
                           <option value="Excellent">Excellent</option>
@@ -4860,7 +4861,7 @@ export default function ChildForm() {
                     <button
                       type="submit"
                       disabled={computerLoading}
-                      className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+                      className="inline-flex h-11 flex-1 items-center justify-center rounded-lg bg-blue-600 text-[14px] font-semibold text-white transition hover:bg-blue-700 disabled:bg-blue-300 sm:h-10 sm:flex-none sm:px-5"
                     >
                       {computerLoading ? 'Saving...' : 'Submit Computer Course Data'}
                     </button>
@@ -4875,8 +4876,8 @@ export default function ChildForm() {
                 {rejectedMessage && (
                   <div
                     className={`rounded-lg border px-4 py-3 text-sm font-medium ${rejectedMessage.type === 'success'
-                      ? 'border-green-200 bg-green-50 text-green-700'
-                      : 'border-red-200 bg-red-50 text-red-700'
+                      ? 'border-status-approved-fg/30 bg-status-approved-bg text-status-approved-fg'
+                      : 'border-status-returned-fg/30 bg-status-returned-bg text-status-returned-fg'
                       }`}
                   >
                     {rejectedMessage.text}
@@ -4884,10 +4885,10 @@ export default function ChildForm() {
                 )}
 
                 {/* Rejected Data Subtabs */}
-                <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                  <h2 className="mb-4 text-lg font-semibold text-slate-900">Rejected Entries</h2>
+                <div className="rounded-xl border border-rule bg-surface p-6 shadow-sm">
+                  <h2 className="mb-4 text-lg font-semibold text-ink">Rejected Entries</h2>
 
-                  <div className="mb-6 border-b border-slate-200">
+                  <div className="mb-6 border-b border-rule">
                     <div className="flex flex-wrap gap-2 sm:gap-0">
                       {(['child', 'family', 'sibling', 'uniform', 'leaving', 'vocational', 'computer'] as RejectedSubTabType[]).map((subTab) => (
                         <button
@@ -4895,7 +4896,7 @@ export default function ChildForm() {
                           onClick={() => setActiveRejectedSubTab(subTab)}
                           className={`px-4 py-3 text-sm font-medium transition capitalize ${activeRejectedSubTab === subTab
                             ? 'border-b-2 border-blue-600 text-blue-600'
-                            : 'border-b-2 border-transparent text-slate-600 hover:text-slate-900'
+                            : 'border-b-2 border-transparent text-ink-muted hover:text-ink'
                             }`}
                         >
                           {subTab === 'child' && 'Child Data'}
@@ -4912,65 +4913,65 @@ export default function ChildForm() {
 
                   {rejectedLoading ? (
                     <div className="flex justify-center py-8">
-                      <p className="text-slate-500">Loading...</p>
+                      <p className="text-ink-faint">Loading...</p>
                     </div>
                   ) : (
                     <div className="overflow-x-auto max-h-96 overflow-y-auto">
                       <table className="w-full text-sm">
                         <thead>
-                          <tr className="border-b border-slate-200">
-                            <th className="px-4 py-2 text-left font-medium text-slate-700">Registration No</th>
+                          <tr className="border-b border-rule">
+                            <th className="px-4 py-2 text-left font-medium text-ink">Registration No</th>
                             {activeRejectedSubTab === 'child' && (
                               <>
-                                <th className="px-4 py-2 text-left font-medium text-slate-700">Name</th>
-                                <th className="px-4 py-2 text-left font-medium text-slate-700">School</th>
+                                <th className="px-4 py-2 text-left font-medium text-ink">Name</th>
+                                <th className="px-4 py-2 text-left font-medium text-ink">School</th>
                               </>
                             )}
                             {activeRejectedSubTab === 'family' && (
                               <>
-                                <th className="px-4 py-2 text-left font-medium text-slate-700">Father Name</th>
-                                <th className="px-4 py-2 text-left font-medium text-slate-700">Mother Name</th>
+                                <th className="px-4 py-2 text-left font-medium text-ink">Father Name</th>
+                                <th className="px-4 py-2 text-left font-medium text-ink">Mother Name</th>
                               </>
                             )}
                             {activeRejectedSubTab === 'sibling' && (
-                              <th className="px-4 py-2 text-left font-medium text-slate-700">EAC No</th>
+                              <th className="px-4 py-2 text-left font-medium text-ink">EAC No</th>
                             )}
                             {activeRejectedSubTab === 'uniform' && (
-                              <th className="px-4 py-2 text-left font-medium text-slate-700">EAC No</th>
+                              <th className="px-4 py-2 text-left font-medium text-ink">EAC No</th>
                             )}
                             {activeRejectedSubTab === 'leaving' && (
-                              <th className="px-4 py-2 text-left font-medium text-slate-700">Reason</th>
+                              <th className="px-4 py-2 text-left font-medium text-ink">Reason</th>
                             )}
                             {activeRejectedSubTab === 'vocational' && (
                               <>
-                                <th className="px-4 py-2 text-left font-medium text-slate-700">Name</th>
-                                <th className="px-4 py-2 text-left font-medium text-slate-700">Reason</th>
+                                <th className="px-4 py-2 text-left font-medium text-ink">Name</th>
+                                <th className="px-4 py-2 text-left font-medium text-ink">Reason</th>
                               </>
                             )}
                             {activeRejectedSubTab === 'computer' && (
                               <>
-                                <th className="px-4 py-2 text-left font-medium text-slate-700">Child Name</th>
+                                <th className="px-4 py-2 text-left font-medium text-ink">Child Name</th>
                               </>
                             )}
-                            <th className="px-4 py-2 text-left font-medium text-slate-700">Rejection Reason</th>
-                            <th className="px-4 py-2 text-left font-medium text-slate-700">Actions</th>
+                            <th className="px-4 py-2 text-left font-medium text-ink">Rejection Reason</th>
+                            <th className="px-4 py-2 text-left font-medium text-ink">Actions</th>
                           </tr>
                         </thead>
                         <tbody>
                           {activeRejectedSubTab === 'child' && rejectedChildData.length === 0 && (
-                            <tr className="border-b border-slate-200">
-                              <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
+                            <tr className="border-b border-rule">
+                              <td colSpan={6} className="px-4 py-8 text-center text-ink-faint">
                                 No rejected child data found.
                               </td>
                             </tr>
                           )}
                           {activeRejectedSubTab === 'child' && rejectedChildData.map((record) => (
-                            <tr key={record.record_id} className="border-b border-slate-200 hover:bg-slate-50">
-                              <td className="px-4 py-2 text-slate-700">{record.reg_no}</td>
-                              <td className="px-4 py-2 text-slate-700">{record.first_name} {record.last_name}</td>
-                              <td className="px-4 py-2 text-slate-700">{record.school_name}</td>
-                              <td className="px-4 py-2 text-slate-700 text-xs">{record.rejection_reason}</td>
-                              <td className="px-4 py-2 text-slate-700">
+                            <tr key={record.record_id} className="border-b border-rule hover:bg-surface-sunken">
+                              <td className="px-4 py-2 text-ink">{record.reg_no}</td>
+                              <td className="px-4 py-2 text-ink">{record.first_name} {record.last_name}</td>
+                              <td className="px-4 py-2 text-ink">{record.school_name}</td>
+                              <td className="px-4 py-2 text-ink text-xs">{record.rejection_reason}</td>
+                              <td className="px-4 py-2 text-ink">
                                 <div className="flex gap-2">
                                   <button
                                     onClick={() => openEditModal(record, 'child')}
@@ -4991,19 +4992,19 @@ export default function ChildForm() {
                           ))}
 
                           {activeRejectedSubTab === 'family' && rejectedFamilyData.length === 0 && (
-                            <tr className="border-b border-slate-200">
-                              <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
+                            <tr className="border-b border-rule">
+                              <td colSpan={6} className="px-4 py-8 text-center text-ink-faint">
                                 No rejected family data found.
                               </td>
                             </tr>
                           )}
                           {activeRejectedSubTab === 'family' && rejectedFamilyData.map((record) => (
-                            <tr key={record.record_id} className="border-b border-slate-200 hover:bg-slate-50">
-                              <td className="px-4 py-2 text-slate-700">{record.reg_no}</td>
-                              <td className="px-4 py-2 text-slate-700">{record.f_name}</td>
-                              <td className="px-4 py-2 text-slate-700">{record.m_name}</td>
-                              <td className="px-4 py-2 text-slate-700 text-xs">{record.rejection_reason}</td>
-                              <td className="px-4 py-2 text-slate-700">
+                            <tr key={record.record_id} className="border-b border-rule hover:bg-surface-sunken">
+                              <td className="px-4 py-2 text-ink">{record.reg_no}</td>
+                              <td className="px-4 py-2 text-ink">{record.f_name}</td>
+                              <td className="px-4 py-2 text-ink">{record.m_name}</td>
+                              <td className="px-4 py-2 text-ink text-xs">{record.rejection_reason}</td>
+                              <td className="px-4 py-2 text-ink">
                                 <div className="flex gap-2">
                                   <button
                                     onClick={() => openEditModal(record, 'family')}
@@ -5024,18 +5025,18 @@ export default function ChildForm() {
                           ))}
 
                           {activeRejectedSubTab === 'sibling' && rejectedSiblingData.length === 0 && (
-                            <tr className="border-b border-slate-200">
-                              <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
+                            <tr className="border-b border-rule">
+                              <td colSpan={5} className="px-4 py-8 text-center text-ink-faint">
                                 No rejected sibling data found.
                               </td>
                             </tr>
                           )}
                           {activeRejectedSubTab === 'sibling' && rejectedSiblingData.map((record) => (
-                            <tr key={record.record_id} className="border-b border-slate-200 hover:bg-slate-50">
-                              <td className="px-4 py-2 text-slate-700">{record.reg_no}</td>
-                              <td className="px-4 py-2 text-slate-700">{record.eac_no}</td>
-                              <td className="px-4 py-2 text-slate-700 text-xs">{record.rejection_reason}</td>
-                              <td className="px-4 py-2 text-slate-700">
+                            <tr key={record.record_id} className="border-b border-rule hover:bg-surface-sunken">
+                              <td className="px-4 py-2 text-ink">{record.reg_no}</td>
+                              <td className="px-4 py-2 text-ink">{record.eac_no}</td>
+                              <td className="px-4 py-2 text-ink text-xs">{record.rejection_reason}</td>
+                              <td className="px-4 py-2 text-ink">
                                 <div className="flex gap-2">
                                   <button
                                     onClick={() => openEditModal(record, 'sibling')}
@@ -5056,18 +5057,18 @@ export default function ChildForm() {
                           ))}
 
                           {activeRejectedSubTab === 'uniform' && rejectedUniformData.length === 0 && (
-                            <tr className="border-b border-slate-200">
-                              <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
+                            <tr className="border-b border-rule">
+                              <td colSpan={5} className="px-4 py-8 text-center text-ink-faint">
                                 No rejected uniform data found.
                               </td>
                             </tr>
                           )}
                           {activeRejectedSubTab === 'uniform' && rejectedUniformData.map((record) => (
-                            <tr key={record.record_id} className="border-b border-slate-200 hover:bg-slate-50">
-                              <td className="px-4 py-2 text-slate-700">{record.reg_no}</td>
-                              <td className="px-4 py-2 text-slate-700">{record.eac_no}</td>
-                              <td className="px-4 py-2 text-slate-700 text-xs">{record.rejection_reason}</td>
-                              <td className="px-4 py-2 text-slate-700">
+                            <tr key={record.record_id} className="border-b border-rule hover:bg-surface-sunken">
+                              <td className="px-4 py-2 text-ink">{record.reg_no}</td>
+                              <td className="px-4 py-2 text-ink">{record.eac_no}</td>
+                              <td className="px-4 py-2 text-ink text-xs">{record.rejection_reason}</td>
+                              <td className="px-4 py-2 text-ink">
                                 <div className="flex gap-2">
                                   <button
                                     onClick={() => openEditModal(record, 'uniform')}
@@ -5088,18 +5089,18 @@ export default function ChildForm() {
                           ))}
 
                           {activeRejectedSubTab === 'leaving' && rejectedLeavingData.length === 0 && (
-                            <tr className="border-b border-slate-200">
-                              <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
+                            <tr className="border-b border-rule">
+                              <td colSpan={5} className="px-4 py-8 text-center text-ink-faint">
                                 No rejected leaving data found.
                               </td>
                             </tr>
                           )}
                           {activeRejectedSubTab === 'leaving' && rejectedLeavingData.map((record) => (
-                            <tr key={record.record_id} className="border-b border-slate-200 hover:bg-slate-50">
-                              <td className="px-4 py-2 text-slate-700">{record.reg_no}</td>
-                              <td className="px-4 py-2 text-slate-700">{record.reason}</td>
-                              <td className="px-4 py-2 text-slate-700 text-xs">{record.rejection_reason}</td>
-                              <td className="px-4 py-2 text-slate-700">
+                            <tr key={record.record_id} className="border-b border-rule hover:bg-surface-sunken">
+                              <td className="px-4 py-2 text-ink">{record.reg_no}</td>
+                              <td className="px-4 py-2 text-ink">{record.reason}</td>
+                              <td className="px-4 py-2 text-ink text-xs">{record.rejection_reason}</td>
+                              <td className="px-4 py-2 text-ink">
                                 <div className="flex gap-2">
                                   <button
                                     onClick={() => openEditModal(record, 'leaving')}
@@ -5121,19 +5122,19 @@ export default function ChildForm() {
 
                           {/* vocational rejected rows */}
                           {activeRejectedSubTab === 'vocational' && rejectedVocationalData.length === 0 && (
-                            <tr className="border-b border-slate-200">
-                              <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
+                            <tr className="border-b border-rule">
+                              <td colSpan={5} className="px-4 py-8 text-center text-ink-faint">
                                 No rejected vocational data found.
                               </td>
                             </tr>
                           )}
                           {activeRejectedSubTab === 'vocational' && rejectedVocationalData.map((record) => (
-                            <tr key={record.record_id} className="border-b border-slate-200 hover:bg-slate-50">
-                              <td className="px-4 py-2 text-slate-700">{record.reg_no}</td>
-                              <td className="px-4 py-2 text-slate-700">{record.trainee_name}</td>
-                              <td className="px-4 py-2 text-slate-700">{record.reason}</td>
-                              <td className="px-4 py-2 text-slate-700 text-xs">{record.rejection_reason}</td>
-                              <td className="px-4 py-2 text-slate-700">
+                            <tr key={record.record_id} className="border-b border-rule hover:bg-surface-sunken">
+                              <td className="px-4 py-2 text-ink">{record.reg_no}</td>
+                              <td className="px-4 py-2 text-ink">{record.trainee_name}</td>
+                              <td className="px-4 py-2 text-ink">{record.reason}</td>
+                              <td className="px-4 py-2 text-ink text-xs">{record.rejection_reason}</td>
+                              <td className="px-4 py-2 text-ink">
                                 <div className="flex gap-2">
                                   <button
                                     onClick={() => openEditModal(record, 'vocational')}
@@ -5155,18 +5156,18 @@ export default function ChildForm() {
 
                           {/* computer rejected rows */}
                           {activeRejectedSubTab === 'computer' && rejectedComputerData.length === 0 && (
-                            <tr className="border-b border-slate-200">
-                              <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
+                            <tr className="border-b border-rule">
+                              <td colSpan={5} className="px-4 py-8 text-center text-ink-faint">
                                 No rejected computer data found.
                               </td>
                             </tr>
                           )}
                           {activeRejectedSubTab === 'computer' && rejectedComputerData.map((record) => (
-                            <tr key={record.record_id} className="border-b border-slate-200 hover:bg-slate-50">
-                              <td className="px-4 py-2 text-slate-700">{record.reg_no}</td>
-                              <td className="px-4 py-2 text-slate-700">{record.child_name}</td>
-                              <td className="px-4 py-2 text-slate-700 text-xs">{record.rejection_reason}</td>
-                              <td className="px-4 py-2 text-slate-700">
+                            <tr key={record.record_id} className="border-b border-rule hover:bg-surface-sunken">
+                              <td className="px-4 py-2 text-ink">{record.reg_no}</td>
+                              <td className="px-4 py-2 text-ink">{record.child_name}</td>
+                              <td className="px-4 py-2 text-ink text-xs">{record.rejection_reason}</td>
+                              <td className="px-4 py-2 text-ink">
                                 <div className="flex gap-2">
                                   <button
                                     onClick={() => openEditModal(record, 'computer')}
@@ -5216,8 +5217,7 @@ export default function ChildForm() {
             )}
           </div>
         </div>
-      </PageContainer>
-    </main>
+      </AppShell>
   )
 }
 
@@ -5269,9 +5269,9 @@ function EditModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-6 shadow-lg">
-        <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-slate-900">
+      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-surface p-6 shadow-lg">
+        <div className="mb-5 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-xl font-semibold text-ink">
             Edit {modalType === 'child' && 'Child Data'}
             {modalType === 'family' && 'Family Data'}
             {modalType === 'sibling' && 'Sibling Data'}
@@ -5282,7 +5282,7 @@ function EditModal({
           </h2>
           <button
             onClick={onClose}
-            className="text-slate-500 hover:text-slate-700"
+            className="text-ink-faint hover:text-ink"
           >
             <X className="w-5 h-5" />
           </button>
@@ -5316,7 +5316,7 @@ function EditModal({
                   max={todayIsoDate}
                 />
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">Religion</label>
+                  <label className="mb-1 block text-sm font-medium text-ink">Religion</label>
                   <select
                     name="religion"
                     value={formData.religion || ''}
@@ -5348,7 +5348,7 @@ function EditModal({
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">Gender</label>
+                  <label className="mb-1 block text-sm font-medium text-ink">Gender</label>
                   <select
                     name="gender"
                     value={formData.gender || ''}
@@ -5394,7 +5394,7 @@ function EditModal({
                   onChange={onFormChange}
                 />
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">Blood Group</label>
+                  <label className="mb-1 block text-sm font-medium text-ink">Blood Group</label>
                   <select
                     name="blood_group"
                     value={formData.blood_group || ''}
@@ -5435,7 +5435,7 @@ function EditModal({
                   onChange={onFormChange}
                 />
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">Class/Standard</label>
+                  <label className="mb-1 block text-sm font-medium text-ink">Class/Standard</label>
                   <select
                     name="class_std_text"
                     value={formData.class_std_text || ''}
@@ -5483,7 +5483,7 @@ function EditModal({
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">Medium of Study</label>
+                  <label className="mb-1 block text-sm font-medium text-ink">Medium of Study</label>
                   <select
                     name="medium_of_study"
                     value={formData.medium_of_study || ''}
@@ -5499,7 +5499,7 @@ function EditModal({
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">Life Ambition</label>
+                  <label className="mb-1 block text-sm font-medium text-ink">Life Ambition</label>
                   <select
                     name="life_ambition"
                     value={formData.life_ambition || ''}
@@ -5517,7 +5517,7 @@ function EditModal({
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">Favourite Subject</label>
+                  <label className="mb-1 block text-sm font-medium text-ink">Favourite Subject</label>
                   <select
                     name="fav_subject"
                     value={formData.fav_subject || ''}
@@ -5534,7 +5534,7 @@ function EditModal({
                 </div>
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Other Information</label>
+                <label className="mb-1 block text-sm font-medium text-ink">Other Information</label>
                 <textarea
                   name="child_other_info"
                   value={formData.child_other_info}
@@ -5544,22 +5544,22 @@ function EditModal({
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Photo Upload</label>
+                <label className="mb-1 block text-sm font-medium text-ink">Photo Upload</label>
                 <input
                   key={photoInputKey}
                   type="file"
                   accept="image/*"
                   onChange={onPhotoChange}
-                  className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  className="block w-full text-sm text-ink-faint file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                 />
                 {formData.photo_link && (
-                  <p className="mt-2 text-sm text-slate-600">Current: {formData.photo_link}</p>
+                  <p className="mt-2 text-sm text-ink-muted">Current: {formData.photo_link}</p>
                 )}
                 {photoPreview && (
                   <img
                     src={photoPreview}
                     alt="Selected child preview"
-                    className="mt-3 h-28 w-28 rounded-lg border border-slate-200 object-cover"
+                    className="mt-3 h-28 w-28 rounded-lg border border-rule object-cover"
                   />
                 )}
               </div>
@@ -5597,7 +5597,7 @@ function EditModal({
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Address Line 1</label>
+                <label className="mb-1 block text-sm font-medium text-ink">Address Line 1</label>
                 <textarea
                   name="fmly_addr1"
                   value={formData.fmly_addr1}
@@ -5607,7 +5607,7 @@ function EditModal({
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Remarks</label>
+                <label className="mb-1 block text-sm font-medium text-ink">Remarks</label>
                 <textarea
                   name="fmly_remarks"
                   value={formData.fmly_remarks}
@@ -5623,7 +5623,7 @@ function EditModal({
             <>
               {[1, 2, 3, 4, 5].map((num) => (
                 <div key={num} className="border-t pt-4">
-                  <h3 className="mb-3 font-semibold text-slate-900">Sibling {num}</h3>
+                  <h3 className="mb-3 font-semibold text-ink">Sibling {num}</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <TextInput
                       label={`Sibling ${num} Name`}
@@ -5641,7 +5641,7 @@ function EditModal({
                 </div>
               ))}
               <div className="border-t pt-4">
-                <label className="mb-1 block text-sm font-medium text-slate-700">Remarks</label>
+                <label className="mb-1 block text-sm font-medium text-ink">Remarks</label>
                 <textarea
                   name="sibling_remarks"
                   value={formData.sibling_remarks}
@@ -5703,7 +5703,7 @@ function EditModal({
                   onChange={onFormChange}
                 />
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">Pass Status</label>
+                  <label className="mb-1 block text-sm font-medium text-ink">Pass Status</label>
                   <select
                     name="pass_status"
                     value={formData.pass_status || ''}
@@ -5735,7 +5735,7 @@ function EditModal({
                 type="date"
               />
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Address Line 1</label>
+                <label className="mb-1 block text-sm font-medium text-ink">Address Line 1</label>
                 <textarea
                   name="leav_addr1"
                   value={formData.leav_addr1}
@@ -5745,7 +5745,7 @@ function EditModal({
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Remarks</label>
+                <label className="mb-1 block text-sm font-medium text-ink">Remarks</label>
                 <textarea
                   name="leav_remarks"
                   value={formData.leav_remarks}
@@ -5780,7 +5780,7 @@ function EditModal({
                 onChange={onFormChange}
               />
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Reason</label>
+                <label className="mb-1 block text-sm font-medium text-ink">Reason</label>
                 <textarea
                   name="reason"
                   value={formData.reason}
@@ -5821,7 +5821,7 @@ function EditModal({
         <div className="mt-6 flex justify-end gap-3">
           <button
             onClick={onClose}
-            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 hover:border-slate-400 hover:text-slate-800"
+            className="rounded-lg border border-rule-strong px-4 py-2 text-sm font-semibold text-ink-muted hover:border-rule-strong hover:text-ink"
           >
             Cancel
           </button>
@@ -5849,15 +5849,28 @@ type InputProps = {
   max?: string
 }
 
+/**
+ * Every field on this screen, on a phone held in one hand.
+ *
+ * h-11 is 44px, the smallest target most people can hit reliably. The 16px base
+ * font is not a style choice: iOS Safari zooms the page in whenever a focused
+ * input is smaller than that, which throws a volunteer out of the form mid-entry.
+ */
 const baseInputClass =
-  'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100'
+  'h-11 w-full rounded-lg border border-rule-strong bg-surface px-3 text-base text-ink outline-none transition ' +
+  'placeholder:text-ink-faint focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 sm:h-10 sm:text-sm'
+
+/** Textareas need the same treatment minus the fixed height. */
+const baseTextareaClass =
+  'w-full rounded-lg border border-rule-strong bg-surface px-3 py-2.5 text-base text-ink outline-none transition ' +
+  'placeholder:text-ink-faint focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 sm:text-sm'
 
 function TextInput({ label, name, value, onChange, type = 'text', step, required = false, max }: InputProps) {
   const displayLabel = required && !label.includes('*') ? `${label} *` : label
 
   return (
     <div>
-      <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor={name}>
+      <label className="mb-1.5 block text-[13px] font-medium text-ink-muted" htmlFor={name}>
         {displayLabel}
       </label>
       <input
@@ -5882,12 +5895,12 @@ function NumberInput(props: InputProps) {
 function ReadOnlyInput({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <label className="mb-1 block text-sm font-medium text-slate-700">{label}</label>
+      <label className="mb-1.5 block text-[13px] font-medium text-ink-muted">{label}</label>
       <input
         type="text"
         value={value}
         readOnly
-        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600"
+        className="h-11 w-full rounded-lg border border-rule bg-surface-sunken px-3 text-base text-ink-muted sm:h-10 sm:text-sm"
       />
     </div>
   )

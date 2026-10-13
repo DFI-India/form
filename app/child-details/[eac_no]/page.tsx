@@ -88,25 +88,25 @@ export default function ChildDetailsPage({ params }: { params: { eac_no: string 
 
     if (authLoading) {
         return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-                <p className="text-sm text-slate-500">Loading…</p>
+            <div className="min-h-screen bg-surface-sunken flex items-center justify-center">
+                <p className="text-sm text-ink-faint">Loading…</p>
             </div>
         )
     }
 
     if (!isAuthorized) {
         return (
-            <main className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-                <div className="bg-white rounded-lg shadow-lg p-6 max-w-md text-center">
-                    <h1 className="text-2xl font-bold text-slate-900 mb-2">Access Denied</h1>
-                    <p className="text-slate-600">You don't have permission to access this page.</p>
+            <main className="min-h-screen bg-surface-sunken flex items-center justify-center p-4">
+                <div className="bg-surface rounded-lg shadow-lg p-6 max-w-md text-center">
+                    <h1 className="text-xl font-bold sm:text-2xl text-ink mb-2">Access Denied</h1>
+                    <p className="text-ink-muted">You don't have permission to access this page.</p>
                 </div>
             </main>
         )
     }
 
     return (
-        <main className="flex-1 bg-slate-100 min-h-screen p-8">
+        <main className="flex-1 bg-surface-hover min-h-screen p-8">
             <header className="mb-8">
                 <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
                     <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:justify-start sm:text-left">
@@ -123,28 +123,28 @@ export default function ChildDetailsPage({ params }: { params: { eac_no: string 
                     <button
                         type="button"
                         onClick={() => router.push('/')}
-                        className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 hover:border-slate-400 hover:text-slate-800"
+                        className="inline-flex items-center justify-center rounded-lg border border-rule-strong px-4 py-2 text-sm font-semibold text-ink-muted hover:border-rule-strong hover:text-ink"
                     >
                         Back
                     </button>
                 </div>
 
                 <p className="text-sm font-semibold tracking-wide text-blue-600">Children</p>
-                <h1 className="mt-2 text-3xl font-bold text-slate-900">Children for EAC: {eac_no}</h1>
+                <h1 className="mt-2 text-3xl font-bold text-ink">Children for EAC: {eac_no}</h1>
             </header>
 
-            <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <section className="rounded-xl border border-rule bg-surface p-6 shadow-sm">
                 {loading ? (
-                    <p className="text-sm text-slate-500">Loading…</p>
+                    <p className="text-sm text-ink-faint">Loading…</p>
                 ) : message ? (
                     <p className="text-sm text-red-600">{message}</p>
                 ) : children.length === 0 ? (
-                    <p className="text-sm text-slate-500">No child records found for this EAC.</p>
+                    <p className="text-sm text-ink-faint">No child records found for this EAC.</p>
                 ) : (
                     // container forces both vertical and horizontal scrolling when needed
                     <div className="overflow-auto max-h-[65vh] w-full border rounded">
-                        <table className="min-w-[1400px] w-full table-auto text-sm text-slate-700">
-                            <thead className="bg-slate-50 text-slate-600 sticky top-0">
+                        <div className="overflow-x-auto"><table className="min-w-[1400px] w-full table-auto text-sm text-ink">
+                            <thead className="bg-surface-sunken text-ink-muted sticky top-0">
                                 <tr>
                                     <th className="border px-3 py-2 text-left">Admission Date</th>
                                     <th className="border px-3 py-2 text-left">Registration No</th>
@@ -177,7 +177,7 @@ export default function ChildDetailsPage({ params }: { params: { eac_no: string 
                                 {children.map((c, i) => (
                                     <tr
                                         key={c.reg_no ?? i}
-                                        className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50'}
+                                        className={i % 2 === 0 ? 'bg-surface' : 'bg-surface-sunken'}
                                     >
                                         <td className="border px-3 py-2">{c.adm_date ?? '-'}</td>
                                         <td className="border px-3 py-2">{c.reg_no ?? '-'}</td>
@@ -215,7 +215,7 @@ export default function ChildDetailsPage({ params }: { params: { eac_no: string 
                                     </tr>
                                 ))}
                             </tbody>
-                        </table>
+                        </table></div>
 
                     </div>
                 )}

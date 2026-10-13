@@ -13,7 +13,7 @@ import { getStandardColumnLabel } from '../../../lib/columnLabels'
 import { useRequireRole } from '../../../lib/hooks'
 import { getErrorMessage } from '../../../lib/errors'
 import { LoadingSpinner } from '../../components/UI'
-import { Navbar, Sidebar, PageContainer } from '../../components/Navbar'
+import AppShell from '../../components/AppShell'
 import { ROLE_CONFIG, getRoleCapabilities } from '../../../lib/types'
 import { X } from 'lucide-react'
 
@@ -367,8 +367,8 @@ export default function ApproveDataPage() {
 
     if (!checkedAuth) {
         return (
-            <main className="flex min-h-screen items-center justify-center bg-slate-100">
-                <p className="text-sm text-slate-500">Checking access…</p>
+            <main className="flex min-h-screen items-center justify-center bg-surface-hover">
+                <p className="text-sm text-ink-faint">Checking access…</p>
             </main>
         )
     }
@@ -402,7 +402,7 @@ export default function ApproveDataPage() {
 
     if (authLoading) {
         return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+            <div className="min-h-screen bg-surface-sunken flex items-center justify-center">
                 <LoadingSpinner size="lg" />
             </div>
         )
@@ -410,10 +410,10 @@ export default function ApproveDataPage() {
 
     if (!isAuthorized || !profile) {
         return (
-            <main className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-                <div className="bg-white rounded-lg shadow-lg p-6 max-w-md text-center">
-                    <h1 className="text-2xl font-bold text-slate-900 mb-2">Access Denied</h1>
-                    <p className="text-slate-600">You don't have permission to access this page.</p>
+            <main className="min-h-screen bg-surface-sunken flex items-center justify-center p-4">
+                <div className="bg-surface rounded-lg shadow-lg p-6 max-w-md text-center">
+                    <h1 className="text-xl font-bold sm:text-2xl text-ink mb-2">Access Denied</h1>
+                    <p className="text-ink-muted">You don't have permission to access this page.</p>
                 </div>
             </main>
         )
@@ -422,54 +422,23 @@ export default function ApproveDataPage() {
     const roleInfo = ROLE_CONFIG.find(r => r.value === 'dfi_field_staff')!
 
     return (
-        <main className="flex-1">
-            <Navbar
-                username={profile.username}
+            <AppShell
                 role="dfi_field_staff"
-                roleLabel={roleInfo.label}
-                roleColor={roleInfo.color} />
-            <Sidebar role="dfi_field_staff" />
-            {/* <header className="mb-8">
-                <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-                    <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:justify-start sm:text-left">
-                        <Image
-                            src={DFILogo}
-                            alt="Debora Foundation India logo"
-                            width={180}
-                            height={60}
-                            priority
-                            className="h-auto w-40 sm:w-44"
-                        />
-                        <span className="text-xl font-semibold text-slate-900">Debora Foundation India</span>
-                    </div>
-
-                    <button
-                        type="button"
-                        onClick={handleSignOut}
-                        className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-800"
-                    >
-                        Sign out
-                    </button>
-                </div>
-
-                <p className="text-sm font-semibold tracking-wide text-blue-600">Approval Workflow</p>
-                <h1 className="mt-2 text-3xl font-bold text-slate-900">Data Verification & Approval</h1>
-                <p className="mt-2 max-w-2xl text-sm text-slate-600">
-                    Review and approve submitted child management data from field volunteers.
-                </p>
-            </header> */}
-            <PageContainer>
+                active="/dfi-field-staff/approve-data"
+                breadcrumb={['Field', 'Verify data']}
+                username={profile.username}
+            >
                 <header className="mb-6">
-                    <h1 className="text-2xl font-bold text-slate-900">Data Verification & Approval</h1>
-                    <p className="mt-1 text-sm text-slate-600">Review and verify submitted child management data from field volunteers.</p>
+                    <h1 className="text-xl font-bold sm:text-2xl text-ink">Data Verification & Approval</h1>
+                    <p className="mt-1 text-sm text-ink-muted">Review and verify submitted child management data from field volunteers.</p>
                 </header>
 
                 {/* Message Alert */}
                 {message && (
                     <div
                         className={`mb-6 rounded-lg border px-4 py-3 text-sm font-medium ${message.type === 'success'
-                            ? 'border-green-200 bg-green-50 text-green-700'
-                            : 'border-red-200 bg-red-50 text-red-700'
+                            ? 'border-status-approved-fg/30 bg-status-approved-bg text-status-approved-fg'
+                            : 'border-status-returned-fg/30 bg-status-returned-bg text-status-returned-fg'
                             }`}
                     >
                         {message.text}
@@ -478,7 +447,7 @@ export default function ApproveDataPage() {
 
                 <div className="space-y-6">
                     {/* Verify Subtabs */}
-                    <div className="border-b border-slate-200">
+                    <div className="border-b border-rule">
                         <div className="flex flex-wrap gap-2 sm:gap-0">
                             {verifySubTabs.map((tab) => (
                                 <button
@@ -486,7 +455,7 @@ export default function ApproveDataPage() {
                                     onClick={() => setVerifySubTab(tab.id)}
                                     className={`px-4 py-3 text-sm font-medium transition ${verifySubTab === tab.id
                                         ? 'border-b-2 border-green-600 text-green-600'
-                                        : 'border-b-2 border-transparent text-slate-600 hover:text-slate-900'
+                                        : 'border-b-2 border-transparent text-ink-muted hover:text-ink'
                                         }`}
                                 >
                                     {tab.label}
@@ -496,36 +465,36 @@ export default function ApproveDataPage() {
                     </div>
 
                     {/* Verify Data Table */}
-                    <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                    <section className="rounded-xl border border-rule bg-surface p-6 shadow-sm">
                         <div className="mb-4">
-                            <h2 className="text-lg font-semibold text-slate-900">
+                            <h2 className="text-lg font-semibold text-ink">
                                 Pending {verifySubTabs.find((t) => t.id === verifySubTab)?.label} Records
                             </h2>
-                            <p className="mt-1 text-sm text-slate-600">
+                            <p className="mt-1 text-sm text-ink-muted">
                                 Review and verify or reject submitted records.
                             </p>
                         </div>
 
                         {verifyLoading[verifySubTab] ? (
                             <div className="flex items-center justify-center py-8">
-                                <p className="text-sm text-slate-500">Loading records...</p>
+                                <p className="text-sm text-ink-faint">Loading records...</p>
                             </div>
                         ) : verifyData[verifySubTab].length === 0 ? (
                             <div className="flex items-center justify-center py-8">
-                                <p className="text-sm text-slate-500">No records found.</p>
+                                <p className="text-sm text-ink-faint">No records found.</p>
                             </div>
                         ) : (
-                            <div className="overflow-x-auto overflow-y-auto max-h-96 border border-slate-200 rounded-lg">
+                            <div className="overflow-x-auto overflow-y-auto max-h-96 border border-rule rounded-lg">
                                 <table className="w-full text-sm">
-                                    <thead className="sticky top-0 bg-slate-50 border-b border-slate-200">
+                                    <thead className="sticky top-0 bg-surface-sunken border-b border-rule">
                                         <tr>
-                                            <th className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap" title="record_id">Record ID</th>
+                                            <th className="px-4 py-3 text-left font-semibold text-ink whitespace-nowrap" title="record_id">Record ID</th>
                                             {visibleKeys.length > 0 && visibleKeys.map((key) => (
-                                                <th key={key} className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap" title={key}>
+                                                <th key={key} className="px-4 py-3 text-left font-semibold text-ink whitespace-nowrap" title={key}>
                                                     {getStandardColumnLabel(key)}
                                                 </th>
                                             ))}
-                                            <th className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap sticky right-0 top-0 bg-white z-20 w-[170px]">Actions</th>
+                                            <th className="px-4 py-3 text-left font-semibold text-ink whitespace-nowrap sticky right-0 top-0 bg-surface z-20 w-[170px]">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -558,11 +527,11 @@ export default function ApproveDataPage() {
                                         }))
                                     }
                                     disabled={verifyPagination[verifySubTab].page === 1}
-                                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="rounded-lg border border-rule-strong px-4 py-2 text-sm font-medium text-ink transition hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     Previous
                                 </button>
-                                <span className="text-sm text-slate-600">
+                                <span className="text-sm text-ink-muted">
                                     Page {verifyPagination[verifySubTab].page}
                                 </span>
                                 <button
@@ -575,7 +544,7 @@ export default function ApproveDataPage() {
                                             },
                                         }))
                                     }
-                                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                                    className="rounded-lg border border-rule-strong px-4 py-2 text-sm font-medium text-ink transition hover:bg-surface-hover"
                                 >
                                     Next
                                 </button>
@@ -588,10 +557,10 @@ export default function ApproveDataPage() {
                 {toasts.length > 0 && (
                     <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3">
                         {toasts.map((t) => (
-                            <div key={t.id} className={`rounded-lg px-4 py-2 text-sm font-medium shadow-lg ${t.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                            <div key={t.id} className={`rounded-lg px-4 py-2 text-sm font-medium shadow-lg ${t.type === 'success' ? 'bg-status-approved-bg text-status-approved-fg border border-green-200' : 'bg-status-returned-bg text-status-returned-fg border border-red-200'}`}>
                                 <div className="flex items-start gap-3">
                                     <div className="flex-1">{t.text}</div>
-                                    <button onClick={() => removeToast(t.id)} className="text-sm font-semibold text-slate-500 hover:text-slate-700">
+                                    <button onClick={() => removeToast(t.id)} className="text-sm font-semibold text-ink-faint hover:text-ink">
                                       <X className="w-4 h-4" />
                                     </button>
                                 </div>
@@ -600,8 +569,7 @@ export default function ApproveDataPage() {
                     </div>
                 )}
 
-            </PageContainer>
-        </main>
+            </AppShell>
     )
 }
 
@@ -639,8 +607,8 @@ function VerifyDataRow({ record, isLoading, onApprove, onReject, displayKeys }: 
 
     return (
         <>
-            <tr className="border-b border-slate-200 hover:bg-slate-50">
-                <td className="px-4 py-3 text-sm font-medium text-slate-900 whitespace-nowrap">
+            <tr className="border-b border-rule hover:bg-surface-hover">
+                <td className="px-4 py-3 text-sm font-medium text-ink whitespace-nowrap">
                     {displayId}
                 </td>
                 {displayKeys.map((key) => {
@@ -648,7 +616,7 @@ function VerifyDataRow({ record, isLoading, onApprove, onReject, displayKeys }: 
                     const isPhoto = isPhotoLink(key) && value
 
                     return (
-                        <td key={key} className="px-4 py-3 text-sm text-slate-700">
+                        <td key={key} className="px-4 py-3 text-sm text-ink">
                             {isPhoto ? (
                                 <button
                                     onClick={() => setPhotoModal({ isOpen: true, url: String(value) })}
@@ -664,7 +632,7 @@ function VerifyDataRow({ record, isLoading, onApprove, onReject, displayKeys }: 
                         </td>
                     )
                 })}
-                <td className="px-4 py-3 text-sm sticky right-0 bg-white z-10 w-[170px]">
+                <td className="px-4 py-3 text-sm sticky right-0 bg-surface z-10 w-[170px]">
                     <div className="flex gap-2 flex-nowrap">
                         <button
                             onClick={onApprove}
@@ -684,10 +652,10 @@ function VerifyDataRow({ record, isLoading, onApprove, onReject, displayKeys }: 
                 </td>
             </tr>
             {showRejectInput && (
-                <tr className="border-b border-slate-200 bg-slate-50">
+                <tr className="border-b border-rule bg-surface-sunken">
                     <td colSpan={displayKeys.length + 2} className="px-4 py-4">
                         <div className="space-y-3">
-                            <label className="block text-sm font-medium text-slate-700">
+                            <label className="block text-sm font-medium text-ink">
                                 Rejection Reason *
                             </label>
                             <textarea
@@ -695,7 +663,7 @@ function VerifyDataRow({ record, isLoading, onApprove, onReject, displayKeys }: 
                                 onChange={(e) => setRejectReason(e.target.value)}
                                 placeholder="Enter the reason for rejection..."
                                 rows={3}
-                                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                                className="w-full rounded-lg border border-rule bg-surface px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                             />
                             <div className="flex gap-2">
                                 <button
@@ -714,7 +682,7 @@ function VerifyDataRow({ record, isLoading, onApprove, onReject, displayKeys }: 
                                         setShowRejectInput(false)
                                         setRejectReason('')
                                     }}
-                                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                                    className="rounded-lg border border-rule-strong px-4 py-2 text-sm font-semibold text-ink transition hover:bg-surface-hover"
                                 >
                                     Cancel
                                 </button>
@@ -727,12 +695,12 @@ function VerifyDataRow({ record, isLoading, onApprove, onReject, displayKeys }: 
             {/* Photo Modal */}
             {photoModal.isOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-                    <div className="rounded-lg bg-white p-6 shadow-lg max-w-2xl max-h-96 flex flex-col">
+                    <div className="rounded-lg bg-surface p-6 shadow-lg max-w-2xl max-h-96 flex flex-col">
                         <div className="mb-4 flex items-center justify-between">
-                            <h3 className="text-lg font-semibold text-slate-900">Photo Preview</h3>
+                            <h3 className="text-lg font-semibold text-ink">Photo Preview</h3>
                             <button
                                 onClick={() => setPhotoModal({ isOpen: false, url: '' })}
-                                className="text-slate-500 hover:text-slate-700"
+                                className="text-ink-faint hover:text-ink"
                             >
                                 <X className="w-5 h-5" />
                             </button>
@@ -747,7 +715,7 @@ function VerifyDataRow({ record, isLoading, onApprove, onReject, displayKeys }: 
                         <div className="mt-4 flex justify-end">
                             <button
                                 onClick={() => setPhotoModal({ isOpen: false, url: '' })}
-                                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                                className="rounded-lg border border-rule-strong px-4 py-2 text-sm font-semibold text-ink transition hover:bg-surface-hover"
                             >
                                 Close
                             </button>

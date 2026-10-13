@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import AppShell from '../components/AppShell'
 import { useRequireRole } from '../../lib/hooks'
 import { supabase } from '../../lib/supabase'
 import { LoadingSpinner } from '../components/UI'
-import { Navbar, Sidebar, PageContainer } from '../components/Navbar'
 import { ROLE_CONFIG, getRoleCapabilities } from '../../lib/types'
 import { Check, Search, BarChart3 } from 'lucide-react'
 
@@ -63,7 +63,7 @@ export default function DFIFieldStaffPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-surface-sunken flex items-center justify-center">
         <LoadingSpinner size="lg" />
       </div>
     )
@@ -71,10 +71,10 @@ export default function DFIFieldStaffPage() {
 
   if (!isAuthorized || !profile) {
     return (
-      <main className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-lg p-6 max-w-md text-center">
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">Access Denied</h1>
-          <p className="text-slate-600">You don't have permission to access this page.</p>
+      <main className="min-h-screen bg-surface-sunken flex items-center justify-center p-4">
+        <div className="bg-surface rounded-lg shadow-lg p-6 max-w-md text-center">
+          <h1 className="text-xl font-bold sm:text-2xl text-ink mb-2">Access Denied</h1>
+          <p className="text-ink-muted">You don't have permission to access this page.</p>
         </div>
       </main>
     )
@@ -84,34 +84,30 @@ export default function DFIFieldStaffPage() {
   const capabilities = getRoleCapabilities('dfi_field_staff')
 
   return (
-    <main className="min-h-screen bg-slate-50">
-      <Navbar
-        username={profile.username}
+      <AppShell
         role="dfi_field_staff"
-        roleLabel={roleInfo.label}
-        roleColor={roleInfo.color}
-      />
-      <Sidebar role="dfi_field_staff" />
-
-      <PageContainer>
-        <div className="p-8">
+        active="/dfi-field-staff"
+        breadcrumb={['Field', 'Overview']}
+        username={profile.username}
+      >
+        <div className="px-4 py-5 sm:px-6 sm:py-8">
           <div className="mb-8">
-            <h2 className="text-3xl font-bold text-slate-900">DFI Field Staff Dashboard</h2>
-            <p className="text-slate-600 mt-2">{roleInfo.description}</p>
+            <h2 className="text-2xl font-bold sm:text-3xl text-ink">DFI Field Staff Dashboard</h2>
+            <p className="text-ink-muted mt-2">{roleInfo.description}</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-            <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
-              <p className="text-slate-600 text-sm font-medium mb-2">Assigned EACs</p>
+            <div className="bg-surface rounded-lg border border-rule p-6 shadow-sm">
+              <p className="text-ink-muted text-sm font-medium mb-2">Assigned EACs</p>
               <p className="text-4xl font-bold text-green-600">{statsLoading ? '...' : assignedEacNos.length}</p>
-              <p className="text-xs text-slate-500 mt-2">
+              <p className="text-xs text-ink-faint mt-2">
                 {assignedEacNos.length > 0 ? `EAC: ${assignedEacNos.join(', ')}` : 'No EAC assigned'}
               </p>
             </div>
-            <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
-              <p className="text-slate-600 text-sm font-medium mb-2">Total Children</p>
+            <div className="bg-surface rounded-lg border border-rule p-6 shadow-sm">
+              <p className="text-ink-muted text-sm font-medium mb-2">Total Children</p>
               <p className="text-4xl font-bold text-blue-600">{statsLoading ? '...' : totalChildren}</p>
-              <p className="text-xs text-slate-500 mt-2">Counted where child_left is false</p>
+              <p className="text-xs text-ink-faint mt-2">Counted where child_left is false</p>
             </div>
           </div>
 
@@ -121,15 +117,15 @@ export default function DFIFieldStaffPage() {
             </div>
           )}
 
-          <div className="bg-white rounded-lg border border-slate-200 p-6 mb-8 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-900 mb-4">Your Capabilities</h3>
+          <div className="bg-surface rounded-lg border border-rule p-6 mb-8 shadow-sm">
+            <h3 className="text-lg font-bold text-ink mb-4">Your Capabilities</h3>
             <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {capabilities.map((capability, i) => (
                 <li key={i} className="flex items-start gap-3">
-                  <span className="w-5 h-5 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-sm flex-shrink-0 mt-0.5 font-bold">
+                  <span className="w-5 h-5 rounded-full bg-status-approved-bg text-status-approved-fg flex items-center justify-center text-sm flex-shrink-0 mt-0.5 font-bold">
                     <Check className="w-3 h-3" />
                   </span>
-                  <span className="text-slate-700">{capability}</span>
+                  <span className="text-ink">{capability}</span>
                 </li>
               ))}
             </ul>
@@ -150,7 +146,6 @@ export default function DFIFieldStaffPage() {
             </Link>
           </div>
         </div>
-      </PageContainer>
-    </main>
+      </AppShell>
   )
 }

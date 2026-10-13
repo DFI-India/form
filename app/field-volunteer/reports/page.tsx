@@ -3,9 +3,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import TablePagination from '@mui/material/TablePagination'
 import { BookOpen, Filter, FileText, Search, Shirt, Users } from 'lucide-react'
-import { Navbar, Sidebar, PageContainer } from '../../components/Navbar'
 import { Alert, LoadingSpinner } from '../../components/UI'
 import { supabase } from '../../../lib/supabase'
+import AppShell from '../../components/AppShell'
 import { useRequireRole } from '../../../lib/hooks'
 import { getErrorMessage } from '../../../lib/errors'
 import { ROLE_CONFIG } from '../../../lib/types'
@@ -354,7 +354,7 @@ export default function FieldVolunteerReportsPage() {
 
     if (authLoading) {
         return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+            <div className="min-h-screen bg-surface-sunken flex items-center justify-center">
                 <LoadingSpinner size="lg" />
             </div>
         )
@@ -362,10 +362,10 @@ export default function FieldVolunteerReportsPage() {
 
     if (!isAuthorized || !profile) {
         return (
-            <main className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-                <div className="rounded-xl border border-slate-200 bg-white p-6 text-center shadow-sm">
-                    <h1 className="text-2xl font-bold text-slate-900 mb-2">Access Denied</h1>
-                    <p className="text-slate-600">You don't have permission to access this page.</p>
+            <main className="min-h-screen bg-surface-sunken flex items-center justify-center p-4">
+                <div className="rounded-xl border border-rule bg-surface p-6 text-center shadow-sm">
+                    <h1 className="text-xl font-bold sm:text-2xl text-ink mb-2">Access Denied</h1>
+                    <p className="text-ink-muted">You don't have permission to access this page.</p>
                 </div>
             </main>
         )
@@ -373,8 +373,8 @@ export default function FieldVolunteerReportsPage() {
 
     const renderChildDataTable = () => (
         <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200 text-sm">
-                <thead className="bg-slate-50 text-slate-600">
+            <table className="min-w-full divide-y divide-rule text-sm">
+                <thead className="bg-surface-sunken text-ink-muted">
                     <tr>
                         <th className="px-4 py-3 text-left font-semibold">Name</th>
                         <th className="px-4 py-3 text-left font-semibold">Reg No</th>
@@ -386,26 +386,26 @@ export default function FieldVolunteerReportsPage() {
                         <th className="px-4 py-3 text-left font-semibold">School Category</th>
                     </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 bg-white">
+                <tbody className="divide-y divide-rule-faint bg-surface">
                     {(visibleRows as EnrichedChildRow[]).map((row) => (
-                        <tr key={String(row.record_id ?? row.reg_no)} className="hover:bg-slate-50">
-                            <td className="px-4 py-3 font-medium text-slate-900">{row.child_name}</td>
-                            <td className="px-4 py-3 text-slate-700">{normalizeDisplayValue(row.reg_no)}</td>
-                            <td className="px-4 py-3 text-slate-700">{normalizeDisplayValue(row.gender)}</td>
-                            <td className="px-4 py-3 text-slate-700">
+                        <tr key={String(row.record_id ?? row.reg_no)} className="hover:bg-surface-hover">
+                            <td className="px-4 py-3 font-medium text-ink">{row.child_name}</td>
+                            <td className="px-4 py-3 text-ink">{normalizeDisplayValue(row.reg_no)}</td>
+                            <td className="px-4 py-3 text-ink">{normalizeDisplayValue(row.gender)}</td>
+                            <td className="px-4 py-3 text-ink">
                                 <span
                                     className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${row.child_status === 'Enrolled'
-                                        ? 'bg-emerald-100 text-emerald-800'
+                                        ? 'bg-status-approved-bg text-status-approved-fg'
                                         : 'bg-rose-100 text-rose-800'
                                         }`}
                                 >
                                     {row.child_status}
                                 </span>
                             </td>
-                            <td className="px-4 py-3 text-slate-700">{normalizeDisplayValue(row.adm_date)}</td>
-                            <td className="px-4 py-3 text-slate-700">{normalizeDisplayValue(row.class_std_text)}</td>
-                            <td className="px-4 py-3 text-slate-700">{normalizeDisplayValue(row.school_name)}</td>
-                            <td className="px-4 py-3 text-slate-700">{normalizeDisplayValue(row.school_category)}</td>
+                            <td className="px-4 py-3 text-ink">{normalizeDisplayValue(row.adm_date)}</td>
+                            <td className="px-4 py-3 text-ink">{normalizeDisplayValue(row.class_std_text)}</td>
+                            <td className="px-4 py-3 text-ink">{normalizeDisplayValue(row.school_name)}</td>
+                            <td className="px-4 py-3 text-ink">{normalizeDisplayValue(row.school_category)}</td>
                         </tr>
                     ))}
                 </tbody>
@@ -415,8 +415,8 @@ export default function FieldVolunteerReportsPage() {
 
     const renderFamilyTable = () => (
         <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200 text-sm">
-                <thead className="bg-slate-50 text-slate-600">
+            <table className="min-w-full divide-y divide-rule text-sm">
+                <thead className="bg-surface-sunken text-ink-muted">
                     <tr>
                         <th className="px-4 py-3 text-left font-semibold">Child Name</th>
                         <th className="px-4 py-3 text-left font-semibold">Reg No</th>
@@ -427,16 +427,16 @@ export default function FieldVolunteerReportsPage() {
                         <th className="px-4 py-3 text-left font-semibold">Address</th>
                     </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 bg-white">
+                <tbody className="divide-y divide-rule-faint bg-surface">
                     {(visibleRows as EnrichedFamilyRow[]).map((row) => (
-                        <tr key={String(row.record_id ?? row.reg_no)} className="hover:bg-slate-50">
-                            <td className="px-4 py-3 font-medium text-slate-900">{row.child_name}</td>
-                            <td className="px-4 py-3 text-slate-700">{normalizeDisplayValue(row.reg_no)}</td>
-                            <td className="px-4 py-3 text-slate-700">{normalizeDisplayValue(row.f_name)}</td>
-                            <td className="px-4 py-3 text-slate-700">{normalizeDisplayValue(row.m_name)}</td>
-                            <td className="px-4 py-3 text-slate-700">{normalizeDisplayValue(row.f_mobile)}</td>
-                            <td className="px-4 py-3 text-slate-700">{normalizeDisplayValue(row.m_mobile)}</td>
-                            <td className="px-4 py-3 text-slate-700">
+                        <tr key={String(row.record_id ?? row.reg_no)} className="hover:bg-surface-hover">
+                            <td className="px-4 py-3 font-medium text-ink">{row.child_name}</td>
+                            <td className="px-4 py-3 text-ink">{normalizeDisplayValue(row.reg_no)}</td>
+                            <td className="px-4 py-3 text-ink">{normalizeDisplayValue(row.f_name)}</td>
+                            <td className="px-4 py-3 text-ink">{normalizeDisplayValue(row.m_name)}</td>
+                            <td className="px-4 py-3 text-ink">{normalizeDisplayValue(row.f_mobile)}</td>
+                            <td className="px-4 py-3 text-ink">{normalizeDisplayValue(row.m_mobile)}</td>
+                            <td className="px-4 py-3 text-ink">
                                 {[row.fmly_addr1, row.fmly_addr2, row.fmly_addr3, row.fmly_pincode]
                                     .map(normalizeDisplayValue)
                                     .filter((value) => value !== '-')
@@ -451,8 +451,8 @@ export default function FieldVolunteerReportsPage() {
 
     const renderSiblingTable = () => (
         <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200 text-sm">
-                <thead className="bg-slate-50 text-slate-600">
+            <table className="min-w-full divide-y divide-rule text-sm">
+                <thead className="bg-surface-sunken text-ink-muted">
                     <tr>
                         <th className="px-4 py-3 text-left font-semibold">Child Name</th>
                         <th className="px-4 py-3 text-left font-semibold">Reg No</th>
@@ -460,7 +460,7 @@ export default function FieldVolunteerReportsPage() {
                         <th className="px-4 py-3 text-left font-semibold">Remarks</th>
                     </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 bg-white">
+                <tbody className="divide-y divide-rule-faint bg-surface">
                     {(visibleRows as EnrichedSiblingRow[]).map((row) => {
                         const siblingDetails = [
                             row.names_1 ? `1. ${row.names_1}` : '',
@@ -473,11 +473,11 @@ export default function FieldVolunteerReportsPage() {
                             .join(' | ')
 
                         return (
-                            <tr key={String(row.record_id ?? row.reg_no)} className="hover:bg-slate-50">
-                                <td className="px-4 py-3 font-medium text-slate-900">{row.child_name}</td>
-                                <td className="px-4 py-3 text-slate-700">{normalizeDisplayValue(row.reg_no)}</td>
-                                <td className="px-4 py-3 text-slate-700">{siblingDetails || '-'}</td>
-                                <td className="px-4 py-3 text-slate-700">{normalizeDisplayValue(row.sibling_remarks)}</td>
+                            <tr key={String(row.record_id ?? row.reg_no)} className="hover:bg-surface-hover">
+                                <td className="px-4 py-3 font-medium text-ink">{row.child_name}</td>
+                                <td className="px-4 py-3 text-ink">{normalizeDisplayValue(row.reg_no)}</td>
+                                <td className="px-4 py-3 text-ink">{siblingDetails || '-'}</td>
+                                <td className="px-4 py-3 text-ink">{normalizeDisplayValue(row.sibling_remarks)}</td>
                             </tr>
                         )
                     })}
@@ -488,8 +488,8 @@ export default function FieldVolunteerReportsPage() {
 
     const renderUniformTable = () => (
         <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200 text-sm">
-                <thead className="bg-slate-50 text-slate-600">
+            <table className="min-w-full divide-y divide-rule text-sm">
+                <thead className="bg-surface-sunken text-ink-muted">
                     <tr>
                         <th className="px-4 py-3 text-left font-semibold">Child Name</th>
                         <th className="px-4 py-3 text-left font-semibold">Reg No</th>
@@ -502,18 +502,18 @@ export default function FieldVolunteerReportsPage() {
                         <th className="px-4 py-3 text-left font-semibold">Updated</th>
                     </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 bg-white">
+                <tbody className="divide-y divide-rule-faint bg-surface">
                     {(visibleRows as EnrichedUniformRow[]).map((row) => (
-                        <tr key={String(row.record_id ?? row.reg_no)} className="hover:bg-slate-50">
-                            <td className="px-4 py-3 font-medium text-slate-900">{row.child_name}</td>
-                            <td className="px-4 py-3 text-slate-700">{normalizeDisplayValue(row.reg_no)}</td>
-                            <td className="px-4 py-3 text-slate-700">{normalizeDisplayValue(row.shirtsize)}</td>
-                            <td className="px-4 py-3 text-slate-700">{normalizeDisplayValue(row.knickersize)}</td>
-                            <td className="px-4 py-3 text-slate-700">{normalizeDisplayValue(row.pant_skirtsize)}</td>
-                            <td className="px-4 py-3 text-slate-700">{normalizeDisplayValue(row.chudidharsize)}</td>
-                            <td className="px-4 py-3 text-slate-700">{normalizeDisplayValue(row.top_pantsize)}</td>
-                            <td className="px-4 py-3 text-slate-700">{normalizeDisplayValue(row.footwearsize)}</td>
-                            <td className="px-4 py-3 text-slate-700">{normalizeDisplayValue(row.uniform_updated)}</td>
+                        <tr key={String(row.record_id ?? row.reg_no)} className="hover:bg-surface-hover">
+                            <td className="px-4 py-3 font-medium text-ink">{row.child_name}</td>
+                            <td className="px-4 py-3 text-ink">{normalizeDisplayValue(row.reg_no)}</td>
+                            <td className="px-4 py-3 text-ink">{normalizeDisplayValue(row.shirtsize)}</td>
+                            <td className="px-4 py-3 text-ink">{normalizeDisplayValue(row.knickersize)}</td>
+                            <td className="px-4 py-3 text-ink">{normalizeDisplayValue(row.pant_skirtsize)}</td>
+                            <td className="px-4 py-3 text-ink">{normalizeDisplayValue(row.chudidharsize)}</td>
+                            <td className="px-4 py-3 text-ink">{normalizeDisplayValue(row.top_pantsize)}</td>
+                            <td className="px-4 py-3 text-ink">{normalizeDisplayValue(row.footwearsize)}</td>
+                            <td className="px-4 py-3 text-ink">{normalizeDisplayValue(row.uniform_updated)}</td>
                         </tr>
                     ))}
                 </tbody>
@@ -522,29 +522,25 @@ export default function FieldVolunteerReportsPage() {
     )
 
     return (
-        <main className="min-h-screen bg-slate-50">
-            <Navbar
-                username={profile.username}
-                role={profile.role!}
-                roleLabel={roleInfo?.label ?? 'Field Volunteer'}
-                roleColor={roleInfo?.color ?? 'bg-blue-100 text-blue-800'}
-            />
-            <Sidebar role="field_volunteer" />
-
-            <PageContainer>
-                <div className="p-8">
+      <AppShell
+        role="field_volunteer"
+        active="/field-volunteer/reports"
+        breadcrumb={['My work', 'Reports']}
+        username={profile.username}
+      >
+                <div className="px-4 py-5 sm:px-6 sm:py-8">
                     <div className="mx-auto max-w-7xl space-y-6">
-                        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                        <div className="rounded-2xl border border-rule bg-surface p-6 shadow-sm">
                             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                                 <div>
                                     <p className="text-sm font-semibold uppercase tracking-[0.24em] text-blue-600">Reports</p>
-                                    <h1 className="mt-2 text-3xl font-bold text-slate-900">EAC Records</h1>
-                                    <p className="mt-2 max-w-2xl text-slate-600">
+                                    <h1 className="mt-2 text-3xl font-bold text-ink">EAC Records</h1>
+                                    <p className="mt-2 max-w-2xl text-ink-muted">
                                         View and search records for Child Data, Child Family, Child Sibling, and Child Uniform within your assigned EAC.
                                     </p>
                                 </div>
-                                <div className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                                    <span className="block font-semibold text-slate-900">Assigned EAC</span>
+                                <div className="rounded-xl bg-surface-sunken px-4 py-3 text-sm text-ink-muted">
+                                    <span className="block font-semibold text-ink">Assigned EAC</span>
                                     <span>{eacNo || 'Not assigned'}</span>
                                 </div>
                             </div>
@@ -552,7 +548,7 @@ export default function FieldVolunteerReportsPage() {
 
                         {error && <Alert type="error" message={error} onDismiss={() => setError('')} />}
 
-                        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                        <div className="rounded-2xl border border-rule bg-surface p-6 shadow-sm">
                             <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                                 <div className="flex flex-wrap gap-2">
                                     {tabs.map((tab) => {
@@ -563,8 +559,8 @@ export default function FieldVolunteerReportsPage() {
                                                 key={tab.id}
                                                 onClick={() => setActiveTab(tab.id)}
                                                 className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${isActive
-                                                    ? 'border-slate-900 bg-slate-900 text-white'
-                                                    : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
+                                                    ? 'border-ink bg-ink text-surface'
+                                                    : 'border-rule bg-surface text-ink hover:border-rule-strong hover:bg-surface-hover'
                                                     }`}
                                             >
                                                 <Icon className="h-4 w-4" />
@@ -577,23 +573,23 @@ export default function FieldVolunteerReportsPage() {
                                 <div className="grid gap-3 md:grid-cols-2 xl:min-w-[520px] xl:grid-cols-[minmax(0,1fr),180px]">
                                     <label className="relative block">
                                         <span className="sr-only">Search by name</span>
-                                        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                                        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" />
                                         <input
                                             type="search"
                                             value={searchTerm}
                                             onChange={(event) => setSearchTerm(event.target.value)}
                                             placeholder="Search by name"
-                                            className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                                            className="w-full rounded-xl border border-rule bg-surface py-3 pl-10 pr-4 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                                         />
                                     </label>
 
                                     <label className="relative block">
                                         <span className="sr-only">Student status filter</span>
-                                        <Filter className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                                        <Filter className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" />
                                         <select
                                             value={studentFilter}
                                             onChange={(event) => setStudentFilter(event.target.value as StudentFilter)}
-                                            className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                                            className="w-full rounded-xl border border-rule bg-surface py-3 pl-10 pr-4 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                                         >
                                             {studentFilters.map((filter) => (
                                                 <option key={filter.id} value={filter.id}>
@@ -605,23 +601,23 @@ export default function FieldVolunteerReportsPage() {
                                 </div>
                             </div>
 
-                            <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-slate-600">
+                            <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-ink-muted">
                                 <span className="rounded-full bg-blue-50 px-3 py-1 font-medium text-blue-700">{activeTabLabel}</span>
                                 <span>{activeRows.length} matching records</span>
                                 <span>Sorted alphabetically by name before pagination</span>
                             </div>
                         </div>
 
-                        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+                        <div className="rounded-2xl border border-rule bg-surface shadow-sm">
                             {loading ? (
                                 <div className="flex min-h-[360px] items-center justify-center">
                                     <LoadingSpinner size="lg" />
                                 </div>
                             ) : activeRows.length === 0 ? (
                                 <div className="flex min-h-[360px] flex-col items-center justify-center px-6 text-center">
-                                    <FileText className="h-10 w-10 text-slate-300" />
-                                    <h2 className="mt-4 text-lg font-semibold text-slate-900">No records found</h2>
-                                    <p className="mt-2 max-w-md text-sm text-slate-500">
+                                    <FileText className="h-10 w-10 text-ink-faint" />
+                                    <h2 className="mt-4 text-lg font-semibold text-ink">No records found</h2>
+                                    <p className="mt-2 max-w-md text-sm text-ink-faint">
                                         Try a different search or status filter, or confirm records exist for this EAC.
                                     </p>
                                 </div>
@@ -635,7 +631,7 @@ export default function FieldVolunteerReportsPage() {
                                                 ? renderSiblingTable()
                                                 : renderUniformTable()}
 
-                                    <div className="border-t border-slate-200">
+                                    <div className="border-t border-rule">
                                         <TablePagination
                                             component="div"
                                             count={activeRows.length}
@@ -651,7 +647,6 @@ export default function FieldVolunteerReportsPage() {
                         </div>
                     </div>
                 </div>
-            </PageContainer>
-        </main>
+            </AppShell>
     )
 }

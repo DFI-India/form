@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRequireRole } from '../../../lib/hooks'
 import { supabase } from '../../../lib/supabase'
 import { LoadingSpinner, Alert } from '../../components/UI'
-import { Navbar, Sidebar, PageContainer } from '../../components/Navbar'
+import AppShell from '../../components/AppShell'
 import { CheckCircle, XCircle, Edit, Plus, Trash2, Send, ClipboardList } from 'lucide-react'
 
 interface ActivityLog {
@@ -19,10 +19,10 @@ interface ActivityLog {
 }
 
 const ACTION_COLORS: Record<string, string> = {
-  approve: 'bg-green-100 text-green-800',
-  reject: 'bg-red-100 text-red-800',
-  edit: 'bg-blue-100 text-blue-800',
-  create: 'bg-purple-100 text-purple-800',
+  approve: 'bg-status-approved-bg text-status-approved-fg',
+  reject: 'bg-status-returned-bg text-status-returned-fg',
+  edit: 'bg-accent-bg text-accent-fg',
+  create: 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300',
   delete: 'bg-gray-100 text-gray-800',
   submit: 'bg-indigo-100 text-indigo-800'
 }
@@ -117,7 +117,7 @@ export default function MyActivityPage() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-surface-sunken flex items-center justify-center">
         <LoadingSpinner size="lg" />
       </div>
     )
@@ -125,10 +125,10 @@ export default function MyActivityPage() {
 
   if (!isAuthorized || !profile) {
     return (
-      <main className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-lg p-6 max-w-md text-center">
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">Access Denied</h1>
-          <p className="text-slate-600">You don't have permission to access this page.</p>
+      <main className="min-h-screen bg-surface-sunken flex items-center justify-center p-4">
+        <div className="bg-surface rounded-lg shadow-lg p-6 max-w-md text-center">
+          <h1 className="text-xl font-bold sm:text-2xl text-ink mb-2">Access Denied</h1>
+          <p className="text-ink-muted">You don't have permission to access this page.</p>
         </div>
       </main>
     )
@@ -138,38 +138,34 @@ export default function MyActivityPage() {
   const uniqueEntities = Array.from(new Set(activities.map(a => a.entity_type)))
 
   return (
-    <main className="min-h-screen bg-slate-50">
-      <Navbar 
-        username={profile.username} 
+      <AppShell
         role={profile.role!}
-        roleLabel={profile.role!.replace(/_/g, ' ')}
-        roleColor="bg-blue-100 text-blue-800"
-      />
-      <Sidebar role={profile.role!} />
-      
-      <PageContainer>
-        <div className="p-8">
+        active="/profile/activity"
+        breadcrumb={['My activity']}
+        username={profile.username}
+      >
+        <div className="px-4 py-5 sm:px-6 sm:py-8">
           <div className="mx-auto max-w-6xl space-y-8">
             {/* Header */}
             <div className="flex items-start justify-between">
               <div>
-                <h1 className="text-4xl font-bold text-slate-900">My Activity History</h1>
-                <p className="mt-2 text-slate-600">Track your actions and interactions</p>
+                <h1 className="text-4xl font-bold text-ink">My Activity History</h1>
+                <p className="mt-2 text-ink-muted">Track your actions and interactions</p>
               </div>
             </div>
 
             {error && <Alert type="error" message={error} onDismiss={() => setError('')} />}
 
             {/* Filters */}
-            <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
-              <h2 className="text-lg font-bold text-slate-900 mb-4">Filter Activity</h2>
+            <div className="bg-surface rounded-lg border border-rule p-6 shadow-sm">
+              <h2 className="text-lg font-bold text-ink mb-4">Filter Activity</h2>
               <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Action Type</label>
+                  <label className="block text-sm font-medium text-ink mb-2">Action Type</label>
                   <select
                     value={filterAction}
                     onChange={e => setFilterAction(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full min-h-[44px] sm:min-h-0 px-3 py-2 rounded-lg border border-rule-strong text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">All Actions</option>
                     {uniqueActions.map(action => (
@@ -179,11 +175,11 @@ export default function MyActivityPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Entity Type</label>
+                  <label className="block text-sm font-medium text-ink mb-2">Entity Type</label>
                   <select
                     value={filterEntity}
                     onChange={e => setFilterEntity(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full min-h-[44px] sm:min-h-0 px-3 py-2 rounded-lg border border-rule-strong text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">All Types</option>
                     {uniqueEntities.map(entity => (
@@ -193,22 +189,22 @@ export default function MyActivityPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">From Date</label>
+                  <label className="block text-sm font-medium text-ink mb-2">From Date</label>
                   <input
                     type="date"
                     value={dateFrom}
                     onChange={e => setDateFrom(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full min-h-[44px] sm:min-h-0 px-3 py-2 rounded-lg border border-rule-strong text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">To Date</label>
+                  <label className="block text-sm font-medium text-ink mb-2">To Date</label>
                   <input
                     type="date"
                     value={dateTo}
                     onChange={e => setDateTo(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full min-h-[44px] sm:min-h-0 px-3 py-2 rounded-lg border border-rule-strong text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
@@ -225,9 +221,9 @@ export default function MyActivityPage() {
             </div>
 
             {/* Activity List */}
-            <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
-              <div className="border-b border-slate-200 px-6 py-4 bg-slate-50">
-                <h2 className="text-lg font-bold text-slate-900">
+            <div className="bg-surface rounded-lg border border-rule shadow-sm overflow-hidden">
+              <div className="border-b border-rule px-6 py-4 bg-surface-sunken">
+                <h2 className="text-lg font-bold text-ink">
                   Activity Logs ({activities.length})
                 </h2>
               </div>
@@ -237,31 +233,31 @@ export default function MyActivityPage() {
                   <LoadingSpinner size="lg" />
                 </div>
               ) : activities.length === 0 ? (
-                <div className="px-6 py-12 text-center text-slate-500">
+                <div className="px-6 py-12 text-center text-ink-faint">
                   No activities found
                 </div>
               ) : (
-                <div className="divide-y divide-slate-200">
+                <div className="divide-y divide-rule">
                   {activities.map((activity) => (
-                    <div key={activity.id} className="px-6 py-4 hover:bg-slate-50 transition-colors">
+                    <div key={activity.id} className="px-6 py-4 hover:bg-surface-sunken transition-colors">
                       <div className="flex items-start gap-4">
-                        <div className="text-slate-700 mt-1">
+                        <div className="text-ink mt-1">
                           {getActionIcon(activity.action_type)}
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
                             <span
                               className={`px-2 py-1 rounded text-xs font-semibold ${
-                                ACTION_COLORS[activity.action_type] || 'bg-slate-100 text-slate-800'
+                                ACTION_COLORS[activity.action_type] || 'bg-surface-hover text-ink'
                               }`}
                             >
                               {activity.action_type.toUpperCase()}
                             </span>
-                            <span className="px-2 py-1 bg-slate-100 text-slate-800 rounded text-xs font-semibold">
+                            <span className="px-2 py-1 bg-surface-hover text-ink rounded text-xs font-semibold">
                               {activity.entity_type.replace(/_/g, ' ')}
                             </span>
                           </div>
-                          <p className="text-slate-900 font-medium">
+                          <p className="text-ink font-medium">
                             {activity.action_type} {activity.entity_type} {activity.entity_id}
                           </p>
                           {activity.changes && Object.keys(activity.changes).length > 0 && (
@@ -269,12 +265,12 @@ export default function MyActivityPage() {
                               <summary className="text-sm text-blue-600 hover:text-blue-700">
                                 View changes ({Object.keys(activity.changes).length})
                               </summary>
-                              <div className="mt-2 bg-slate-50 p-3 rounded text-xs font-mono text-slate-700 overflow-x-auto">
+                              <div className="mt-2 bg-surface-sunken p-3 rounded text-xs font-mono text-ink overflow-x-auto">
                                 <pre>{JSON.stringify(activity.changes, null, 2)}</pre>
                               </div>
                             </details>
                           )}
-                          <p className="text-xs text-slate-500 mt-2">
+                          <p className="text-xs text-ink-faint mt-2">
                             {new Date(activity.created_at).toLocaleString()}
                           </p>
                         </div>
@@ -286,7 +282,6 @@ export default function MyActivityPage() {
             </div>
           </div>
         </div>
-      </PageContainer>
-    </main>
+      </AppShell>
   )
 }

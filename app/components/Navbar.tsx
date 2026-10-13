@@ -19,6 +19,7 @@ import {
   Database,
   FileEdit,
   User,
+  Upload,
   type LucideIcon
 } from 'lucide-react'
 
@@ -87,8 +88,10 @@ export function Sidebar({ role }: SidebarProps) {
     ],
     admin: [
       { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
+      { label: 'People', href: '/admin/people', icon: User },
       { label: 'Centre Management', href: '/admin/center-management', icon: CheckCircle },
       { label: 'All Records', href: '/admin/records', icon: ClipboardList },
+      { label: 'Bulk Import', href: '/admin/import', icon: Upload },
       { label: 'Analytics', href: '/admin/analytics', icon: TrendingUp },
       { label: 'Reports & Export', href: '/tech-support/reports', icon: Download },
       { label: 'Activity Logs', href: '/admin/logs', icon: FileEdit },

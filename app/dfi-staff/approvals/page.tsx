@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import AppShell from '../../components/AppShell'
 import { useRequireRole } from '../../../lib/hooks'
 import { supabase } from '../../../lib/supabase'
 import { getStandardColumnLabel } from '../../../lib/columnLabels'
 import { LoadingSpinner, Alert } from '../../components/UI'
-import { Navbar, Sidebar, PageContainer } from '../../components/Navbar'
 import { ROLE_CONFIG } from '../../../lib/types'
 import {
   Baby,
@@ -339,7 +339,7 @@ export default function DFIStaffApprovalsPage() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-surface-sunken flex items-center justify-center">
         <LoadingSpinner size="lg" />
       </div>
     )
@@ -347,10 +347,10 @@ export default function DFIStaffApprovalsPage() {
 
   if (!isAuthorized || !profile) {
     return (
-      <main className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-lg p-6 max-w-md text-center">
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">Access Denied</h1>
-          <p className="text-slate-600">You don't have permission to access this page.</p>
+      <main className="min-h-screen bg-surface-sunken flex items-center justify-center p-4">
+        <div className="bg-surface rounded-lg shadow-lg p-6 max-w-md text-center">
+          <h1 className="text-xl font-bold sm:text-2xl text-ink mb-2">Access Denied</h1>
+          <p className="text-ink-muted">You don't have permission to access this page.</p>
         </div>
       </main>
     )
@@ -362,24 +362,20 @@ export default function DFIStaffApprovalsPage() {
   const totalVerified = Object.values(counts).reduce((a, b) => a + b, 0)
 
   return (
-    <main className="min-h-screen bg-slate-50">
-      <Navbar
-        username={profile.username}
+      <AppShell
         role="dfi_staff"
-        roleLabel={roleInfo.label}
-        roleColor={roleInfo.color}
-      />
-      <Sidebar role="dfi_staff" />
-
-      <PageContainer>
-        <div className="p-8">
+        active="/dfi-staff/approvals"
+        breadcrumb={['Review', 'Approvals']}
+        username={profile.username}
+      >
+        <div className="px-4 py-5 sm:px-6 sm:py-8">
           {/* Header */}
-          <div className="mb-8 flex items-center justify-between">
+          <div className="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-3xl font-bold text-slate-900">Final Approvals</h2>
-              <p className="text-slate-600 mt-2">
+              <h2 className="text-2xl font-bold sm:text-3xl text-ink">Final Approvals</h2>
+              <p className="text-ink-muted mt-2">
                 Approve or reject verified submissions
-                <span className="ml-2 px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-medium">
+                <span className="ml-2 px-2 py-1 bg-status-pending-bg text-status-pending-fg rounded-full text-sm font-medium">
                   {totalVerified} verified
                 </span>
               </p>
@@ -387,13 +383,13 @@ export default function DFIStaffApprovalsPage() {
             <div className="flex gap-3">
               <button
                 onClick={() => router.push('/dfi-staff/review-queue')}
-                className="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors inline-flex items-center gap-2"
+                className="min-h-[40px] px-4 py-2 bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300 rounded-lg hover:bg-purple-200 dark:hover:bg-purple-900 transition-colors inline-flex items-center gap-2"
               >
                 <Search className="w-4 h-4" /> Review Queue
               </button>
               <button
                 onClick={() => router.push('/dfi-staff')}
-                className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors inline-flex items-center gap-2"
+                className="min-h-[40px] px-4 py-2 bg-surface-hover text-ink rounded-lg hover:bg-rule transition-colors inline-flex items-center gap-2"
               >
                 <ArrowLeft className="w-4 h-4" /> Dashboard
               </button>
@@ -413,7 +409,7 @@ export default function DFIStaffApprovalsPage() {
               <div className="flex gap-3">
                 <button
                   onClick={() => setSelectedRecords(new Set())}
-                  className="px-3 py-1 bg-white text-slate-600 rounded border border-slate-300 hover:bg-slate-50"
+                  className="px-3 py-1 bg-surface text-ink-muted rounded border border-rule-strong hover:bg-surface-hover"
                 >
                   Clear Selection
                 </button>
@@ -429,7 +425,7 @@ export default function DFIStaffApprovalsPage() {
           )}
 
           {/* Entity Type Tabs */}
-          <div className="bg-white rounded-lg border border-slate-200 mb-6">
+          <div className="bg-surface rounded-lg border border-rule mb-6">
             <div className="flex overflow-x-auto">
               {(Object.keys(ENTITY_LABELS) as EntityType[]).map(type => (
                 <button
@@ -440,12 +436,12 @@ export default function DFIStaffApprovalsPage() {
                   }}
                   className={`flex-1 min-w-[120px] px-4 py-4 text-sm font-medium transition-colors border-b-2 ${activeTab === type
                     ? 'border-green-600 text-green-600 bg-green-50'
-                    : 'border-transparent text-slate-600 hover:bg-slate-50'
+                    : 'border-transparent text-ink-muted hover:bg-surface-hover'
                     }`}
                 >
                   <span className="mr-2 inline-flex">{getEntityIcon(type, 'w-4 h-4')}</span>
                   {ENTITY_LABELS[type]}
-                  <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${counts[type] > 0 ? 'bg-yellow-100 text-yellow-800' : 'bg-slate-100 text-slate-600'
+                  <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${counts[type] > 0 ? 'bg-status-pending-bg text-status-pending-fg' : 'bg-surface-hover text-ink-muted'
                     }`}>
                     {counts[type] || 0}
                   </span>
@@ -455,21 +451,21 @@ export default function DFIStaffApprovalsPage() {
           </div>
 
           {/* Records Table */}
-          <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+          <div className="bg-surface rounded-lg border border-rule overflow-hidden">
             {loading ? (
               <div className="p-12 text-center">
                 <LoadingSpinner size="lg" />
-                <p className="mt-4 text-slate-600">Loading submissions...</p>
+                <p className="mt-4 text-ink-muted">Loading submissions...</p>
               </div>
             ) : currentTabData.length === 0 ? (
               <div className="p-12 text-center">
                 <CheckCircle className="w-14 h-14 text-green-500 mx-auto mb-4" />
-                <p className="text-slate-600 font-medium">No verified {ENTITY_LABELS[activeTab]} records</p>
+                <p className="text-ink-muted font-medium">No verified {ENTITY_LABELS[activeTab]} records</p>
               </div>
             ) : (
               <div className="max-h-[70vh] overflow-auto">
                 <table className="w-full min-w-max">
-                  <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
+                  <thead className="bg-surface-sunken border-b border-rule sticky top-0 z-10">
                     <tr>
                       <th className="px-4 py-3 text-left">
                         <input
@@ -477,28 +473,28 @@ export default function DFIStaffApprovalsPage() {
                           checked={selectableRows.length > 0 && selectableRows.every((record) => selectedRecords.has(getEntityId(record) || ''))}
                           onChange={toggleSelectAll}
                           disabled={selectableRows.length === 0}
-                          className="w-4 h-4 rounded border-slate-300"
+                          className="w-4 h-4 rounded border-rule-strong"
                         />
                       </th>
                       {allColumnKeys.map((columnKey) => (
                         <th
                           key={columnKey}
-                          className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap"
+                          className="px-4 py-3 text-left text-xs font-semibold text-ink-muted uppercase whitespace-nowrap"
                           title={columnKey}
                         >
                           {formatColumnLabel(columnKey)}
                         </th>
                       ))}
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase">Actions</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-ink-muted uppercase">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-200">
+                  <tbody className="divide-y divide-rule">
                     {currentTabData.map((record) => {
                       const entityId = getEntityId(record)
                       const selectable = isRowSelectable(record)
 
                       return (
-                        <tr key={getEntityId(record) || `${activeTab}-${record.created_at}`} className={`hover:bg-slate-50 ${selectedRecords.has(getEntityId(record) || '') ? 'bg-blue-50' : ''
+                        <tr key={getEntityId(record) || `${activeTab}-${record.created_at}`} className={`hover:bg-surface-hover ${selectedRecords.has(getEntityId(record) || '') ? 'bg-blue-50' : ''
                           }`}>
                           <td className="px-4 py-3">
                             <input
@@ -508,7 +504,7 @@ export default function DFIStaffApprovalsPage() {
                                 if (entityId && selectable) toggleSelectRecord(entityId)
                               }}
                               disabled={!selectable}
-                              className="w-4 h-4 rounded border-slate-300"
+                              className="w-4 h-4 rounded border-rule-strong"
                             />
                           </td>
                           {allColumnKeys.map((columnKey) => {
@@ -516,11 +512,11 @@ export default function DFIStaffApprovalsPage() {
                             const photoUrl = typeof rawValue === 'string' ? rawValue.trim() : ''
 
                             return (
-                              <td key={`${getEntityId(record) || record.created_at}-${columnKey}`} className="px-4 py-3 text-sm text-slate-700 align-top whitespace-nowrap">
+                              <td key={`${getEntityId(record) || record.created_at}-${columnKey}`} className="px-4 py-3 text-sm text-ink align-top whitespace-nowrap">
                                 {isPhotoLinkColumn(columnKey) && photoUrl ? (
                                   <button
                                     onClick={() => setPhotoPreviewUrl(photoUrl)}
-                                    className="px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 text-sm font-medium"
+                                    className="px-3 py-1 bg-accent-bg text-accent-fg rounded hover:bg-blue-200 text-sm font-medium"
                                   >
                                     View Photo
                                   </button>
@@ -535,7 +531,7 @@ export default function DFIStaffApprovalsPage() {
                               <button
                                 onClick={() => handleApprove(record)}
                                 disabled={actionLoading || !selectable}
-                                className="px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 disabled:opacity-50 text-sm font-medium inline-flex items-center gap-1"
+                                className="px-3 py-1 bg-status-approved-bg text-status-approved-fg rounded hover:bg-green-200 disabled:opacity-50 text-sm font-medium inline-flex items-center gap-1"
                               >
                                 <CheckCircle className="w-4 h-4" /> Approve
                               </button>
@@ -545,7 +541,7 @@ export default function DFIStaffApprovalsPage() {
                                   setShowRejectModal(true)
                                 }}
                                 disabled={actionLoading || !selectable}
-                                className="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 disabled:opacity-50 text-sm font-medium inline-flex items-center gap-1"
+                                className="px-3 py-1 bg-status-returned-bg text-status-returned-fg rounded hover:bg-red-200 disabled:opacity-50 text-sm font-medium inline-flex items-center gap-1"
                               >
                                 <XCircle className="w-4 h-4" /> Reject
                               </button>
@@ -560,21 +556,20 @@ export default function DFIStaffApprovalsPage() {
             )}
           </div>
         </div>
-      </PageContainer>
 
       {/* Reject Modal */}
       {showRejectModal && rejectingRecord && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
-            <h3 className="text-xl font-bold text-slate-900 mb-4">Reject Record</h3>
-            <p className="text-slate-600 mb-4">
+          <div className="bg-surface rounded-xl shadow-2xl max-w-md w-full p-6">
+            <h3 className="text-xl font-bold text-ink mb-4">Reject Record</h3>
+            <p className="text-ink-muted mb-4">
               Rejecting: <strong>{getRecordName(rejectingRecord)}</strong>
             </p>
             <textarea
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
               placeholder="Enter rejection reason (required)..."
-              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 resize-none"
+              className="w-full px-4 py-3 border border-rule-strong rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 resize-none"
               rows={4}
             />
             <div className="flex gap-3 mt-6">
@@ -584,7 +579,7 @@ export default function DFIStaffApprovalsPage() {
                   setRejectReason('')
                   setRejectingRecord(null)
                 }}
-                className="flex-1 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
+                className="flex-1 px-4 py-2 bg-surface-hover text-ink rounded-lg hover:bg-rule transition-colors"
               >
                 Cancel
               </button>
@@ -602,17 +597,17 @@ export default function DFIStaffApprovalsPage() {
 
       {photoPreviewUrl && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-4">
+          <div className="bg-surface rounded-xl shadow-2xl max-w-sm w-full p-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-lg font-bold text-slate-900">Photo Preview</h3>
+              <h3 className="text-lg font-bold text-ink">Photo Preview</h3>
               <button
                 onClick={() => setPhotoPreviewUrl(null)}
-                className="px-2 py-1 bg-slate-100 text-slate-700 rounded hover:bg-slate-200"
+                className="px-2 py-1 bg-surface-hover text-ink rounded hover:bg-rule"
               >
                 Close
               </button>
             </div>
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-2">
+            <div className="rounded-lg border border-rule bg-surface-sunken p-2">
               <img
                 src={photoPreviewUrl}
                 alt="Record Photo"
@@ -622,6 +617,6 @@ export default function DFIStaffApprovalsPage() {
           </div>
         </div>
       )}
-    </main>
+    </AppShell>
   )
 }

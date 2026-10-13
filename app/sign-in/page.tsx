@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
+import DFILogo from '../../public/DFI.png'
 import { supabase } from '../../lib/supabase'
 import { Alert, LoadingSpinner } from '../components/UI'
 
@@ -105,7 +107,7 @@ export default function SignInPage() {
   }, [router])
   if (checkingAuth) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-100">
+      <main className="flex min-h-screen items-center justify-center bg-surface-hover">
         <LoadingSpinner size="lg" />
       </main>
     )
@@ -196,21 +198,29 @@ export default function SignInPage() {
   // Show loading spinner while redirecting
   if (redirecting) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-100">
+      <main className="flex min-h-screen items-center justify-center bg-surface-hover">
         <LoadingSpinner size="lg" />
       </main>
     )
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
-      <div className="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
-        <div className="mb-6 text-center">
-          <h1 className="text-2xl font-semibold text-slate-900">
-            Sign In
+    <main className="flex min-h-screen items-center justify-center bg-surface-hover px-4">
+      <div className="w-full max-w-sm rounded-2xl border border-rule bg-surface p-8 shadow-sm">
+        <div className="mb-6 flex flex-col items-center text-center">
+          <Image
+            src={DFILogo}
+            alt="Debora Foundation India"
+            width={180}
+            height={60}
+            priority
+            className="mb-5 h-auto w-40"
+          />
+          <h1 className="text-2xl font-semibold text-ink">
+            Sign in
           </h1>
-          <p className="mt-2 text-sm text-slate-600">
-            Enter credentials to continue.
+          <p className="mt-1.5 text-sm text-ink-faint">
+            Welcome back — enter your details to continue.
           </p>
         </div>
 
@@ -218,7 +228,7 @@ export default function SignInPage() {
           <div>
             <label
               htmlFor="username"
-              className="mb-1 block text-sm font-medium text-slate-700"
+              className="mb-1 block text-sm font-medium text-ink"
             >
               Username
             </label>
@@ -232,14 +242,14 @@ export default function SignInPage() {
               }}
               autoComplete="username"
               required
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+              className="w-full rounded-lg border border-rule px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
             />
           </div>
 
           <div>
             <label
               htmlFor="password"
-              className="mb-1 block text-sm font-medium text-slate-700"
+              className="mb-1 block text-sm font-medium text-ink"
             >
               Password
             </label>
@@ -253,7 +263,7 @@ export default function SignInPage() {
               }}
               autoComplete="current-password"
               required
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+              className="w-full rounded-lg border border-rule px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
             />
           </div>
 
@@ -278,10 +288,6 @@ export default function SignInPage() {
             </Link>
           </div>
         </form>
-
-        <p className="mt-6 text-center text-xs text-slate-500">
-          Credentials are validated against the <code>profiles</code> table.
-        </p>
       </div>
     </main>
   )

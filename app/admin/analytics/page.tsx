@@ -1,10 +1,10 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import AppShell from '../../components/AppShell'
 import { useRequireRole } from '../../../lib/hooks'
 import { supabase } from '../../../lib/supabase'
 import { LoadingSpinner, Alert } from '../../components/UI'
-import { Navbar, Sidebar, PageContainer } from '../../components/Navbar'
 import { CheckCircle } from 'lucide-react'
 
 type ReportTab = 'child_data' | 'vocational_course'
@@ -287,7 +287,7 @@ export default function AdminAnalyticsPage() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-surface-sunken flex items-center justify-center">
         <LoadingSpinner size="lg" />
       </div>
     )
@@ -295,45 +295,41 @@ export default function AdminAnalyticsPage() {
 
   if (!isAuthorized || !profile) {
     return (
-      <main className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-lg p-6 max-w-md text-center">
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">Access Denied</h1>
-          <p className="text-slate-600">You don't have permission to access this page.</p>
+      <main className="min-h-screen bg-surface-sunken flex items-center justify-center p-4">
+        <div className="bg-surface rounded-lg shadow-lg p-6 max-w-md text-center">
+          <h1 className="text-xl font-bold sm:text-2xl text-ink mb-2">Access Denied</h1>
+          <p className="text-ink-muted">You don't have permission to access this page.</p>
         </div>
       </main>
     )
   }
 
   return (
-    <main className="min-h-screen bg-slate-50">
-      <Navbar
-        username={profile.username}
+      <AppShell
         role="admin"
-        roleLabel="Admin"
-        roleColor="bg-indigo-100 text-indigo-800"
-      />
-      <Sidebar role="admin" />
-
-      <PageContainer>
-        <div className="p-8">
+        active="/admin/analytics"
+        breadcrumb={['Data', 'Analytics']}
+        username={profile.username}
+      >
+        <div className="px-4 py-5 sm:px-6 sm:py-8">
           <div className="mx-auto max-w-7xl space-y-8">
             {/* Header */}
             <div className="flex items-start justify-between">
               <div>
-                <h1 className="text-4xl font-bold text-slate-900">Analytics & Reports</h1>
-                <p className="mt-2 text-slate-600">System-wide statistics and trends</p>
+                <h1 className="text-4xl font-bold text-ink">Analytics & Reports</h1>
+                <p className="mt-2 text-ink-muted">System-wide statistics and trends</p>
               </div>
             </div>
 
-            <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
-              <h2 className="text-xl font-bold text-slate-900 mb-6">Dynamic Reports</h2>
+            <div className="bg-surface rounded-lg border border-rule p-6 shadow-sm">
+              <h2 className="text-xl font-bold text-ink mb-6">Dynamic Reports</h2>
 
-              <div className="mb-6 border-b border-slate-200 flex gap-2">
+              <div className="mb-6 border-b border-rule flex gap-2">
                 <button
                   onClick={() => setReportTab('child_data')}
                   className={`px-4 py-2 rounded-t-lg text-sm font-medium ${reportTab === 'child_data'
-                    ? 'bg-blue-50 text-blue-700 border border-b-0 border-blue-200'
-                    : 'text-slate-600 hover:bg-slate-50'
+                    ? 'bg-accent-bg text-accent-fg border border-b-0 border-blue-200'
+                    : 'text-ink-muted hover:bg-surface-hover'
                     }`}
                 >
                   Child Data
@@ -341,8 +337,8 @@ export default function AdminAnalyticsPage() {
                 <button
                   onClick={() => setReportTab('vocational_course')}
                   className={`px-4 py-2 rounded-t-lg text-sm font-medium ${reportTab === 'vocational_course'
-                    ? 'bg-blue-50 text-blue-700 border border-b-0 border-blue-200'
-                    : 'text-slate-600 hover:bg-slate-50'
+                    ? 'bg-accent-bg text-accent-fg border border-b-0 border-blue-200'
+                    : 'text-ink-muted hover:bg-surface-hover'
                     }`}
                 >
                   Vocational Course
@@ -351,11 +347,11 @@ export default function AdminAnalyticsPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4 items-end">
                 <div className="lg:col-span-2">
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Group By *</label>
+                  <label className="block text-sm font-medium text-ink mb-1">Group By *</label>
                   <select
                     value={reportGroupBy[reportTab]}
                     onChange={(e) => setReportGroupBy((prev) => ({ ...prev, [reportTab]: e.target.value as ReportColumn }))}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                    className="w-full min-h-[44px] sm:min-h-0 px-3 py-2 border border-rule-strong rounded-lg text-base sm:text-sm text-sm"
                   >
                     <option value="">Select column</option>
                     {REPORT_COLUMNS_BY_TAB[reportTab].map((column) => (
@@ -375,7 +371,7 @@ export default function AdminAnalyticsPage() {
                 <button
                   onClick={handleResetReportFilters}
                   disabled={reportLoading || reportOptionsLoading}
-                  className="px-6 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 disabled:opacity-50"
+                  className="px-6 py-2 bg-surface-hover text-ink rounded-lg hover:bg-rule disabled:opacity-50"
                 >
                   Reset
                 </button>
@@ -384,7 +380,7 @@ export default function AdminAnalyticsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
                 {REPORT_COLUMNS_BY_TAB[reportTab].map((column) => (
                   <div key={`${reportTab}-${column.key}`}>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">{column.label}</label>
+                    <label className="block text-sm font-medium text-ink mb-1">{column.label}</label>
                     <select
                       value={reportFilters[reportTab]?.[column.key] || ''}
                       onChange={(e) => setReportFilters((prev) => ({
@@ -394,7 +390,7 @@ export default function AdminAnalyticsPage() {
                           [column.key]: e.target.value
                         }
                       }))}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                      className="w-full min-h-[44px] sm:min-h-0 px-3 py-2 border border-rule-strong rounded-lg text-base sm:text-sm text-sm"
                       disabled={reportOptionsLoading}
                     >
                       <option value="">All</option>
@@ -410,17 +406,17 @@ export default function AdminAnalyticsPage() {
                 <button
                   onClick={handleExportCsv}
                   disabled={reportLoading || reportRows.length === 0}
-                  className="px-6 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-6 py-2 bg-surface-hover text-ink rounded-lg hover:bg-rule disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Export as CSV
                 </button>
-                <span className="text-sm text-slate-500">
+                <span className="text-sm text-ink-faint">
                   Active filters: {activeReportFiltersCount}
                 </span>
-                <span className="text-sm text-slate-500">
+                <span className="text-sm text-ink-faint">
                   Rows: {reportRows.length}
                 </span>
-                <span className="text-sm text-slate-500">
+                <span className="text-sm text-ink-faint">
                   Total students: {reportTotalStudents}
                 </span>
               </div>
@@ -431,29 +427,29 @@ export default function AdminAnalyticsPage() {
                 </div>
               )}
 
-              <div className="border border-slate-200 rounded-lg overflow-hidden">
+              <div className="border border-rule rounded-lg overflow-hidden">
                 {reportLoading ? (
                   <div className="p-8 text-center">
                     <LoadingSpinner size="lg" />
                   </div>
                 ) : reportRows.length === 0 ? (
-                  <div className="p-8 text-center text-slate-600">No data found</div>
+                  <div className="p-8 text-center text-ink-muted">No data found</div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
-                      <thead className="bg-slate-50 border-b border-slate-200">
+                      <thead className="bg-surface-sunken border-b border-rule">
                         <tr>
-                          <th className="px-4 py-3 text-left font-semibold text-slate-700">Group</th>
-                          <th className="px-4 py-3 text-left font-semibold text-slate-700">Total Students</th>
-                          <th className="px-4 py-3 text-left font-semibold text-slate-700">Share</th>
+                          <th className="px-4 py-3 text-left font-semibold text-ink">Group</th>
+                          <th className="px-4 py-3 text-left font-semibold text-ink">Total Students</th>
+                          <th className="px-4 py-3 text-left font-semibold text-ink">Share</th>
                         </tr>
                       </thead>
                       <tbody>
                         {reportRows.map((row, index) => (
-                          <tr key={`${row.group}-${index}`} className="border-b border-slate-100">
-                            <td className="px-4 py-3 text-slate-800">{row.group === 'Not Specified' || !String(row.group || '').trim() ? '-' : row.group}</td>
-                            <td className="px-4 py-3 text-slate-800 font-medium">{row.total_children}</td>
-                            <td className="px-4 py-3 text-slate-600">
+                          <tr key={`${row.group}-${index}`} className="border-b border-rule-faint">
+                            <td className="px-4 py-3 text-ink">{row.group === 'Not Specified' || !String(row.group || '').trim() ? '-' : row.group}</td>
+                            <td className="px-4 py-3 text-ink font-medium">{row.total_children}</td>
+                            <td className="px-4 py-3 text-ink-muted">
                               {reportTotalStudents > 0 ? `${((row.total_children / reportTotalStudents) * 100).toFixed(1)}%` : '0.0%'}
                             </td>
                           </tr>
@@ -475,38 +471,38 @@ export default function AdminAnalyticsPage() {
               <div className="space-y-8">
                 {/* Summary Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
-                    <p className="text-sm text-slate-600 font-medium">Total Students</p>
-                    <p className="text-3xl font-bold text-slate-900 mt-2">
+                  <div className="bg-surface rounded-lg border border-rule p-6 shadow-sm">
+                    <p className="text-sm text-ink-muted font-medium">Total Students</p>
+                    <p className="text-2xl font-bold sm:text-3xl text-ink mt-2">
                       {analytics.summary.totalChildren}
                     </p>
                   </div>
-                  <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
-                    <p className="text-sm text-slate-600 font-medium">Pending Approval</p>
-                    <p className="text-3xl font-bold text-yellow-600 mt-2">
+                  <div className="bg-surface rounded-lg border border-rule p-6 shadow-sm">
+                    <p className="text-sm text-ink-muted font-medium">Pending Approval</p>
+                    <p className="text-2xl font-bold sm:text-3xl text-yellow-600 mt-2">
                       {analytics.summary.totalPending}
                     </p>
-                    <p className="text-xs text-slate-500 mt-1">{analyticsRates.pendingRate}% of total</p>
+                    <p className="text-xs text-ink-faint mt-1">{analyticsRates.pendingRate}% of total</p>
                   </div>
-                  <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
-                    <p className="text-sm text-slate-600 font-medium">Approved</p>
-                    <p className="text-3xl font-bold text-green-600 mt-2">
+                  <div className="bg-surface rounded-lg border border-rule p-6 shadow-sm">
+                    <p className="text-sm text-ink-muted font-medium">Approved</p>
+                    <p className="text-2xl font-bold sm:text-3xl text-green-600 mt-2">
                       {analytics.summary.totalApproved}
                     </p>
-                    <p className="text-xs text-slate-500 mt-1">{analyticsRates.approvedRate}% of total</p>
+                    <p className="text-xs text-ink-faint mt-1">{analyticsRates.approvedRate}% of total</p>
                   </div>
-                  <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
-                    <p className="text-sm text-slate-600 font-medium">Rejected</p>
-                    <p className="text-3xl font-bold text-red-600 mt-2">
+                  <div className="bg-surface rounded-lg border border-rule p-6 shadow-sm">
+                    <p className="text-sm text-ink-muted font-medium">Rejected</p>
+                    <p className="text-2xl font-bold sm:text-3xl text-red-600 mt-2">
                       {analytics.summary.totalRejected}
                     </p>
-                    <p className="text-xs text-slate-500 mt-1">{analyticsRates.rejectedRate}% of total</p>
+                    <p className="text-xs text-ink-faint mt-1">{analyticsRates.rejectedRate}% of total</p>
                   </div>
                 </div>
 
                 {/* Status Distribution Pie Chart */}
-                <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
-                  <h2 className="text-xl font-bold text-slate-900 mb-6">Status Distribution</h2>
+                <div className="bg-surface rounded-lg border border-rule p-6 shadow-sm">
+                  <h2 className="text-xl font-bold text-ink mb-6">Status Distribution</h2>
                   <div className="flex flex-col items-center gap-8">
                     <svg width="200" height="200" viewBox="0 0 200 200" className="drop-shadow">
                       {(() => {
@@ -559,35 +555,35 @@ export default function AdminAnalyticsPage() {
                     <div className="flex flex-col gap-3">
                       <div className="flex items-center gap-2">
                         <div className="w-4 h-4 bg-yellow-400 rounded"></div>
-                        <span className="text-sm text-slate-700">Pending: {analytics.summary.totalPending}</span>
+                        <span className="text-sm text-ink">Pending: {analytics.summary.totalPending}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="w-4 h-4 bg-green-400 rounded"></div>
-                        <span className="text-sm text-slate-700">Approved: {analytics.summary.totalApproved}</span>
+                        <span className="text-sm text-ink">Approved: {analytics.summary.totalApproved}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="w-4 h-4 bg-red-400 rounded"></div>
-                        <span className="text-sm text-slate-700">Rejected: {analytics.summary.totalRejected}</span>
+                        <span className="text-sm text-ink">Rejected: {analytics.summary.totalRejected}</span>
                       </div>
                     </div>
                   </div>
                 </div>
 
                 {/* By Centre */}
-                <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
-                  <h2 className="text-xl font-bold text-slate-900 mb-6">Children by Centre</h2>
+                <div className="bg-surface rounded-lg border border-rule p-6 shadow-sm">
+                  <h2 className="text-xl font-bold text-ink mb-6">Children by Centre</h2>
                   <div className="space-y-3 max-h-96 overflow-y-auto">
                     {analytics.byCentre.length === 0 ? (
-                      <p className="text-slate-500">No data available</p>
+                      <p className="text-ink-faint">No data available</p>
                     ) : (
                       analytics.byCentre.sort((a, b) => b.count - a.count).map((centre) => (
-                        <div key={centre.eac_no} className="flex items-center justify-between pb-3 border-b border-slate-100">
+                        <div key={centre.eac_no} className="flex items-center justify-between pb-3 border-b border-rule-faint">
                           <div>
-                            <p className="font-medium text-slate-900">{centre.village_name}</p>
-                            <p className="text-sm text-slate-500">{centre.eac_no}</p>
+                            <p className="font-medium text-ink">{centre.village_name}</p>
+                            <p className="text-sm text-ink-faint">{centre.eac_no}</p>
                           </div>
                           <div className="flex items-center gap-4">
-                            <div className="w-48 bg-slate-200 rounded-full h-2">
+                            <div className="w-48 bg-rule rounded-full h-2">
                               <div
                                 className="bg-blue-600 h-2 rounded-full"
                                 style={{
@@ -595,7 +591,7 @@ export default function AdminAnalyticsPage() {
                                 }}
                               ></div>
                             </div>
-                            <span className="font-bold text-slate-900 min-w-fit">{centre.count}</span>
+                            <span className="font-bold text-ink min-w-fit">{centre.count}</span>
                           </div>
                         </div>
                       ))
@@ -604,17 +600,17 @@ export default function AdminAnalyticsPage() {
                 </div>
 
                 {/* Top Volunteers */}
-                <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
-                  <h2 className="text-xl font-bold text-slate-900 mb-6">Top Submitting Volunteers</h2>
+                <div className="bg-surface rounded-lg border border-rule p-6 shadow-sm">
+                  <h2 className="text-xl font-bold text-ink mb-6">Top Submitting Volunteers</h2>
                   <div className="space-y-3">
                     {analytics.topVolunteers.length === 0 ? (
-                      <p className="text-slate-500">No data available</p>
+                      <p className="text-ink-faint">No data available</p>
                     ) : (
                       analytics.topVolunteers.map((vol, idx) => (
-                        <div key={vol.user_id} className="flex items-center gap-4 pb-3 border-b border-slate-100">
-                          <span className="font-bold text-lg text-slate-500 min-w-fit w-8">{idx + 1}.</span>
+                        <div key={vol.user_id} className="flex items-center gap-4 pb-3 border-b border-rule-faint">
+                          <span className="font-bold text-lg text-ink-faint min-w-fit w-8">{idx + 1}.</span>
                           <div className="flex-1">
-                            <p className="font-medium text-slate-900">{vol.username}</p>
+                            <p className="font-medium text-ink">{vol.username}</p>
                           </div>
                           <span className="text-lg font-bold text-blue-600">{vol.count}</span>
                         </div>
@@ -627,13 +623,13 @@ export default function AdminAnalyticsPage() {
                 {(analytics.vocationalCourses.length > 0 || analytics.computerCourses.length > 0) && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {analytics.vocationalCourses.length > 0 && (
-                      <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
-                        <h2 className="text-xl font-bold text-slate-900 mb-6">Vocational Courses</h2>
+                      <div className="bg-surface rounded-lg border border-rule p-6 shadow-sm">
+                        <h2 className="text-xl font-bold text-ink mb-6">Vocational Courses</h2>
                         <div className="space-y-2">
                           {analytics.vocationalCourses.sort((a, b) => b.count - a.count).map((course) => (
                             <div key={course.course} className="flex items-center justify-between pb-2">
-                              <span className="text-sm text-slate-700">{course.course}</span>
-                              <span className="font-semibold text-slate-900">{course.count}</span>
+                              <span className="text-sm text-ink">{course.course}</span>
+                              <span className="font-semibold text-ink">{course.count}</span>
                             </div>
                           ))}
                         </div>
@@ -641,13 +637,13 @@ export default function AdminAnalyticsPage() {
                     )}
 
                     {analytics.computerCourses.length > 0 && (
-                      <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
-                        <h2 className="text-xl font-bold text-slate-900 mb-6">Computer Courses</h2>
+                      <div className="bg-surface rounded-lg border border-rule p-6 shadow-sm">
+                        <h2 className="text-xl font-bold text-ink mb-6">Computer Courses</h2>
                         <div className="space-y-2">
                           {analytics.computerCourses.sort((a, b) => b.count - a.count).map((course) => (
                             <div key={course.course} className="flex items-center justify-between pb-2">
-                              <span className="text-sm text-slate-700">{course.course}</span>
-                              <span className="font-semibold text-slate-900">{course.count}</span>
+                              <span className="text-sm text-ink">{course.course}</span>
+                              <span className="font-semibold text-ink">{course.count}</span>
                             </div>
                           ))}
                         </div>
@@ -658,8 +654,8 @@ export default function AdminAnalyticsPage() {
 
                 {/* Gender Distribution */}
                 {analytics.genderDistribution && Object.keys(analytics.genderDistribution).length > 0 && (
-                  <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
-                    <h2 className="text-xl font-bold text-slate-900 mb-6">Gender Distribution</h2>
+                  <div className="bg-surface rounded-lg border border-rule p-6 shadow-sm">
+                    <h2 className="text-xl font-bold text-ink mb-6">Gender Distribution</h2>
                     <div className="flex flex-col md:flex-row items-center justify-around gap-8">
                       {/* Pie Chart */}
                       <svg width="180" height="180" viewBox="0 0 180 180" className="drop-shadow">
@@ -695,15 +691,15 @@ export default function AdminAnalyticsPage() {
                       {/* Legend */}
                       <div className="space-y-3">
                         {Object.entries(analytics.genderDistribution).map(([gender, count], idx) => {
-                          const colors = ['bg-blue-500', 'bg-pink-500', 'bg-slate-400']
+                          const colors = ['bg-blue-500', 'bg-pink-500', 'bg-ink-faint']
                           const total = Object.values(analytics.genderDistribution).reduce((a, b) => a + b, 0)
                           const percent = ((count / total) * 100).toFixed(1)
                           return (
                             <div key={gender} className="flex items-center gap-3">
                               <div className={`w-4 h-4 ${colors[idx % colors.length]} rounded`}></div>
                               <div>
-                                <p className="font-medium text-slate-900">{gender}</p>
-                                <p className="text-sm text-slate-600">{count} ({percent}%)</p>
+                                <p className="font-medium text-ink">{gender}</p>
+                                <p className="text-sm text-ink-muted">{count} ({percent}%)</p>
                               </div>
                             </div>
                           )
@@ -715,8 +711,8 @@ export default function AdminAnalyticsPage() {
 
                 {/* Age Distribution */}
                 {analytics.ageDistribution && Object.keys(analytics.ageDistribution).length > 0 && (
-                  <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
-                    <h2 className="text-xl font-bold text-slate-900 mb-6">Age Group Distribution (by Class)</h2>
+                  <div className="bg-surface rounded-lg border border-rule p-6 shadow-sm">
+                    <h2 className="text-xl font-bold text-ink mb-6">Age Group Distribution (by Class)</h2>
                     <div className="h-64">
                       <div className="flex items-end justify-around h-56 gap-4 px-4">
                         {Object.entries(analytics.ageDistribution)
@@ -730,14 +726,14 @@ export default function AdminAnalyticsPage() {
                             return (
                               <div key={ageGroup} className="flex flex-col items-center gap-2 flex-1">
                                 <div className="w-full flex flex-col items-center">
-                                  <span className="text-sm font-semibold text-slate-900 mb-1">{count}</span>
+                                  <span className="text-sm font-semibold text-ink mb-1">{count}</span>
                                   <div
                                     className="w-full bg-gradient-to-t from-indigo-600 to-indigo-400 rounded-t-lg"
                                     style={{ height: `${heightPercent}%`, minHeight: count > 0 ? '20px' : '0' }}
                                     title={`${ageGroup}: ${count} children`}
                                   ></div>
                                 </div>
-                                <span className="text-xs font-medium text-slate-600 text-center">{ageGroup}</span>
+                                <span className="text-xs font-medium text-ink-muted text-center">{ageGroup}</span>
                               </div>
                             )
                           })}
@@ -748,8 +744,8 @@ export default function AdminAnalyticsPage() {
 
                 {/* Grade Distribution */}
                 {analytics.gradeDistribution && Object.keys(analytics.gradeDistribution).length > 0 && (
-                  <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
-                    <h2 className="text-xl font-bold text-slate-900 mb-6">Grade-Wise Distribution</h2>
+                  <div className="bg-surface rounded-lg border border-rule p-6 shadow-sm">
+                    <h2 className="text-xl font-bold text-ink mb-6">Grade-Wise Distribution</h2>
                     <div className="space-y-3 max-h-96 overflow-y-auto">
                       {Object.entries(analytics.gradeDistribution)
                         .filter(([grade]) => grade !== 'Unknown')
@@ -763,8 +759,8 @@ export default function AdminAnalyticsPage() {
                           const widthPercent = (count / maxCount) * 100
                           return (
                             <div key={grade} className="flex items-center gap-4">
-                              <span className="font-medium text-slate-900 min-w-fit w-20">Grade {grade}</span>
-                              <div className="flex-1 bg-slate-200 rounded-full h-6">
+                              <span className="font-medium text-ink min-w-fit w-20">Grade {grade}</span>
+                              <div className="flex-1 bg-rule rounded-full h-6">
                                 <div
                                   className="bg-gradient-to-r from-emerald-500 to-emerald-400 h-6 rounded-full flex items-center justify-end px-3"
                                   style={{ width: `${Math.max(widthPercent, 5)}%` }}
@@ -776,11 +772,11 @@ export default function AdminAnalyticsPage() {
                           )
                         })}
                       {analytics.gradeDistribution['Unknown'] > 0 && (
-                        <div className="flex items-center gap-4 pt-2 border-t border-slate-200">
-                          <span className="font-medium text-slate-500 min-w-fit w-20">Unknown</span>
-                          <div className="flex-1 bg-slate-200 rounded-full h-6">
+                        <div className="flex items-center gap-4 pt-2 border-t border-rule">
+                          <span className="font-medium text-ink-faint min-w-fit w-20">Unknown</span>
+                          <div className="flex-1 bg-rule rounded-full h-6">
                             <div
-                              className="bg-slate-400 h-6 rounded-full flex items-center justify-end px-3"
+                              className="bg-ink-faint h-6 rounded-full flex items-center justify-end px-3"
                               style={{
                                 width: `${Math.max((analytics.gradeDistribution['Unknown'] / Math.max(...Object.values(analytics.gradeDistribution))) * 100, 5)}%`
                               }}
@@ -815,7 +811,6 @@ export default function AdminAnalyticsPage() {
             ) : null}
           </div>
         </div>
-      </PageContainer>
-    </main>
+      </AppShell>
   )
 }

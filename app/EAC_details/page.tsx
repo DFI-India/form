@@ -178,8 +178,8 @@ export default function EAC_Details() {
 
     if (!checkedAuth) {
         return (
-            <main className="flex min-h-screen items-center justify-center bg-slate-100">
-                <p className="text-sm text-slate-500">Checking access…</p>
+            <main className="flex min-h-screen items-center justify-center bg-surface-hover">
+                <p className="text-sm text-ink-faint">Checking access…</p>
             </main>
         )
     }
@@ -187,7 +187,7 @@ export default function EAC_Details() {
     if (!authorized) return null
 
     return (
-        <main className="flex-1 bg-slate-100 min-h-screen p-8">
+        <main className="flex-1 bg-surface-hover min-h-screen p-8">
             {/* Header */}
             <header className="mb-8">
                 <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
@@ -200,7 +200,7 @@ export default function EAC_Details() {
                             priority
                             className="h-auto w-40 sm:w-44"
                         />
-                        <span className="text-xl font-semibold text-slate-900">
+                        <span className="text-xl font-semibold text-ink">
                             Debora Foundation India
                         </span>
                     </div>
@@ -211,7 +211,7 @@ export default function EAC_Details() {
                             await supabase.auth.signOut()
                             router.replace('/sign-in')
                         }}
-                        className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 hover:border-slate-400 hover:text-slate-800"
+                        className="inline-flex items-center justify-center rounded-lg border border-rule-strong px-4 py-2 text-sm font-semibold text-ink-muted hover:border-rule-strong hover:text-ink"
                     >
                         Sign out
                     </button>
@@ -220,7 +220,7 @@ export default function EAC_Details() {
                 <p className="text-sm font-semibold tracking-wide text-blue-600">
                     Centre Directory
                 </p>
-                <h1 className="mt-2 text-3xl font-bold text-slate-900">EAC Details</h1>
+                <h1 className="mt-2 text-3xl font-bold text-ink">EAC Details</h1>
             </header>
 
             {/* Search Bar */}
@@ -230,19 +230,19 @@ export default function EAC_Details() {
                     placeholder="Search by EAC No…"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                    className="w-full rounded-lg border border-rule-strong px-4 py-2 text-sm focus:border-blue-500 focus:outline-none"
                 />
             </section>
             {/* Table Section (moved after form so user sees entry boxes when row clicked) */}
-            <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <section className="rounded-xl border border-rule bg-surface p-6 shadow-sm">
                 {loading ? (
-                    <p className="text-sm text-slate-500">Loading…</p>
+                    <p className="text-sm text-ink-faint">Loading…</p>
                 ) : filteredData.length === 0 ? (
-                    <p className="text-sm text-slate-500">No matching records.</p>
+                    <p className="text-sm text-ink-faint">No matching records.</p>
                 ) : (
                     <div className="overflow-x-auto">
-                        <table className="min-w-full border border-slate-200 text-sm text-slate-700">
-                            <thead className="bg-slate-50 text-slate-600">
+                        <table className="min-w-full border border-rule text-sm text-ink">
+                            <thead className="bg-surface-sunken text-ink-muted">
                                 <tr>
                                     <th className="border px-3 py-2 text-left">EAC No</th>
                                     <th className="border px-3 py-2 text-left">Centre ID</th>
@@ -264,7 +264,7 @@ export default function EAC_Details() {
                                             <tr
                                                 key={key}
                                                 onClick={() => handleRowClick(item)}
-                                                className={`cursor-pointer ${isSelected ? 'bg-blue-50' : (idx % 2 === 0 ? 'bg-white' : 'bg-slate-50')}`}
+                                                className={`cursor-pointer ${isSelected ? 'bg-blue-50' : (idx % 2 === 0 ? 'bg-surface' : 'bg-surface-sunken')}`}
                                             >
                                                 <td className="border px-3 py-2">{item.eac_no}</td>
                                                 <td className="border px-3 py-2">{item.centre_id ?? '-'}</td>
@@ -305,9 +305,9 @@ export default function EAC_Details() {
 
             </section>
             {/* Add New Entry Form */}
-            <section className="mb-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <section className="mb-8 rounded-xl border border-rule bg-surface p-6 shadow-sm">
                 <div className="mb-4 flex items-start justify-between">
-                    <h2 className="text-lg font-semibold text-slate-800">
+                    <h2 className="text-lg font-semibold text-ink">
                         {editing ? 'Edit EAC Entry' : 'Add New EAC Entry'}
                     </h2>
 
@@ -322,7 +322,7 @@ export default function EAC_Details() {
                                 </button>
                                 <button
                                     onClick={handleCancelEdit}
-                                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                                    className="rounded-lg border border-rule-strong px-4 py-2 text-sm font-semibold text-ink hover:bg-surface-hover"
                                 >
                                     Cancel
                                 </button>
@@ -357,7 +357,7 @@ export default function EAC_Details() {
                         ] as (keyof EacDetail)[]
                     ).map((field) => (
                         <div key={field} className="flex flex-col">
-                            <label className="mb-1 text-sm font-medium text-slate-700">
+                            <label className="mb-1 text-sm font-medium text-ink">
                                 {field.replace('_', ' ').toUpperCase()}
                             </label>
                             <input
@@ -366,7 +366,7 @@ export default function EAC_Details() {
                                 onChange={(e) =>
                                     setNewEntry(prev => ({ ...(prev as any), [field]: e.target.value }))
                                 }
-                                className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                                className="rounded-lg border border-rule-strong px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
                             />
                         </div>
                     ))}

@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { getStandardColumnLabel } from '../../../lib/columnLabels'
-import { Navbar, Sidebar, PageContainer } from '../../components/Navbar'
 import { LoadingSpinner } from '../../components/UI'
 import { ROLE_CONFIG } from '../../../lib/types'
+import AppShell from '../../components/AppShell'
 import { useRequireRole } from '../../../lib/hooks'
 import { getErrorMessage } from '../../../lib/errors'
 
@@ -228,7 +228,7 @@ export default function FieldStaffHistoryPage() {
 
     if (authLoading) {
         return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+            <div className="min-h-screen bg-surface-sunken flex items-center justify-center">
                 <LoadingSpinner size="lg" />
             </div>
         )
@@ -236,10 +236,10 @@ export default function FieldStaffHistoryPage() {
 
     if (!isAuthorized || !profile) {
         return (
-            <main className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-                <div className="bg-white rounded-lg shadow-lg p-6 max-w-md text-center">
-                    <h1 className="text-2xl font-bold text-slate-900 mb-2">Access Denied</h1>
-                    <p className="text-slate-600">You don't have permission to access this page.</p>
+            <main className="min-h-screen bg-surface-sunken flex items-center justify-center p-4">
+                <div className="bg-surface rounded-lg shadow-lg p-6 max-w-md text-center">
+                    <h1 className="text-xl font-bold sm:text-2xl text-ink mb-2">Access Denied</h1>
+                    <p className="text-ink-muted">You don't have permission to access this page.</p>
                 </div>
             </main>
         )
@@ -259,24 +259,22 @@ export default function FieldStaffHistoryPage() {
         historyUniformLoading || historyLeavingLoading || historyVocationalLoading || historyComputerLoading
 
     return (
-        <main className="min-h-screen bg-slate-50/50">
-            <Navbar
-                username={profile.username}
-                role="dfi_field_staff"
-                roleLabel={roleInfo.label}
-                roleColor={roleInfo.color} />
-            <Sidebar role="dfi_field_staff" />
-            <PageContainer>
+      <AppShell
+        role="dfi_field_staff"
+        active="/dfi-field-staff/history"
+        breadcrumb={['Field', 'History']}
+        username={profile.username}
+      >
                 <header className="mb-6">
-                    <h1 className="text-2xl font-bold text-slate-900">Personal History</h1>
-                    <p className="mt-1 text-sm text-slate-600">View all records you have verified.</p>
+                    <h1 className="text-xl font-bold sm:text-2xl text-ink">Personal History</h1>
+                    <p className="mt-1 text-sm text-ink-muted">View all records you have verified.</p>
                 </header>
 
                 {message && (
                     <div
                         className={`mb-6 rounded-lg border px-4 py-3 text-sm font-medium ${message.type === 'success'
-                            ? 'border-green-200 bg-green-50 text-green-700'
-                            : 'border-red-200 bg-red-50 text-red-700'
+                            ? 'border-status-approved-fg/30 bg-status-approved-bg text-status-approved-fg'
+                            : 'border-status-returned-fg/30 bg-status-returned-bg text-status-returned-fg'
                             }`}
                     >
                         {message.text}
@@ -284,7 +282,7 @@ export default function FieldStaffHistoryPage() {
                 )}
 
                 <div className="space-y-6">
-                    <div className="border-b border-slate-200">
+                    <div className="border-b border-rule">
                         <div className="flex flex-wrap gap-2 sm:gap-0">
                             {historySubTabs.map((tab) => (
                                 <button
@@ -292,7 +290,7 @@ export default function FieldStaffHistoryPage() {
                                     onClick={() => handleHistorySubTabChange(tab.id)}
                                     className={`px-4 py-3 text-sm font-medium transition ${activeHistorySubTab === tab.id
                                         ? 'border-b-2 border-amber-600 text-amber-600'
-                                        : 'border-b-2 border-transparent text-slate-600 hover:text-slate-900'
+                                        : 'border-b-2 border-transparent text-ink-muted hover:text-ink'
                                         }`}
                                 >
                                     {tab.label}
@@ -301,19 +299,19 @@ export default function FieldStaffHistoryPage() {
                         </div>
                     </div>
 
-                    <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                    <section className="rounded-xl border border-rule bg-surface p-6 shadow-sm">
                         <div className="mb-6">
-                            <h2 className="text-lg font-semibold text-slate-900">
+                            <h2 className="text-lg font-semibold text-ink">
                                 Verified {historySubTabs.find((t) => t.id === activeHistorySubTab)?.label} Records
                             </h2>
-                            <p className="mt-1 text-sm text-slate-600">
+                            <p className="mt-1 text-sm text-ink-muted">
                                 View all records you have verified.
                             </p>
                         </div>
 
                         <div className="mb-6 flex gap-4 items-end flex-col sm:flex-row">
                             <div>
-                                <label className="mb-1 block text-sm font-medium text-slate-700">From Date (Verified)</label>
+                                <label className="mb-1 block text-sm font-medium text-ink">From Date (Verified)</label>
                                 <input
                                     type="date"
                                     value={
@@ -326,11 +324,11 @@ export default function FieldStaffHistoryPage() {
                                                                 historyLeavingDateRange.start
                                     }
                                     onChange={(e) => handleHistoryDateRangeChange(activeHistorySubTab, 'start', e.target.value)}
-                                    className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                                    className="rounded-lg border border-rule px-3 py-2 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                                 />
                             </div>
                             <div>
-                                <label className="mb-1 block text-sm font-medium text-slate-700">To Date (Verified)</label>
+                                <label className="mb-1 block text-sm font-medium text-ink">To Date (Verified)</label>
                                 <input
                                     type="date"
                                     value={
@@ -343,30 +341,30 @@ export default function FieldStaffHistoryPage() {
                                                                 historyLeavingDateRange.end
                                     }
                                     onChange={(e) => handleHistoryDateRangeChange(activeHistorySubTab, 'end', e.target.value)}
-                                    className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                                    className="rounded-lg border border-rule px-3 py-2 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                                 />
                             </div>
                         </div>
 
                         {currentLoading ? (
                             <div className="flex items-center justify-center py-8">
-                                <p className="text-sm text-slate-500">Loading records...</p>
+                                <p className="text-sm text-ink-faint">Loading records...</p>
                             </div>
                         ) : currentData.length === 0 ? (
                             <div className="flex items-center justify-center py-8">
-                                <p className="text-sm text-slate-500">No verified records found.</p>
+                                <p className="text-sm text-ink-faint">No verified records found.</p>
                             </div>
                         ) : (
-                            <div className="overflow-x-auto overflow-y-auto max-h-96 border border-slate-200 rounded-lg">
+                            <div className="overflow-x-auto overflow-y-auto max-h-96 border border-rule rounded-lg">
                                 <table className="w-full text-sm">
-                                    <thead className="sticky top-0 bg-slate-50 border-b border-slate-200">
+                                    <thead className="sticky top-0 bg-surface-sunken border-b border-rule">
                                         <tr>
                                             {Object.keys(currentData[0] || {})
                                                 .filter((key) => !HISTORY_HIDDEN_COLUMNS.includes(key.toLowerCase()))
                                                 .map((key) => (
                                                     <th
                                                         key={key}
-                                                        className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap"
+                                                        className="px-4 py-3 text-left font-semibold text-ink whitespace-nowrap"
                                                         title={key}
                                                     >
                                                         {getStandardColumnLabel(key)}
@@ -376,7 +374,7 @@ export default function FieldStaffHistoryPage() {
                                     </thead>
                                     <tbody>
                                         {currentData.map((record, idx) => (
-                                            <tr key={idx} className="border-b border-slate-200 hover:bg-slate-50">
+                                            <tr key={idx} className="border-b border-rule hover:bg-surface-hover">
                                                 {Object.entries(record)
                                                     .filter(([key]) => !HISTORY_HIDDEN_COLUMNS.includes(key.toLowerCase()))
                                                     .map(([key, value]) => {
@@ -384,7 +382,7 @@ export default function FieldStaffHistoryPage() {
                                                         const isPhoto = (key.toLowerCase().includes('photo') || key.toLowerCase().includes('image')) && value
 
                                                         return (
-                                                            <td key={key} className="px-4 py-3 text-sm text-slate-700 max-w-xs truncate">
+                                                            <td key={key} className="px-4 py-3 text-sm text-ink max-w-xs truncate">
                                                                 {isPhoto ? (
                                                                     <a
                                                                         href={String(value)}
@@ -408,7 +406,6 @@ export default function FieldStaffHistoryPage() {
                         )}
                     </section>
                 </div>
-            </PageContainer>
-        </main>
+            </AppShell>
     )
 }
