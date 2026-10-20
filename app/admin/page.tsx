@@ -12,7 +12,7 @@ import { Users, Building2, BarChart3, Upload } from 'lucide-react'
 interface Overview {
   totals: { children: number; enrolled: number; left: number; centres: number }
   byStatus: { pending: number; verified: number; approved: number; returned: number }
-  gaps: { missingFamily: number; noDob: number }
+  gaps: { missingDetails: number; noDob: number }
   pendingConflicts: number
   centres: { eacNo: string; village: string; total: number; withFamily: number; percent: number }[]
 }
@@ -130,9 +130,9 @@ export default function AdminHomePage() {
           tone: 'text-status-returned-fg',
         },
         {
-          count: overview.gaps.missingFamily,
-          text: 'children with no family details recorded',
-          href: '/admin/child-data',
+          count: overview.gaps.missingDetails,
+          text: 'children with details still missing',
+          href: '/admin/child-data?missing=any',
           tone: 'text-status-pending-fg',
         },
         {
@@ -182,11 +182,11 @@ export default function AdminHomePage() {
                 tone: 'text-blue-600',
               },
               {
-                label: 'Missing family details',
-                value: overview?.gaps.missingFamily,
+                label: 'Missing details',
+                value: overview?.gaps.missingDetails,
                 sub:
                   overview && overview.totals.children > 0
-                    ? `${Math.round((overview.gaps.missingFamily / overview.totals.children) * 100)}% of children`
+                    ? `${Math.round((overview.gaps.missingDetails / overview.totals.children) * 100)}% of children`
                     : '',
                 tone: 'text-status-pending-fg',
               },

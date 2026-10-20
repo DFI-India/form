@@ -65,7 +65,7 @@ type Centre = {
   cbv_email: string | null
 }
 
-type CentreCounts = { total: number; enrolled: number; left: number; missingFamily: number }
+type CentreCounts = { total: number; enrolled: number; left: number; missingDetails: number }
 
 type FormState = Record<string, string>
 
@@ -782,9 +782,9 @@ function CentreDetail({
           { label: 'Enrolled', value: counts?.enrolled ?? 0, tone: '' },
           { label: 'Left', value: counts?.left ?? 0, tone: 'text-ink-muted' },
           {
-            label: 'Missing family details',
-            value: counts?.missingFamily ?? 0,
-            tone: counts?.missingFamily ? 'text-status-pending-fg' : '',
+            label: 'Missing details',
+            value: counts?.missingDetails ?? 0,
+            tone: counts?.missingDetails ? 'text-status-pending-fg' : '',
           },
         ].map((s) => (
           <div key={s.label} className="flex flex-1 flex-col gap-1 bg-surface px-4 py-3">

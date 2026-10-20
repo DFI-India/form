@@ -2913,7 +2913,10 @@ export default function ChildForm() {
     }
   }
 
-  const { profile, loading: authLoading, isAuthorized } = useRequireRole(['field_volunteer'])
+  // Admins enter records too, so they reach the same form rather than a second
+  // copy of it. The centre dropdown below is only narrowed for volunteers, so
+  // an admin can file against any centre.
+  const { profile, loading: authLoading, isAuthorized } = useRequireRole(['field_volunteer', 'admin'])
 
   // Field volunteers may only submit records for their own assigned centre;
   // the dropdown is narrowed accordingly. This is a UI-level safeguard only —
@@ -2972,9 +2975,9 @@ export default function ChildForm() {
 
   return (
       <AppShell
-        role="field_volunteer"
+        role={profile.role!}
         active="/field-volunteer/child-data-entry"
-        breadcrumb={['My work', 'New child']}
+        breadcrumb={profile.role === 'admin' ? ['Manage records', 'New entry'] : ['My work', 'New child']}
         username={profile.username}
       >
         <div className="px-4 pb-24 pt-4 sm:px-6 sm:pb-10">

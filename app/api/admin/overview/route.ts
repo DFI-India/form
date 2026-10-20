@@ -92,19 +92,35 @@ export async function GET(request: NextRequest) {
     ])
 
     // Children with no family row, and per-centre completeness.
-    const [{ data: childKeys }, { data: familyKeys }] = await Promise.all([
+    // A child is "missing details" when any section they should have is absent.
+    // Leaving only counts once they are marked as left.
+    const [{ data: childKeys }, ...sectionRows] = await Promise.all([
       supabaseAdmin.from('Child_Data').select('eac_no, reg_no, village_name, child_left').limit(SCAN_CAP),
       supabaseAdmin.from('childfmly').select('eac_no, reg_no').limit(SCAN_CAP),
+      supabaseAdmin.from('childsibling').select('eac_no, reg_no').limit(SCAN_CAP),
+      supabaseAdmin.from('childuniform').select('eac_no, reg_no').limit(SCAN_CAP),
+      supabaseAdmin.from('childleaving').select('eac_no, reg_no').limit(SCAN_CAP),
     ])
 
-    const familySet = new Set((familyKeys || []).map((r: any) => pairKey(r.eac_no, r.reg_no)))
+    const setOf = (i: number) =>
+      new Set((sectionRows[i]?.data || []).map((r: any) => pairKey(r.eac_no, r.reg_no)))
+    const familySet = setOf(0)
+    const siblingSet = setOf(1)
+    const uniformSet = setOf(2)
+    const leavingSet = setOf(3)
 
-    let missingFamily = 0
+    const isMissingDetails = (row: any) => {
+      const key = pairKey(row.eac_no, row.reg_no)
+      if (!familySet.has(key) || !siblingSet.has(key) || !uniformSet.has(key)) return true
+      return Boolean(row.child_left) && !leavingSet.has(key)
+    }
+
+    let missingDetails = 0
     const perCentre = new Map<string, { eacNo: string; village: string; total: number; withFamily: number }>()
 
     for (const row of childKeys || []) {
-      const hasFamily = familySet.has(pairKey(row.eac_no, row.reg_no))
-      if (!hasFamily) missingFamily += 1
+      const hasFamily = !isMissingDetails(row)
+      if (!hasFamily) missingDetails += 1
 
       const eacNo = String(row.eac_no ?? '')
       if (!eacNo) continue
@@ -134,7 +150,7 @@ export async function GET(request: NextRequest) {
       },
       byStatus: { pending, verified, approved, returned },
       gaps: {
-        missingFamily,
+        missingDetails,
         noDob,
       },
       pendingConflicts,

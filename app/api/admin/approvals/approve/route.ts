@@ -38,12 +38,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden - Only admin, DFI staff, and DFI field staff can approve' }, { status: 403 })
     }
 
-    const isFieldStaff = profile.role === 'dfi_field_staff'
-    const sourceStatus = isFieldStaff ? 'Pending' : 'Verified'
-    const targetStatus = isFieldStaff ? 'Verified' : 'Approved'
-
     const body = await request.json()
     const { entityType, entityId } = body
+
+    /*
+     * Who may move a record from where to where.
+     *
+     * Field staff verify, DFI staff approve what was verified. An admin is the
+     * final authority, so they may also take a record that nobody has verified
+     * and approve it outright, which is the only way a pending record can clear
+     * when no field staff member is available. That one-step case stamps both
+     * the verification and the approval, so the history still shows who did it.
+     */
+    const isFieldStaff = profile.role === 'dfi_field_staff'
+    const adminDirect = profile.role === 'admin' && body?.fromStatus === 'Pending'
+
+    const sourceStatus = isFieldStaff || adminDirect ? 'Pending' : 'Verified'
+    const targetStatus = isFieldStaff ? 'Verified' : 'Approved'
 
     if (!entityType || !entityId) {
       return NextResponse.json({ error: 'entityType and entityId are required' }, { status: 400 })
@@ -124,11 +135,19 @@ export async function POST(request: NextRequest) {
           verified_by: user.id,
           verified_at: new Date().toISOString()
         }
-        : {
-          status: targetStatus,
-          decided_by: user.id,
-          decided_at: new Date().toISOString()
-        })
+        : adminDirect
+          ? {
+            status: targetStatus,
+            verified_by: user.id,
+            verified_at: new Date().toISOString(),
+            decided_by: user.id,
+            decided_at: new Date().toISOString()
+          }
+          : {
+            status: targetStatus,
+            decided_by: user.id,
+            decided_at: new Date().toISOString()
+          })
 
     console.log(`[Approve] Updating ${approvalTableName} for ${canonicalEntityType}/${normalizedEntityId} with status=${targetStatus}`)
     const { error: approvalUpdateError } = await supabaseAdmin

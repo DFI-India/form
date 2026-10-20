@@ -79,7 +79,14 @@ select
   (sb.record_id is not null)                                       as has_siblings,
   (un.record_id is not null)                                       as has_uniform,
   (lv.record_id is not null)                                       as has_leaving_record,
-  (fm.record_id is not null and sb.record_id is not null and un.record_id is not null) as sections_complete,
+  -- Leaving counts only once a child is marked as left, so an enrolled child
+  -- is never reported as missing a record they should not have.
+  (
+    fm.record_id is not null
+    and sb.record_id is not null
+    and un.record_id is not null
+    and (not coalesce(c.child_left, false) or lv.record_id is not null)
+  )                                                                as sections_complete,
 
   -- Family
   fm.f_name                                                        as father_name,

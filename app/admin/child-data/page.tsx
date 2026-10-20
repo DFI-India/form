@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRequireRole } from '../../../lib/hooks'
 import { supabase } from '../../../lib/supabase'
 import { getErrorMessage } from '../../../lib/errors'
+import { hasAllDetails } from '../../../lib/childSections'
 import { LoadingSpinner, Alert } from '../../components/UI'
 import AdminShell from '../AdminShell'
 import ChildProfilePanel, { type SectionKey as ProfileSection } from '../records/ChildProfilePanel'
@@ -20,8 +21,7 @@ const SECTIONS: { key: SectionKey; label: string }[] = [
   { key: 'childleaving', label: 'Leaving' },
 ]
 
-/** Leaving only applies to children who left, so it isn't part of "complete". */
-const REQUIRED_SECTIONS: SectionKey[] = ['childfmly', 'childsibling', 'childuniform']
+
 
 const SORTS = [
   { value: 'review', label: 'Needs attention first' },
@@ -78,8 +78,7 @@ const ENROLMENT_CHIPS = [
 
 const RECORD_CHIPS = [
   { value: 'none', label: 'Any' },
-  { value: 'family', label: 'No family details' },
-  { value: 'any', label: 'Incomplete' },
+  { value: 'any', label: 'Missing details' },
   { value: 'dob', label: 'No date of birth' },
 ]
 
@@ -112,8 +111,8 @@ const hasLeft = (row: ChildRow) =>
 
 type Sections = Partial<Record<SectionKey, boolean>> | undefined
 
-const isComplete = (sections: Sections) =>
-  Boolean(sections) && REQUIRED_SECTIONS.every((k) => sections![k])
+/** Leaving counts only for a child marked as left; see lib/childSections. */
+const isComplete = (sections: Sections, left: boolean) => hasAllDetails(left, sections)
 
 /**
  * Approval state as the screen shows it.
@@ -123,10 +122,10 @@ const isComplete = (sections: Sections) =>
  */
 type Bucket = 'returned' | 'pending' | 'awaiting' | 'approved_pending' | 'approved'
 
-function approvalBucket(status: string | undefined, sections: Sections): Bucket {
+function approvalBucket(status: string | undefined, sections: Sections, left: boolean): Bucket {
   if (status === 'Rejected') return 'returned'
   if (status === 'Verified') return 'awaiting'
-  if (status === 'Approved') return isComplete(sections) ? 'approved' : 'approved_pending'
+  if (status === 'Approved') return isComplete(sections, left) ? 'approved' : 'approved_pending'
   return 'pending'
 }
 
@@ -677,7 +676,7 @@ export default function ChildDataPage() {
               const isOpen = expanded === key
               const sections = completeness[key]
               const left = hasLeft(row)
-              const bucket = approvalBucket(row.status, sections)
+              const bucket = approvalBucket(row.status, sections, left)
               const name = [row.first_name, row.last_name].filter(Boolean).join(' ') || 'Unnamed'
 
               const showHeading = grouped && bucket !== lastBucket

@@ -11,7 +11,7 @@ import { Users, Building2 } from 'lucide-react'
 
 interface Overview {
   totals: { children: number; enrolled: number; left: number; centres: number }
-  gaps: { missingFamily: number; noDob: number }
+  gaps: { missingDetails: number; noDob: number }
 }
 
 /**
@@ -110,9 +110,9 @@ export default function ManageRecordsPage() {
                 <span className="font-mono text-[12.5px]">{n(overview?.totals.left)}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-[12.5px] text-status-pending-fg">Missing family details</span>
+                <span className="text-[12.5px] text-status-pending-fg">Missing details</span>
                 <span className="font-mono text-[12.5px] text-status-pending-fg">
-                  {n(overview?.gaps.missingFamily)}
+                  {n(overview?.gaps.missingDetails)}
                 </span>
               </div>
             </div>

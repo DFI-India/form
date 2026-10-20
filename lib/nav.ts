@@ -44,6 +44,8 @@ export const NAV_BY_ROLE: Record<UserRole, NavGroup[]> = {
       items: [
         { label: 'Overview', href: '/admin/manage-records', icon: LayoutGrid },
         { label: 'Child data', href: '/admin/child-data', icon: Users },
+        { label: 'New entry', href: '/field-volunteer/child-data-entry', icon: UserPlus },
+        { label: 'Approvals', href: '/admin/approvals', icon: ClipboardCheck },
         { label: 'Centre data', href: '/admin/center-management', icon: Building2 },
         { label: 'Places', href: '/admin/places', icon: MapPin },
         { label: 'All records', href: '/admin/records', icon: List },

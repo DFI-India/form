@@ -38,11 +38,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden - Only admin, DFI staff, and DFI field staff can reject' }, { status: 403 })
     }
 
-    const isFieldStaff = profile.role === 'dfi_field_staff'
-    const sourceStatus = isFieldStaff ? 'Pending' : 'Verified'
-
     const body = await request.json()
     const { entityType, entityId, reason } = body
+
+    // Mirrors the approve route: an admin may also send back a record that
+    // nobody has verified yet, rather than being stuck waiting for field staff.
+    const isFieldStaff = profile.role === 'dfi_field_staff'
+    const adminDirect = profile.role === 'admin' && body?.fromStatus === 'Pending'
+    const sourceStatus = isFieldStaff || adminDirect ? 'Pending' : 'Verified'
 
     if (!entityType || entityId === null || entityId === undefined || String(entityId).trim().length === 0) {
       return NextResponse.json({ error: 'entityType and entityId are required' }, { status: 400 })

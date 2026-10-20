@@ -58,11 +58,19 @@ const LIST_COLUMNS =
  */
 const APPROVAL_STATUSES = ['Pending', 'Verified', 'Approved', 'Rejected']
 
-/** Leaving is only expected for children who left, so it doesn't count here. */
-const REQUIRED_SECTIONS: SectionKey[] = ['childfmly', 'childsibling', 'childuniform']
+/**
+ * Leaving counts only for a child marked as left, so an enrolled child is not
+ * reported as missing a leaving record they should never have.
+ */
+const hasLeft = (row: any) => row?.child_left === true || String(row?.child_left).toLowerCase() === 'true'
 
-const isComplete = (c?: Record<SectionKey, boolean>) =>
-  Boolean(c) && REQUIRED_SECTIONS.every((k) => c![k])
+const requiredFor = (row: any): SectionKey[] =>
+  hasLeft(row)
+    ? ['childfmly', 'childsibling', 'childuniform', 'childleaving']
+    : ['childfmly', 'childsibling', 'childuniform']
+
+const isComplete = (row: any, c?: Record<SectionKey, boolean>) =>
+  Boolean(c) && requiredFor(row).every((k) => c![k])
 
 /** Order for the "Needs attention first" sort, worst first. */
 function reviewRank(row: any, c?: Record<SectionKey, boolean>): number {
@@ -70,7 +78,7 @@ function reviewRank(row: any, c?: Record<SectionKey, boolean>): number {
   if (status === 'Rejected') return 0
   if (status === 'Verified') return 1
   if (status !== 'Approved') return 2
-  return isComplete(c) ? 4 : 3
+  return isComplete(row, c) ? 4 : 3
 }
 
 /** Which of the four linked sections each of these children already has. */
@@ -245,7 +253,7 @@ export async function GET(request: NextRequest) {
           const c = allCompleteness[pairKey(r.eac_no, r.reg_no)]
           if (!c) return true
           if (missing === 'any') {
-            return !c.childfmly || !c.childsibling || !c.childuniform
+            return !isComplete(r, c)
           }
           const section = MISSING_TO_SECTION[missing]
           return section ? !c[section] : true
@@ -253,7 +261,7 @@ export async function GET(request: NextRequest) {
       }
 
       if (approval === 'approved_pending') {
-        all = all.filter((r: any) => !isComplete(allCompleteness[pairKey(r.eac_no, r.reg_no)]))
+        all = all.filter((r: any) => !isComplete(r, allCompleteness[pairKey(r.eac_no, r.reg_no)]))
       }
 
       if (sort === 'review') {
@@ -269,7 +277,7 @@ export async function GET(request: NextRequest) {
         const filledCount = (r: any) => {
           const c = allCompleteness[pairKey(r.eac_no, r.reg_no)]
           if (!c) return 0
-          return [c.childfmly, c.childsibling, c.childuniform].filter(Boolean).length
+          return requiredFor(r).filter((k) => c[k]).length
         }
         all.sort((a: any, b: any) => filledCount(a) - filledCount(b))
       }

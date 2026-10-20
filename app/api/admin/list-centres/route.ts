@@ -57,22 +57,37 @@ export async function GET(req: Request) {
     // Per-centre roll-up. PostgREST can't GROUP BY and "no family row" is an
     // anti-join, so both are done here over two key-only scans. Opt-in via
     // ?counts=1 so callers that only need the centre list don't pay for it.
-    const [{ data: children }, { data: family }] = await Promise.all([
+    const [{ data: children }, fmly, sib, uni, leav] = await Promise.all([
       supabase.from('Child_Data').select('eac_no, reg_no, child_left').limit(SCAN_CAP),
       supabase.from('childfmly').select('eac_no, reg_no').limit(SCAN_CAP),
+      supabase.from('childsibling').select('eac_no, reg_no').limit(SCAN_CAP),
+      supabase.from('childuniform').select('eac_no, reg_no').limit(SCAN_CAP),
+      supabase.from('childleaving').select('eac_no, reg_no').limit(SCAN_CAP),
     ])
 
-    const familySet = new Set((family || []).map((r: any) => `${String(r.eac_no)}::${String(r.reg_no)}`))
-    const counts: Record<string, { total: number; enrolled: number; left: number; missingFamily: number }> = {}
+    const key = (r: any) => `${String(r.eac_no)}::${String(r.reg_no)}`
+    const asSet = (res: any) => new Set((res?.data || []).map(key))
+    const familySet = asSet(fmly)
+    const siblingSet = asSet(sib)
+    const uniformSet = asSet(uni)
+    const leavingSet = asSet(leav)
+
+    const counts: Record<string, { total: number; enrolled: number; left: number; missingDetails: number }> = {}
 
     for (const row of children || []) {
       const eac = String(row.eac_no ?? '').trim()
       if (!eac) continue
-      const bucket = counts[eac] || (counts[eac] = { total: 0, enrolled: 0, left: 0, missingFamily: 0 })
+      const bucket = counts[eac] || (counts[eac] = { total: 0, enrolled: 0, left: 0, missingDetails: 0 })
       bucket.total += 1
       if (row.child_left) bucket.left += 1
       else bucket.enrolled += 1
-      if (!familySet.has(`${String(row.eac_no)}::${String(row.reg_no)}`)) bucket.missingFamily += 1
+
+      // Leaving is only expected once a child is marked as left.
+      const k = key(row)
+      const missing =
+        !familySet.has(k) || !siblingSet.has(k) || !uniformSet.has(k) ||
+        (Boolean(row.child_left) && !leavingSet.has(k))
+      if (missing) bucket.missingDetails += 1
     }
 
     return NextResponse.json({ centres: data || [], counts })

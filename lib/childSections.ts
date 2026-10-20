@@ -149,6 +149,24 @@ export const SECTION_SCHEMA: Record<ChildSectionKey, SectionSchema> = {
   },
 }
 
+/**
+ * Which sections a given child is expected to have.
+ *
+ * Leaving only counts once a child is marked as left. Counting it for everyone
+ * would mean every enrolled child reads as incomplete forever, which is how a
+ * "missing details" number stops meaning anything.
+ */
+export const requiredSectionsFor = (hasLeft: boolean): ChildSectionKey[] =>
+  hasLeft
+    ? ['childfmly', 'childsibling', 'childuniform', 'childleaving']
+    : ['childfmly', 'childsibling', 'childuniform']
+
+/** True when every section this child is expected to have is recorded. */
+export const hasAllDetails = (
+  hasLeft: boolean,
+  present: Partial<Record<ChildSectionKey, boolean>> | undefined
+): boolean => Boolean(present) && requiredSectionsFor(hasLeft).every((k) => present![k])
+
 export const isChildSectionKey = (value: unknown): value is ChildSectionKey =>
   typeof value === 'string' && value in SECTION_SCHEMA
 

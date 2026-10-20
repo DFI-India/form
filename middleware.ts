@@ -71,7 +71,16 @@ export async function middleware(request: NextRequest) {
     field_volunteer: ['/field-volunteer'],
     dfi_field_staff: ['/dfi-field-staff'],
     dfi_staff: ['/dfi-staff'],
-    admin: ['/admin', '/EAC_details', '/child-details', '/tech-support/reports', '/profile/activity'],
+    // Admins also enter records, which lives on the volunteer form rather than
+    // a duplicate of it, so that one route is opened to them specifically.
+    admin: [
+      '/admin',
+      '/EAC_details',
+      '/child-details',
+      '/tech-support/reports',
+      '/profile/activity',
+      '/field-volunteer/child-data-entry',
+    ],
     tech_support: ['/tech-support'],
   }
 
