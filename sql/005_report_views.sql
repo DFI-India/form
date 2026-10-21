@@ -17,6 +17,20 @@
 
 begin;
 
+-- A number that might be stored as text.
+--
+-- childfmly.f_inc is numeric on one deployment and text on another, and the
+-- text one holds whatever was typed years ago. This returns a number when the
+-- value looks like one and null otherwise, so a stray "n/a" cannot break every
+-- report that touches income.
+create or replace function public.report_number(v anyelement)
+returns numeric language sql immutable as $$
+  select case
+    when v is null then null
+    when btrim(v::text) ~ '^-?[0-9]+(\.[0-9]+)?$' then btrim(v::text)::numeric
+  end
+$$;
+
 -- --------------------------------------------------------------- children --
 create or replace view public.v_child_report
 with (security_invoker = on) as
@@ -91,16 +105,16 @@ select
   -- Family
   fm.f_name                                                        as father_name,
   fm.f_occup                                                       as father_occupation,
-  fm.f_inc                                                         as father_income,
+  public.report_number(fm.f_inc)                                   as father_income,
   fm.f_mobile                                                      as father_mobile,
   fm.m_name                                                        as mother_name,
   fm.m_occup                                                       as mother_occupation,
-  fm.m_inc                                                         as mother_income,
+  public.report_number(fm.m_inc)                                   as mother_income,
   fm.m_mobile                                                      as mother_mobile,
   -- null, not 0, when nothing was recorded: a zero would drag every average down.
   case
-    when fm.f_inc is null and fm.m_inc is null then null
-    else coalesce(fm.f_inc, 0) + coalesce(fm.m_inc, 0)
+    when public.report_number(fm.f_inc) is null and public.report_number(fm.m_inc) is null then null
+    else coalesce(public.report_number(fm.f_inc), 0) + coalesce(public.report_number(fm.m_inc), 0)
   end                                                              as household_income,
   nullif(btrim(concat_ws(', ', fm.fmly_addr1, fm.fmly_addr2, fm.fmly_addr3), E' \t\r\n'), '') as family_address,
   fm.fmly_pincode                                                  as family_pincode,
@@ -139,13 +153,16 @@ select
   ce.cbv_name,
   ce.in_charge
 from public."Child_Data" c
-left join public.centre_data ce on ce.eac_no = c.eac_no
+left join public.centre_data ce on ce.eac_no::text = c.eac_no::text
 
--- eac_no is bigint on Child_Data and varchar on every linked table.
-left join public.childfmly    fm on fm.eac_no = c.eac_no::text and fm.reg_no = c.reg_no::text
-left join public.childsibling sb on sb.eac_no = c.eac_no::text and sb.reg_no = c.reg_no::text
-left join public.childuniform un on un.eac_no = c.eac_no::text and un.reg_no = c.reg_no::text
-left join public.childleaving lv on lv.eac_no = c.eac_no::text and lv.reg_no = c.reg_no::text
+-- These key columns are not the same type on every deployment: reg_no is text
+-- on one Supabase project and a number on another, and eac_no varies the same
+-- way. Casting both sides to text makes the join work on either without
+-- having to know which shape a given database happens to have.
+left join public.childfmly    fm on fm.eac_no::text = c.eac_no::text and fm.reg_no::text = c.reg_no::text
+left join public.childsibling sb on sb.eac_no::text = c.eac_no::text and sb.reg_no::text = c.reg_no::text
+left join public.childuniform un on un.eac_no::text = c.eac_no::text and un.reg_no::text = c.reg_no::text
+left join public.childleaving lv on lv.eac_no::text = c.eac_no::text and lv.reg_no::text = c.reg_no::text
 
 left join public.villages   vi  on vi.id  = c.village_id
 left join public.taluks     tk  on tk.id  = vi.taluk_id
@@ -192,8 +209,8 @@ select
   v.mother_occupation,
   v.mother_income,
   case
-    when v.father_income is null and v.mother_income is null then null
-    else coalesce(v.father_income, 0) + coalesce(v.mother_income, 0)
+    when public.report_number(v.father_income) is null and public.report_number(v.mother_income) is null then null
+    else coalesce(public.report_number(v.father_income), 0) + coalesce(public.report_number(v.mother_income), 0)
   end                                                              as household_income,
   coalesce(di.name, nullif(btrim(v.district, E' \t\r\n'), ''))                  as district,
   coalesce(tk.name, nullif(btrim(v.taluk, E' \t\r\n'), ''))                     as taluk,
@@ -202,7 +219,7 @@ select
   coalesce(v.status, 'Pending')                                    as approval_status,
   v.created_at                                                     as recorded_on
 from public.vocational_course v
-left join public.centre_data ce on ce.eac_no = v.eac_no
+left join public.centre_data ce on ce.eac_no::text = v.eac_no::text
 left join public.villages   vi on vi.id = ce.village_id
 left join public.taluks     tk on tk.id = vi.taluk_id
 left join public.districts  di on di.id = tk.district_id
@@ -237,8 +254,8 @@ select
   k.mother_occupation,
   k.mother_income,
   case
-    when k.father_income is null and k.mother_income is null then null
-    else coalesce(k.father_income, 0) + coalesce(k.mother_income, 0)
+    when public.report_number(k.father_income) is null and public.report_number(k.mother_income) is null then null
+    else coalesce(public.report_number(k.father_income), 0) + coalesce(public.report_number(k.mother_income), 0)
   end                                                              as household_income,
   di.name                                                          as district,
   tk.name                                                          as taluk,
@@ -247,8 +264,7 @@ select
   coalesce(k.status, 'Pending')                                    as approval_status,
   k.created_at                                                     as recorded_on
 from public.computer_course k
--- computer_course.eac_no is text; centre_data.eac_no is bigint.
-left join public.centre_data ce on ce.eac_no::text = k.eac_no
+left join public.centre_data ce on ce.eac_no::text = k.eac_no::text
 left join public.villages   vi on vi.id = ce.village_id
 left join public.taluks     tk on tk.id = vi.taluk_id
 left join public.districts  di on di.id = tk.district_id
@@ -256,6 +272,9 @@ left join public.panchayats pa on pa.id = vi.panchayat_id;
 
 -- The views inherit row-level security from the tables underneath
 -- (security_invoker), so this grant does not widen what anyone can see.
+revoke all on function public.report_number(anyelement) from anon, public;
+grant execute on function public.report_number(anyelement) to authenticated;
+
 grant select on public.v_child_report      to authenticated;
 grant select on public.v_vocational_report to authenticated;
 grant select on public.v_computer_report   to authenticated;

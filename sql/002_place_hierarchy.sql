@@ -46,8 +46,14 @@ create index if not exists panchayats_taluk_idx on public.panchayats (taluk_id);
 
 -- Lets villages reference the (panchayat, taluk) pair rather than the panchayat
 -- alone -- see villages_panchayat_same_taluk below.
-alter table public.panchayats drop constraint if exists panchayats_id_taluk_key;
-alter table public.panchayats add constraint panchayats_id_taluk_key unique (id, taluk_id);
+-- Added only when absent. Dropping it on a re-run fails once villages exist,
+-- because the composite key below depends on this one.
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'panchayats_id_taluk_key') then
+    alter table public.panchayats add constraint panchayats_id_taluk_key unique (id, taluk_id);
+  end if;
+end $$;
 
 -- ---------------------------------------------------------------- villages --
 create table if not exists public.villages (
@@ -66,11 +72,15 @@ create index if not exists villages_panchayat_idx on public.villages (panchayat_
 -- a village's panchayat must sit in that village's OWN taluk. A plain FK to
 -- panchayats(id) would happily let a Devanahalli village point at a
 -- Doddaballapur panchayat; this cannot.
-alter table public.villages drop constraint if exists villages_panchayat_same_taluk;
-alter table public.villages add constraint villages_panchayat_same_taluk
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'villages_panchayat_same_taluk') then
+    alter table public.villages add constraint villages_panchayat_same_taluk
   foreign key (panchayat_id, taluk_id)
   references public.panchayats (id, taluk_id)
   on delete restrict;
+  end if;
+end $$;
 
 -- ----------------------------------------------------------- place_aliases --
 -- Every spelling ever seen for a place, so an import resolves "DODDABALLAPPUR",

@@ -69,9 +69,20 @@ begin
   end loop;
 end $$;
 
--- 4. The report function is for signed-in staff only.
-revoke all on function public.report_group(text, text[], jsonb, jsonb, jsonb, integer) from anon, public;
-grant execute on function public.report_group(text, text[], jsonb, jsonb, jsonb, integer) to authenticated;
+-- 4. The report function is for signed-in staff only. Guarded, because this
+--    file is also run on databases where the reporting migrations have not
+--    happened yet, and a missing function must not stop the lockdown.
+do $$
+begin
+  if exists (
+    select 1 from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public' and p.proname = 'report_group'
+  ) then
+    execute 'revoke all on function public.report_group(text, text[], jsonb, jsonb, jsonb, integer) from anon, public';
+    execute 'grant execute on function public.report_group(text, text[], jsonb, jsonb, jsonb, integer) to authenticated';
+  end if;
+end $$;
 
 commit;
 
