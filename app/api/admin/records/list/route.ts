@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { safeFilterTerm } from '../../../../../lib/errors'
 import { NextRequest, NextResponse } from 'next/server'
 
 type EntityType = 'child_data' | 'childfmly' | 'childsibling' | 'childuniform' | 'childleaving' | 'vocational_course' | 'computer_course'
@@ -143,7 +144,7 @@ export async function GET(request: NextRequest) {
       let childNameQuery = supabaseAdmin
         .from('Child_Data')
         .select('reg_no')
-        .or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%`)
+        .or(`first_name.ilike.%${safeFilterTerm(search)}%,last_name.ilike.%${safeFilterTerm(search)}%`)
 
       if (profile.role === 'dfi_field_staff' && profile.centre_eac_no) {
         childNameQuery = childNameQuery.eq('eac_no', profile.centre_eac_no)
@@ -205,11 +206,11 @@ export async function GET(request: NextRequest) {
           query = query.eq('eac_no', search) as T
         } else {
           if (entityType === 'child_data') {
-            query = query.or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%`) as T
+            query = query.or(`first_name.ilike.%${safeFilterTerm(search)}%,last_name.ilike.%${safeFilterTerm(search)}%`) as T
           } else if (entityType === 'vocational_course') {
-            query = query.or(`trainee_name.ilike.%${search}%`) as T
+            query = query.or(`trainee_name.ilike.%${safeFilterTerm(search)}%`) as T
           } else if (entityType === 'computer_course') {
-            query = query.or(`child_name.ilike.%${search}%`) as T
+            query = query.or(`child_name.ilike.%${safeFilterTerm(search)}%`) as T
           } else if (matchingRegNosForNameSearch && matchingRegNosForNameSearch.length > 0) {
             query = query.in('reg_no', matchingRegNosForNameSearch) as T
           } else {

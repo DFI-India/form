@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { PRIMARY_KEYS, isRecordEntity, sanitiseUpdates, tableFor } from '../../../../../lib/recordTables'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -45,23 +46,27 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'entityType, entityId, and updates are required' }, { status: 400 })
     }
 
-    // Map entity type to table name
-    let tableName = entityType
-    if (entityType === 'child_data') tableName = 'Child_Data'
+    // The table comes from the request and this runs with the service key, so
+    // it has to be one we named. Without this, 'profiles' would be a valid
+    // target and a role change one field away.
+    if (!isRecordEntity(entityType)) {
+      return NextResponse.json({ error: 'Unknown record type' }, { status: 400 })
+    }
+    const tableName = tableFor(entityType)
 
-    const primaryKeyCandidatesByEntity: Record<string, string[]> = {
-      child_data: ['record_id', 'id'],
-      childfmly: ['record_id', 'id'],
-      childsibling: ['record_id', 'id'],
-      childuniform: ['record_id', 'id'],
-      childleaving: ['record_id', 'id'],
-      vocational_course: ['record_id', 'vocational_id', 'id'],
-      computer_course: ['record_id', 'computer_id', 'id']
+    // Approval state and ownership are moved by the approval endpoints, which
+    // enforce who may do it. An edit must not be able to set them.
+    const { clean: safeUpdates, rejected } = sanitiseUpdates(updates)
+    if (Object.keys(safeUpdates).length === 0) {
+      return NextResponse.json(
+        { error: rejected.length ? `These fields cannot be edited here: ${rejected.join(', ')}` : 'Nothing to update' },
+        { status: 400 }
+      )
     }
 
     const candidates = [
-      ...(entityKey ? [String(entityKey)] : []),
-      ...(primaryKeyCandidatesByEntity[entityType] || ['record_id', 'id'])
+      ...(entityKey && PRIMARY_KEYS[entityType].includes(String(entityKey)) ? [String(entityKey)] : []),
+      ...PRIMARY_KEYS[entityType]
     ]
 
     const uniqueCandidates = Array.from(new Set(candidates))
@@ -90,7 +95,7 @@ export async function PUT(request: NextRequest) {
 
     // Calculate changes
     const changes: Record<string, { old: any; new: any }> = {}
-    for (const [key, newValue] of Object.entries(updates)) {
+    for (const [key, newValue] of Object.entries(safeUpdates)) {
       if (currentRecord[key] !== newValue) {
         changes[key] = {
           old: currentRecord[key],
@@ -134,7 +139,8 @@ export async function PUT(request: NextRequest) {
           edited_by_username: profile.username,
           edited_by_role: profile.role,
           fields_changed: Object.keys(changes),
-          primary_key: resolvedPrimaryKey
+          primary_key: resolvedPrimaryKey,
+          rejected_fields: rejected.length ? rejected : undefined
         }
       })
 

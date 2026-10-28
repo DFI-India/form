@@ -14,6 +14,7 @@ import Image from 'next/image'
 import { supabase } from '../../../lib/supabase'
 import { useRequireRole } from '../../../lib/hooks'
 import { getErrorMessage } from '../../../lib/errors'
+import { safeFileName } from '../../../lib/csv'
 import AppShell from '../../components/AppShell'
 import { LoadingSpinner } from '../../components/UI'
 import { User, Users, Shirt, LogOut, BookOpen, Laptop, AlertCircle, History, ChevronRight, Check, X } from 'lucide-react'
@@ -1772,7 +1773,7 @@ export default function ChildForm() {
 
     try {
       setVocationalPhotoUploading(true)
-      const fileName = `${Date.now()}-${vocationalPhotoFile.name}`
+      const fileName = `${Date.now()}-${safeFileName(vocationalPhotoFile.name)}`
       const filePath = `vocational_photos/${fileName}`
 
       const { error: uploadError } = await supabase.storage
@@ -1800,7 +1801,7 @@ export default function ChildForm() {
 
     try {
       setComputerPhotoUploading(true)
-      const fileName = `${Date.now()}-${computerPhotoFile.name}`
+      const fileName = `${Date.now()}-${safeFileName(computerPhotoFile.name)}`
       const filePath = `profiles/${fileName}`
 
       const { error: uploadError } = await supabase.storage

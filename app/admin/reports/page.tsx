@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRequireRole } from '../../../lib/hooks'
 import { supabase } from '../../../lib/supabase'
 import { getErrorMessage } from '../../../lib/errors'
+import { toCsv } from '../../../lib/csv'
 import { LoadingSpinner, Alert } from '../../components/UI'
 import AdminShell from '../AdminShell'
 import {
@@ -194,15 +195,7 @@ export default function ReportsPage() {
 
       const cols: string[] = json.columns || []
       const header = cols.map((c) => byKey.get(c)?.label ?? c)
-      const escape = (v: unknown) => {
-        if (v === null || v === undefined) return ''
-        const text = typeof v === 'boolean' ? (v ? 'Yes' : 'No') : String(v)
-        return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
-      }
-      const csv = [
-        header.join(','),
-        ...(json.rows || []).map((r: Record<string, unknown>) => cols.map((c) => escape(r[c])).join(',')),
-      ].join('\n')
+      const csv = toCsv(header, (json.rows || []).map((r: Record<string, unknown>) => cols.map((c) => r[c])))
 
       const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }))
       const link = document.createElement('a')

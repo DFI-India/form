@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import AppShell from '../../components/AppShell'
 import { useRequireRole } from '../../../lib/hooks'
 import { supabase } from '../../../lib/supabase'
+import { toCsv } from '../../../lib/csv'
 import { LoadingSpinner, Alert } from '../../components/UI'
 import { FileText, Columns, Search, Download, Lightbulb } from 'lucide-react'
 
@@ -199,16 +200,10 @@ export default function EnhancedReportsPage() {
       previewData.length > 0 && previewData[0].hasOwnProperty(col)
     )
 
-    const csv = [
-      headers.map(h => ALL_COLUMNS.find(c => c.key === h)?.label || h).join(','),
-      ...previewData.map(row =>
-        headers.map(header => {
-          const value = row[header]
-          const escaped = String(value || '').replace(/"/g, '""')
-          return escaped.includes(',') || escaped.includes('\n') ? `"${escaped}"` : escaped
-        }).join(',')
-      )
-    ].join('\n')
+    const csv = toCsv(
+      headers.map(h => ALL_COLUMNS.find(c => c.key === h)?.label || h),
+      previewData.map(row => headers.map(header => row[header]))
+    )
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
     const url = window.URL.createObjectURL(blob)

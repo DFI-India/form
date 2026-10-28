@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import AppShell from '../../components/AppShell'
 import { useRequireRole } from '../../../lib/hooks'
 import { supabase } from '../../../lib/supabase'
+import { safeFileName } from '../../../lib/csv'
 import { getStandardColumnLabel } from '../../../lib/columnLabels'
 import { LoadingSpinner, Alert } from '../../components/UI'
 import { ROLE_CONFIG } from '../../../lib/types'
@@ -267,7 +268,7 @@ export default function DFIStaffAllRecordsPage() {
         setError('')
 
         try {
-            const safeName = file.name.replace(/\s+/g, '-')
+            const safeName = safeFileName(file.name)
             const fileName = `${Date.now()}-${safeName}`
             const filePath = `all_records_photos/${fileName}`
 

@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { safeFilterTerm } from '../../../../../lib/errors'
 import { NextRequest, NextResponse } from 'next/server'
 
 const supabaseAdmin = createClient(
@@ -185,13 +186,15 @@ export async function GET(request: NextRequest) {
       if (missing === 'dob') query = query.is('dateofbirth', null)
 
       if (search) {
-        const digits = /^\d+$/.test(search)
-        const clauses = [`first_name.ilike.%${search}%`, `last_name.ilike.%${search}%`]
+        // Commas and brackets would otherwise restructure the filter itself.
+        const term = safeFilterTerm(search)
+        const digits = /^\d+$/.test(term)
+        const clauses = [`first_name.ilike.%${term}%`, `last_name.ilike.%${term}%`]
         if (digits) {
-          clauses.push(`reg_no.eq.${search}`)
-          clauses.push(`aadhar_no.eq.${search}`)
+          clauses.push(`reg_no.eq.${term}`)
+          clauses.push(`aadhar_no.eq.${term}`)
         }
-        query = query.or(clauses.join(','))
+        if (term) query = query.or(clauses.join(','))
       }
       return query
     }

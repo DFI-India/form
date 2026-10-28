@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { PRIMARY_KEYS, isRecordEntity, tableFor } from '../../../../../lib/recordTables'
 
 const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -46,22 +47,19 @@ export async function DELETE(request: NextRequest) {
             return NextResponse.json({ error: 'entityType and entityId are required' }, { status: 400 })
         }
 
-        let tableName = entityType
-        if (entityType === 'child_data') tableName = 'Child_Data'
-
-        const primaryKeyCandidatesByEntity: Record<string, string[]> = {
-            child_data: ['record_id', 'id'],
-            childfmly: ['record_id', 'id'],
-            childsibling: ['record_id', 'id'],
-            childuniform: ['record_id', 'id'],
-            childleaving: ['record_id', 'id'],
-            vocational_course: ['record_id', 'vocational_id', 'id'],
-            computer_course: ['record_id', 'computer_id', 'id'],
+        // Same reasoning as the update route: the table must be one we named,
+        // because this runs with the service key and ignores row-level security.
+        if (!isRecordEntity(entityType)) {
+            return NextResponse.json({ error: 'Unknown record type' }, { status: 400 })
         }
+        const tableName = tableFor(entityType)
+        const primaryKeyCandidatesByEntity = PRIMARY_KEYS
 
         const candidates = [
-            ...(entityKey ? [String(entityKey)] : []),
-            ...(primaryKeyCandidatesByEntity[entityType] || ['record_id', 'id']),
+            ...(entityKey && primaryKeyCandidatesByEntity[entityType].includes(String(entityKey))
+              ? [String(entityKey)]
+              : []),
+            ...primaryKeyCandidatesByEntity[entityType],
         ]
         const uniqueCandidates = Array.from(new Set(candidates))
 

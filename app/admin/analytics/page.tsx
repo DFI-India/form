@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import AppShell from '../../components/AppShell'
 import { useRequireRole } from '../../../lib/hooks'
 import { supabase } from '../../../lib/supabase'
+import { toCsv } from '../../../lib/csv'
 import { LoadingSpinner, Alert } from '../../components/UI'
 import { CheckCircle } from 'lucide-react'
 
@@ -240,24 +241,13 @@ export default function AdminAnalyticsPage() {
       return
     }
 
-    const escapeCsv = (value: string | number) => {
-      const str = String(value ?? '')
-      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-        return `"${str.replace(/"/g, '""')}"`
-      }
-      return str
-    }
-
     const headers = ['Group', 'Total Students']
     const rows = reportRows.map((row) => [
       row.group === 'Not Specified' || !String(row.group || '').trim() ? '-' : row.group,
       row.total_children,
     ])
 
-    const csv = [
-      headers.join(','),
-      ...rows.map((row) => row.map((cell) => escapeCsv(cell)).join(',')),
-    ].join('\n')
+    const csv = toCsv(headers, rows)
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)

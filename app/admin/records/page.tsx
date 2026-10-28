@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRequireRole } from '../../../lib/hooks'
 import { supabase } from '../../../lib/supabase'
 import { getErrorMessage } from '../../../lib/errors'
+import { toCsv } from '../../../lib/csv'
 import { LoadingSpinner, Alert } from '../../components/UI'
 import AdminShell from '../AdminShell'
 import ChildProfilePanel, { type SectionKey } from './ChildProfilePanel'
@@ -282,13 +283,10 @@ export default function AdminRecordsPage() {
       for (const row of all) Object.keys(row).forEach((k) => headerSet.add(k))
       const headers = Array.from(headerSet)
 
-      const escape = (value: unknown) => {
-        if (value === null || value === undefined) return ''
-        const text = typeof value === 'object' ? JSON.stringify(value) : String(value)
-        return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
-      }
-
-      const csv = [headers.join(','), ...all.map((row) => headers.map((h) => escape(row[h])).join(','))].join('\n')
+      const csv = toCsv(
+        headers,
+        all.map((row) => headers.map((h) => (typeof row[h] === 'object' && row[h] !== null ? JSON.stringify(row[h]) : row[h])))
+      )
       const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }))
       const link = document.createElement('a')
       link.href = url

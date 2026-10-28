@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { X, Check, AlertTriangle } from 'lucide-react'
 import { supabase } from '../../../lib/supabase'
 import { getStandardColumnLabel } from '../../../lib/columnLabels'
+import { safeFileName } from '../../../lib/csv'
 import {
   SECTION_SCHEMA,
   coerceSectionValues,
@@ -321,7 +322,7 @@ export default function ChildProfilePanel({
     setError('')
 
     try {
-      const safeName = file.name.replace(/\s+/g, '-')
+      const safeName = safeFileName(file.name)
       const filePath = `admin_records_photos/${Date.now()}-${safeName}`
 
       const { error: uploadError } = await supabase.storage.from('profiles').upload(filePath, file)

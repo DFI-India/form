@@ -22,3 +22,14 @@ export function getErrorMessage(error: unknown, fallback: string): string {
   }
   return fallback
 }
+
+/**
+ * Make a search term safe to drop inside a PostgREST `or(...)` filter.
+ *
+ * That filter is a comma-separated list, so a term containing a comma, a
+ * parenthesis or a quote changes the structure of the filter rather than being
+ * matched literally. Searching for "Kumar,gender.eq.Male" should look for that
+ * string, not add a condition.
+ */
+export const safeFilterTerm = (value: string) =>
+  value.replace(/[(),"\\*]/g, ' ').trim()
