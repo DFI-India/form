@@ -1,69 +1,70 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import AppShell from '../components/AppShell'
 import { useRequireRole } from '../../lib/hooks'
 import { supabase } from '../../lib/supabase'
-import { LoadingSpinner } from '../components/UI'
-import { ROLE_CONFIG, getRoleCapabilities } from '../../lib/types'
-import { Check, Search, BarChart3 } from 'lucide-react'
+import { getErrorMessage } from '../../lib/errors'
+import { LoadingSpinner, Alert } from '../components/UI'
+import AppShell from '../components/AppShell'
+import { ClipboardCheck, Eye, History, ArrowRight } from 'lucide-react'
 
-export default function DFIFieldStaffPage() {
-  const { profile, loading, isAuthorized } = useRequireRole(['dfi_field_staff'])
-  const [assignedEacNos, setAssignedEacNos] = useState<number[]>([])
-  const [totalChildren, setTotalChildren] = useState(0)
-  const [statsLoading, setStatsLoading] = useState(false)
-  const [statsError, setStatsError] = useState<string | null>(null)
+/**
+ * What field staff need on opening the app: what volunteers have sent that
+ * nobody has checked. Their queue is the unverified one, and the API already
+ * narrows it to the centres assigned to them.
+ */
+
+const ENTITY_LABELS: Record<string, string> = {
+  child_data: 'Personal',
+  childfmly: 'Family',
+  childsibling: 'Siblings',
+  childuniform: 'Uniform',
+  childleaving: 'Leaving',
+  vocational_course: 'Vocational',
+  computer_course: 'Computer',
+}
+
+export default function FieldStaffHome() {
+  const { profile, loading: authLoading, isAuthorized } = useRequireRole(['dfi_field_staff'])
+
+  const [token, setToken] = useState<string | null>(null)
+  const [waiting, setWaiting] = useState<Record<string, number>>({})
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    const loadDashboardStats = async () => {
-      if (!isAuthorized || !profile) return
+    if (!isAuthorized) return
+    supabase.auth.getSession().then(({ data }) => setToken(data.session?.access_token ?? null))
+  }, [isAuthorized])
 
-      setStatsLoading(true)
-      setStatsError(null)
-
-      try {
-        const { data: eacs, error: eacError } = await supabase
-          .from('dfi_field_staff_assigned_eacs')
-          .select('assigned_eac')
-          .eq('id', profile.id)
-
-        if (eacError) throw eacError
-
-        const eacNos = (eacs || [])
-          .map((row) => Number((row as { assigned_eac: unknown }).assigned_eac))
-          .filter((value) => !Number.isNaN(value))
-
-        setAssignedEacNos(eacNos)
-
-        if (eacNos.length === 0) {
-          setTotalChildren(0)
-          return
-        }
-
-        const { count: childCount, error: childCountError } = await supabase
-          .from('Child_Data')
-          .select('*', { count: 'exact', head: true })
-          .in('eac_no', eacNos)
-          .eq('child_left', false)
-
-        if (childCountError) throw childCountError
-
-        setTotalChildren(childCount || 0)
-      } catch (error: any) {
-        setStatsError(error.message || 'Failed to load dashboard stats')
-      } finally {
-        setStatsLoading(false)
-      }
+  const load = useCallback(async () => {
+    if (!token) return
+    setLoading(true)
+    setError('')
+    try {
+      const res = await fetch('/api/admin/approvals/list?status=Pending&limit=1', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Could not load your queue')
+      setWaiting(json.counts || {})
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Could not load your queue.'))
+    } finally {
+      setLoading(false)
     }
+  }, [token])
 
-    loadDashboardStats()
-  }, [isAuthorized, profile])
+  useEffect(() => {
+    load()
+  }, [load])
 
-  if (loading) {
+  const total = Object.values(waiting).reduce((a, b) => a + b, 0)
+
+  if (authLoading) {
     return (
-      <div className="min-h-screen bg-surface-sunken flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-surface">
         <LoadingSpinner size="lg" />
       </div>
     )
@@ -71,81 +72,81 @@ export default function DFIFieldStaffPage() {
 
   if (!isAuthorized || !profile) {
     return (
-      <main className="min-h-screen bg-surface-sunken flex items-center justify-center p-4">
-        <div className="bg-surface rounded-lg shadow-lg p-6 max-w-md text-center">
-          <h1 className="text-xl font-bold sm:text-2xl text-ink mb-2">Access Denied</h1>
-          <p className="text-ink-muted">You don't have permission to access this page.</p>
+      <main className="flex min-h-screen items-center justify-center bg-surface p-4">
+        <div className="max-w-md rounded-lg border border-rule p-6 text-center">
+          <h1 className="mb-2 text-2xl font-semibold">Access denied</h1>
+          <p className="text-ink-muted">You don&apos;t have permission to view this page.</p>
         </div>
       </main>
     )
   }
 
-  const roleInfo = ROLE_CONFIG.find(r => r.value === 'dfi_field_staff')!
-  const capabilities = getRoleCapabilities('dfi_field_staff')
-
   return (
-      <AppShell
-        role="dfi_field_staff"
-        active="/dfi-field-staff"
-        breadcrumb={['Field', 'Overview']}
-        username={profile.username}
-      >
-        <div className="px-4 py-5 sm:px-6 sm:py-8">
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold sm:text-3xl text-ink">DFI Field Staff Dashboard</h2>
-            <p className="text-ink-muted mt-2">{roleInfo.description}</p>
-          </div>
+    <AppShell
+      role="dfi_field_staff"
+      active="/dfi-field-staff"
+      breadcrumb={['Field', 'Overview']}
+      username={profile.username}
+    >
+      <div className="px-4 pb-10 pt-5 sm:px-6">
+        {error && <Alert type="error" message={error} className="mb-4" />}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-            <div className="bg-surface rounded-lg border border-rule p-6 shadow-sm">
-              <p className="text-ink-muted text-sm font-medium mb-2">Assigned EACs</p>
-              <p className="text-4xl font-bold text-green-600">{statsLoading ? '...' : assignedEacNos.length}</p>
-              <p className="text-xs text-ink-faint mt-2">
-                {assignedEacNos.length > 0 ? `EAC: ${assignedEacNos.join(', ')}` : 'No EAC assigned'}
-              </p>
-            </div>
-            <div className="bg-surface rounded-lg border border-rule p-6 shadow-sm">
-              <p className="text-ink-muted text-sm font-medium mb-2">Total Children</p>
-              <p className="text-4xl font-bold text-blue-600">{statsLoading ? '...' : totalChildren}</p>
-              <p className="text-xs text-ink-faint mt-2">Counted where child_left is false</p>
-            </div>
-          </div>
-
-          {statsError && (
-            <div className="mb-8 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {statsError}
-            </div>
-          )}
-
-          <div className="bg-surface rounded-lg border border-rule p-6 mb-8 shadow-sm">
-            <h3 className="text-lg font-bold text-ink mb-4">Your Capabilities</h3>
-            <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {capabilities.map((capability, i) => (
-                <li key={i} className="flex items-start gap-3">
-                  <span className="w-5 h-5 rounded-full bg-status-approved-bg text-status-approved-fg flex items-center justify-center text-sm flex-shrink-0 mt-0.5 font-bold">
-                    <Check className="w-3 h-3" />
-                  </span>
-                  <span className="text-ink">{capability}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Link
-              href="/dfi-field-staff/approve-data"
-              className="bg-green-600 text-white px-6 py-4 rounded-lg hover:bg-green-700 transition-colors font-medium text-lg text-center inline-flex items-center justify-center gap-2"
-            >
-              <Search className="w-5 h-5" /> Review Submitted Data
-            </Link>
-            <Link
-              href="/dfi-field-staff/history"
-              className="bg-blue-600 text-white px-6 py-4 rounded-lg hover:bg-blue-700 transition-colors font-medium text-lg text-center inline-flex items-center justify-center gap-2"
-            >
-              <BarChart3 className="w-5 h-5" /> View Activity History
-            </Link>
-          </div>
+        <div className="mb-5">
+          <h1 className="text-xl font-semibold tracking-tight">Field</h1>
+          <p className="mt-1 text-[14px] text-ink-muted">
+            You check what volunteers submit before DFI staff sign it off.
+          </p>
         </div>
-      </AppShell>
+
+        <Link
+          href="/dfi-field-staff/approve-data"
+          className={`mb-5 flex items-center gap-3 rounded-md border px-4 py-4 transition-colors ${
+            total > 0
+              ? 'border-status-pending-fg/30 bg-status-pending-bg hover:opacity-90'
+              : 'border-rule hover:bg-surface-hover'
+          }`}
+        >
+          <ClipboardCheck className={`h-5 w-5 shrink-0 ${total > 0 ? 'text-status-pending-fg' : 'text-ink-muted'}`} />
+          <span className="min-w-0 flex-1">
+            <span className={`block text-[15px] font-medium ${total > 0 ? 'text-status-pending-fg' : ''}`}>
+              {loading
+                ? 'Checking the queue…'
+                : total > 0
+                ? `${total} ${total === 1 ? 'record needs' : 'records need'} checking`
+                : 'Nothing is waiting to be checked'}
+            </span>
+            {!loading && total > 0 && (
+              <span className="mt-1 flex flex-wrap gap-1.5">
+                {Object.entries(waiting)
+                  .filter(([, v]) => v > 0)
+                  .map(([k, v]) => (
+                    <span key={k} className="rounded bg-surface px-1.5 py-0.5 text-[12px] text-ink-muted">
+                      {ENTITY_LABELS[k] ?? k} {v}
+                    </span>
+                  ))}
+              </span>
+            )}
+          </span>
+          <ArrowRight className={`h-4 w-4 shrink-0 ${total > 0 ? 'text-status-pending-fg' : 'text-ink-faint'}`} />
+        </Link>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {[
+            { href: '/dfi-field-staff/view-data', icon: Eye, title: 'View data', text: 'Everything recorded at your centres' },
+            { href: '/dfi-field-staff/history', icon: History, title: 'My activity', text: 'What you have verified or sent back' },
+          ].map((a) => (
+            <Link
+              key={a.href}
+              href={a.href}
+              className="flex min-h-[88px] flex-col gap-1.5 rounded-md border border-rule p-4 transition-colors hover:bg-surface-hover"
+            >
+              <a.icon className="h-[18px] w-[18px] text-ink-muted" />
+              <span className="text-[14.5px] font-medium">{a.title}</span>
+              <span className="text-[13px] leading-snug text-ink-muted">{a.text}</span>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </AppShell>
   )
 }

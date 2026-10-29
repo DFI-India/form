@@ -1,119 +1,74 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import AppShell from '../components/AppShell'
+import { useCallback, useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useRequireRole } from '../../lib/hooks'
-import { LoadingSpinner } from '../components/UI'
-import { ROLE_CONFIG, getRoleCapabilities } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
-import { BarChart3, Search, Check } from 'lucide-react'
+import { getErrorMessage } from '../../lib/errors'
+import { LoadingSpinner, Alert } from '../components/UI'
+import AppShell from '../components/AppShell'
+import { ClipboardCheck, List, History, ArrowRight } from 'lucide-react'
 
-interface DashboardAnalytics {
-  summary: {
-    totalEacs: number
-    totalChildren: number
-    totalVocationalStudents: number
-    totalApprovedChildren?: number
-    totalApprovedVocationalStudents?: number
-  }
-  byCentre: {
-    eac_no: string | number
-    village_name?: string
-    count: number
-  }[]
+/**
+ * What DFI staff need on opening the app: what is waiting for them.
+ *
+ * Their job is signing off what field staff have verified, so the queue comes
+ * first and everything else is context.
+ */
+
+const ENTITY_LABELS: Record<string, string> = {
+  child_data: 'Personal',
+  childfmly: 'Family',
+  childsibling: 'Siblings',
+  childuniform: 'Uniform',
+  childleaving: 'Leaving',
+  vocational_course: 'Vocational',
+  computer_course: 'Computer',
 }
 
-const PIE_COLORS = ['#4f46e5', '#0891b2', '#16a34a', '#ca8a04', '#dc2626', '#7c3aed', '#ea580c', '#0d9488']
+export default function StaffHome() {
+  const { profile, loading: authLoading, isAuthorized } = useRequireRole(['dfi_staff'])
 
-export default function DFIStaffPage() {
-  const { profile, loading, isAuthorized } = useRequireRole(['dfi_staff'])
-  const [analytics, setAnalytics] = useState<DashboardAnalytics | null>(null)
-  const [dataLoading, setDataLoading] = useState(false)
-  const [dataError, setDataError] = useState('')
+  const [token, setToken] = useState<string | null>(null)
+  const [waiting, setWaiting] = useState<Record<string, number>>({})
+  const [summary, setSummary] = useState<{ pending: number; approved: number; rejected: number } | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    const loadDashboardStats = async () => {
-      setDataLoading(true)
-      setDataError('')
-      try {
-        const { data } = await supabase.auth.getSession()
-        const token = data.session?.access_token
-        if (!token) {
-          setDataError('Not signed in')
-          return
-        }
-
-        const res = await fetch('/api/admin/analytics/summary', {
-          headers: { Authorization: `Bearer ${token}` }
-        })
-        const json = await res.json()
-        if (!res.ok) {
-          throw new Error(json.error || 'Failed to load dashboard stats')
-        }
-
-        setAnalytics({
-          summary: {
-            totalEacs: json.summary?.totalEacs || 0,
-            totalChildren: json.summary?.totalChildren || 0,
-            totalVocationalStudents: json.summary?.totalVocationalStudents || 0,
-            totalApprovedChildren: json.summary?.totalApprovedChildren || 0,
-            totalApprovedVocationalStudents: json.summary?.totalApprovedVocationalStudents || 0
-          },
-          byCentre: json.byCentre || []
-        })
-      } catch (err: any) {
-        setDataError(err.message || 'Failed to load dashboard stats')
-      } finally {
-        setDataLoading(false)
-      }
-    }
-
-    if (isAuthorized) {
-      loadDashboardStats()
-    }
+    if (!isAuthorized) return
+    supabase.auth.getSession().then(({ data }) => setToken(data.session?.access_token ?? null))
   }, [isAuthorized])
 
-  const pieData = useMemo(() => {
-    const rows = analytics?.byCentre || []
-    const total = rows.reduce((sum, row) => sum + (row.count || 0), 0)
-    if (total === 0) return []
+  const load = useCallback(async () => {
+    if (!token) return
+    setLoading(true)
+    setError('')
+    try {
+      const headers = { Authorization: `Bearer ${token}` }
+      const [queue, stats] = await Promise.all([
+        fetch('/api/admin/approvals/list?status=Verified&limit=1', { headers }).then((r) => r.json()),
+        fetch('/api/admin/analytics/summary', { headers }).then((r) => r.json()),
+      ])
+      if (queue.error) throw new Error(queue.error)
+      setWaiting(queue.counts || {})
+      if (stats.byStatus) setSummary(stats.byStatus)
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Could not load your queue.'))
+    } finally {
+      setLoading(false)
+    }
+  }, [token])
 
-    let currentAngle = -90
-    return rows.map((row, index) => {
-      const value = row.count || 0
-      const sweep = (value / total) * 360
-      const percentage = (value / total) * 100
-      const startAngle = currentAngle
-      const endAngle = currentAngle + sweep
-      currentAngle = endAngle
+  useEffect(() => {
+    load()
+  }, [load])
 
-      const cx = 120
-      const cy = 120
-      const radius = 90
+  const totalWaiting = Object.values(waiting).reduce((a, b) => a + b, 0)
 
-      const startRad = (Math.PI / 180) * startAngle
-      const endRad = (Math.PI / 180) * endAngle
-      const x1 = cx + radius * Math.cos(startRad)
-      const y1 = cy + radius * Math.sin(startRad)
-      const x2 = cx + radius * Math.cos(endRad)
-      const y2 = cy + radius * Math.sin(endRad)
-      const largeArc = sweep > 180 ? 1 : 0
-      const path = `M ${cx} ${cy} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2} Z`
-
-      return {
-        key: String(row.eac_no),
-        eac: row.eac_no,
-        count: value,
-        percentage,
-        color: PIE_COLORS[index % PIE_COLORS.length],
-        path
-      }
-    })
-  }, [analytics])
-
-  if (loading) {
+  if (authLoading) {
     return (
-      <div className="min-h-screen bg-surface-sunken flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-surface">
         <LoadingSpinner size="lg" />
       </div>
     )
@@ -121,131 +76,98 @@ export default function DFIStaffPage() {
 
   if (!isAuthorized || !profile) {
     return (
-      <main className="min-h-screen bg-surface-sunken flex items-center justify-center p-4">
-        <div className="bg-surface rounded-lg shadow-lg p-6 max-w-md text-center">
-          <h1 className="text-xl font-bold sm:text-2xl text-ink mb-2">Access Denied</h1>
-          <p className="text-ink-muted">You don't have permission to access this page.</p>
+      <main className="flex min-h-screen items-center justify-center bg-surface p-4">
+        <div className="max-w-md rounded-lg border border-rule p-6 text-center">
+          <h1 className="mb-2 text-2xl font-semibold">Access denied</h1>
+          <p className="text-ink-muted">You don&apos;t have permission to view this page.</p>
         </div>
       </main>
     )
   }
 
-  const roleInfo = ROLE_CONFIG.find(r => r.value === 'dfi_staff')!
-  const capabilities = getRoleCapabilities('dfi_staff')
-  const visibleCapabilities = capabilities.filter(
-    (capability) => capability.trim().toLowerCase() !== 'update assigned records'
-  )
+  const n = (v?: number) => (loading ? '—' : (v ?? 0).toLocaleString())
 
   return (
-      <AppShell
-        role="dfi_staff"
-        active="/dfi-staff"
-        breadcrumb={['Review', 'Overview']}
-        username={profile.username}
-      >
-        <div className="px-4 py-5 sm:px-6 sm:py-8">
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold sm:text-3xl text-ink">DFI Staff Dashboard</h2>
-            <p className="text-ink-muted mt-2">{roleInfo.description}</p>
-          </div>
+    <AppShell role="dfi_staff" active="/dfi-staff" breadcrumb={['Review', 'Overview']} username={profile.username}>
+      <div className="px-4 pb-10 pt-5 sm:px-6">
+        {error && <Alert type="error" message={error} className="mb-4" />}
 
-          {dataError && (
-            <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700">
-              {dataError}
-            </div>
-          )}
-
-          {/* SECTION 1: Data Review Stats */}
-          <div className="mb-12">
-            <h3 className="text-xl font-bold text-ink mb-4 flex items-center gap-2">
-              <BarChart3 className="w-5 h-5" /> Overview
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-surface rounded-lg border border-rule p-6 shadow-sm">
-                <p className="text-ink-muted text-sm font-medium mb-2">Total EACs</p>
-                <p className="text-4xl font-bold text-indigo-600">{analytics?.summary.totalEacs ?? 0}</p>
-                <p className="text-xs text-ink-faint mt-2">From centre_data</p>
-              </div>
-              <div className="bg-surface rounded-lg border border-rule p-6 shadow-sm">
-                <p className="text-ink-muted text-sm font-medium mb-2">Total Children</p>
-                <p className="text-4xl font-bold text-blue-600">{analytics?.summary.totalApprovedChildren ?? 0}</p>
-                <p className="text-xs text-ink-faint mt-2">Approved rows in Child_Data</p>
-              </div>
-              <div className="bg-surface rounded-lg border border-rule p-6 shadow-sm">
-                <p className="text-ink-muted text-sm font-medium mb-2">Vocational Students</p>
-                <p className="text-4xl font-bold text-emerald-600">{analytics?.summary.totalApprovedVocationalStudents ?? 0}</p>
-                <p className="text-xs text-ink-faint mt-2">Approved rows in vocational_course</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="mb-12 bg-surface rounded-lg border border-rule p-6 shadow-sm">
-            <h3 className="text-lg font-bold text-ink mb-4">Children Distribution by EAC</h3>
-            {dataLoading ? (
-              <div className="py-8 flex justify-center">
-                <LoadingSpinner size="lg" />
-              </div>
-            ) : pieData.length === 0 ? (
-              <p className="text-ink-muted">No data available.</p>
-            ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
-                <div className="flex justify-center">
-                  <svg width="260" height="260" viewBox="0 0 240 240" role="img" aria-label="Children by EAC pie chart">
-                    {pieData.map((slice) => (
-                      <path key={slice.key} d={slice.path} fill={slice.color} stroke="#fff" strokeWidth="1">
-                        <title>{`EAC ${String(slice.eac)}: ${slice.count} children (${slice.percentage.toFixed(1)}%)`}</title>
-                      </path>
-                    ))}
-                  </svg>
-                </div>
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {pieData.map((slice) => (
-                    <div key={`legend-${slice.key}`} className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2">
-                        <span className="inline-block w-3 h-3 rounded-sm" style={{ backgroundColor: slice.color }} />
-                        <span className="text-ink">EAC {String(slice.eac)}</span>
-                      </div>
-                      <span className="font-medium text-ink">{slice.count} ({slice.percentage.toFixed(1)}%)</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* SECTION 2: Data Review Actions */}
-          <div className="mb-12">
-            <h3 className="text-lg font-bold text-ink mb-4 flex items-center gap-2">
-              <Search className="w-5 h-5" /> Data Verification
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <a href="/dfi-staff/approvals" className="bg-surface border border-rule text-ink px-6 py-4 rounded-lg hover:bg-surface-hover transition-colors font-medium text-center">
-                Approve Data
-              </a>
-              <a href="/dfi-staff/all-records" className="bg-surface border border-rule text-ink px-6 py-4 rounded-lg hover:bg-surface-hover transition-colors font-medium text-center">
-                Manage Data
-              </a>
-              <a href="/dfi-staff/history" className="bg-surface border border-rule text-ink px-6 py-4 rounded-lg hover:bg-surface-hover transition-colors font-medium text-center">
-                View Approval History
-              </a>
-            </div>
-          </div>
-
-          {/* Capabilities List */}
-          <div className="bg-surface rounded-lg border border-rule p-6 shadow-sm">
-            <h3 className="text-lg font-bold text-ink mb-4">Your Full Capabilities</h3>
-            <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {visibleCapabilities.map((capability, i) => (
-                <li key={i} className="flex items-start gap-3">
-                  <span className="w-5 h-5 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-sm flex-shrink-0 mt-0.5 font-bold">
-                    <Check className="w-3 h-3" />
-                  </span>
-                  <span className="text-ink">{capability}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+        <div className="mb-5">
+          <h1 className="text-xl font-semibold tracking-tight">Review</h1>
+          <p className="mt-1 text-[14px] text-ink-muted">
+            Field staff verify what volunteers submit. You decide what is approved.
+          </p>
         </div>
-      </AppShell>
+
+        <Link
+          href="/dfi-staff/approvals"
+          className={`mb-5 flex items-center gap-3 rounded-md border px-4 py-4 transition-colors ${
+            totalWaiting > 0
+              ? 'border-status-verified-fg/30 bg-status-verified-bg hover:opacity-90'
+              : 'border-rule hover:bg-surface-hover'
+          }`}
+        >
+          <ClipboardCheck
+            className={`h-5 w-5 shrink-0 ${totalWaiting > 0 ? 'text-status-verified-fg' : 'text-ink-muted'}`}
+          />
+          <span className="min-w-0 flex-1">
+            <span
+              className={`block text-[15px] font-medium ${totalWaiting > 0 ? 'text-status-verified-fg' : ''}`}
+            >
+              {loading
+                ? 'Checking the queue…'
+                : totalWaiting > 0
+                ? `${totalWaiting} ${totalWaiting === 1 ? 'record is' : 'records are'} waiting for your approval`
+                : 'Nothing is waiting for approval'}
+            </span>
+            {!loading && totalWaiting > 0 && (
+              <span className="mt-1 flex flex-wrap gap-1.5">
+                {Object.entries(waiting)
+                  .filter(([, v]) => v > 0)
+                  .map(([k, v]) => (
+                    <span
+                      key={k}
+                      className="rounded bg-surface px-1.5 py-0.5 text-[12px] text-ink-muted"
+                    >
+                      {ENTITY_LABELS[k] ?? k} {v}
+                    </span>
+                  ))}
+              </span>
+            )}
+          </span>
+          <ArrowRight className={`h-4 w-4 shrink-0 ${totalWaiting > 0 ? 'text-status-verified-fg' : 'text-ink-faint'}`} />
+        </Link>
+
+        <div className="mb-5 grid grid-cols-3 gap-px overflow-hidden rounded-md border border-rule bg-rule">
+          {[
+            { label: 'Approved', value: summary?.approved, tone: 'text-status-approved-fg' },
+            { label: 'Still pending', value: summary?.pending, tone: 'text-status-pending-fg' },
+            { label: 'Sent back', value: summary?.rejected, tone: 'text-status-returned-fg' },
+          ].map((s) => (
+            <div key={s.label} className="flex flex-col gap-1 bg-surface px-4 py-3.5">
+              <span className="text-[12.5px] text-ink-muted">{s.label}</span>
+              <span className={`text-xl font-semibold tracking-tight ${s.tone}`}>{n(s.value)}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {[
+            { href: '/dfi-staff/all-records', icon: List, title: 'All records', text: 'Search every table and export' },
+            { href: '/dfi-staff/history', icon: History, title: 'My activity', text: 'What you have approved or sent back' },
+          ].map((a) => (
+            <Link
+              key={a.href}
+              href={a.href}
+              className="flex min-h-[88px] flex-col gap-1.5 rounded-md border border-rule p-4 transition-colors hover:bg-surface-hover"
+            >
+              <a.icon className="h-[18px] w-[18px] text-ink-muted" />
+              <span className="text-[14.5px] font-medium">{a.title}</span>
+              <span className="text-[13px] leading-snug text-ink-muted">{a.text}</span>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </AppShell>
   )
 }

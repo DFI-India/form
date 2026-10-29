@@ -1,652 +1,250 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import TablePagination from '@mui/material/TablePagination'
-import { BookOpen, Filter, FileText, Search, Shirt, Users } from 'lucide-react'
-import { Alert, LoadingSpinner } from '../../components/UI'
-import { supabase } from '../../../lib/supabase'
-import AppShell from '../../components/AppShell'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRequireRole } from '../../../lib/hooks'
+import { supabase } from '../../../lib/supabase'
 import { getErrorMessage } from '../../../lib/errors'
-import { ROLE_CONFIG } from '../../../lib/types'
+import { toCsv } from '../../../lib/csv'
+import { LoadingSpinner, Alert } from '../../components/UI'
+import AppShell from '../../components/AppShell'
+import { Download, Inbox, Search } from 'lucide-react'
 
-type ReportTab = 'child' | 'family' | 'sibling' | 'uniform'
-type StudentFilter = 'all' | 'enrolled' | 'left'
+/**
+ * A volunteer's own centre, ready to take away.
+ *
+ * Not the admin report builder: a volunteer wants their centre's list on paper
+ * or in a spreadsheet, not a query tool. Everything is scoped to the centre on
+ * their profile.
+ */
 
-type ChildDataRow = {
-    record_id?: number | string
-    eac_no?: string | number | null
-    reg_no?: string | number | null
-    first_name?: string | null
-    last_name?: string | null
-    gender?: string | null
-    adm_date?: string | null
-    class_std_text?: string | null
-    school_name?: string | null
-    school_category?: string | null
-    child_left?: boolean | string | number | null
-    created_at?: string | null
+const SHEETS = [
+  {
+    key: 'Child_Data',
+    label: 'Children',
+    columns: [
+      ['reg_no', 'Reg No'], ['first_name', 'First name'], ['last_name', 'Last name'],
+      ['gender', 'Gender'], ['dateofbirth', 'Date of birth'], ['class_std_text', 'Class'],
+      ['village', 'Village'], ['school_name', 'School'], ['status', 'Approval'],
+    ],
+  },
+  {
+    key: 'childfmly',
+    label: 'Family',
+    columns: [
+      ['reg_no', 'Reg No'], ['f_name', 'Father'], ['f_occup', 'Father occupation'], ['f_mobile', 'Father mobile'],
+      ['m_name', 'Mother'], ['m_occup', 'Mother occupation'], ['m_mobile', 'Mother mobile'],
+      ['fmly_pincode', 'Pincode'], ['status', 'Approval'],
+    ],
+  },
+  {
+    key: 'childuniform',
+    label: 'Uniform',
+    columns: [
+      ['reg_no', 'Reg No'], ['shirtsize', 'Shirt'], ['knickersize', 'Knicker'],
+      ['pant_skirtsize', 'Pant or skirt'], ['chudidharsize', 'Chudidhar'],
+      ['top_pantsize', 'Top and pant'], ['footwearsize', 'Footwear'], ['status', 'Approval'],
+    ],
+  },
+  {
+    key: 'childleaving',
+    label: 'Leaving',
+    columns: [
+      ['reg_no', 'Reg No'], ['leav_date', 'Left on'], ['reason', 'Reason'],
+      ['leav_class', 'Class when leaving'], ['pass_status', 'Pass or drop out'], ['status', 'Approval'],
+    ],
+  },
+] as const
+
+type SheetKey = (typeof SHEETS)[number]['key']
+
+const txt = (v: unknown) => String(v ?? '').trim()
+
+const cell = (v: unknown) => {
+  if (v === null || v === undefined || txt(v) === '') return '—'
+  if (typeof v === 'boolean') return v ? 'Yes' : 'No'
+  const s = txt(v)
+  return /^\d{4}-\d{2}-\d{2}T/.test(s) ? s.slice(0, 10) : s
 }
 
-type ChildFamilyRow = {
-    record_id?: number | string
-    eac_no?: string | number | null
-    reg_no?: string | number | null
-    f_name?: string | null
-    m_name?: string | null
-    f_mobile?: string | null
-    m_mobile?: string | null
-    fmly_addr1?: string | null
-    fmly_addr2?: string | null
-    fmly_addr3?: string | null
-    fmly_pincode?: string | null
-    fmly_remarks?: string | null
-    created_at?: string | null
-}
+export default function VolunteerReportsPage() {
+  const { profile, loading: authLoading, isAuthorized } = useRequireRole(['field_volunteer'])
 
-type ChildSiblingRow = {
-    record_id?: number | string
-    eac_no?: string | number | null
-    reg_no?: string | number | null
-    names_1?: string | null
-    ages_1?: string | number | null
-    genders_1?: string | null
-    class_occup_1?: string | null
-    names_2?: string | null
-    ages_2?: string | number | null
-    genders_2?: string | null
-    class_occup_2?: string | null
-    names_3?: string | null
-    ages_3?: string | number | null
-    genders_3?: string | null
-    class_occup_3?: string | null
-    names_4?: string | null
-    ages_4?: string | number | null
-    genders_4?: string | null
-    class_occup_4?: string | null
-    names_5?: string | null
-    ages_5?: string | number | null
-    genders_5?: string | null
-    class_occup_5?: string | null
-    sibling_remarks?: string | null
-    created_at?: string | null
-}
+  const [sheet, setSheet] = useState<SheetKey>('Child_Data')
+  const [rows, setRows] = useState<Record<string, unknown>[]>([])
+  const [query, setQuery] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
-type ChildUniformRow = {
-    record_id?: number | string
-    eac_no?: string | number | null
-    reg_no?: string | number | null
-    shirtsize?: string | null
-    knickersize?: string | null
-    pant_skirtsize?: string | null
-    chudidharsize?: string | null
-    top_pantsize?: string | null
-    footwearsize?: string | null
-    uniform_updated?: string | null
-    created_at?: string | null
-}
+  const centre = profile?.centre_eac_no ?? null
+  const definition = useMemo(() => SHEETS.find((s) => s.key === sheet)!, [sheet])
 
-type StudentStatus = 'Enrolled' | 'Left'
-
-type EnrichedChildRow = ChildDataRow & {
-    child_name: string
-    child_status: StudentStatus
-}
-
-type EnrichedFamilyRow = ChildFamilyRow & {
-    child_name: string
-    child_status: StudentStatus
-}
-
-type EnrichedSiblingRow = ChildSiblingRow & {
-    child_name: string
-    child_status: StudentStatus
-}
-
-type EnrichedUniformRow = ChildUniformRow & {
-    child_name: string
-    child_status: StudentStatus
-}
-
-const tabs: Array<{ id: ReportTab; label: string; icon: typeof FileText }> = [
-    { id: 'child', label: 'Child Data', icon: FileText },
-    { id: 'family', label: 'Child Family', icon: Users },
-    { id: 'sibling', label: 'Child Sibling', icon: BookOpen },
-    { id: 'uniform', label: 'Child Uniform', icon: Shirt },
-]
-
-const studentFilters: Array<{ id: StudentFilter; label: string }> = [
-    { id: 'all', label: 'All Students' },
-    { id: 'enrolled', label: 'Enrolled' },
-    { id: 'left', label: 'Left' },
-]
-
-const rowsPerPageOptions = [10, 25, 50]
-
-const normalizeValue = (value: unknown) => String(value ?? '').trim().toLowerCase()
-
-const joinName = (firstName?: string | null, lastName?: string | null) => {
-    return [firstName, lastName].map((part) => part?.trim()).filter(Boolean).join(' ').trim()
-}
-
-const buildChildName = (row?: ChildDataRow | null) => {
-    if (!row) return 'Unknown'
-    return joinName(row.first_name, row.last_name) || String(row.reg_no ?? '').trim() || 'Unknown'
-}
-
-const normalizeDisplayValue = (value: unknown) => {
-    const trimmed = String(value ?? '').trim()
-    return trimmed || '-'
-}
-
-const isLeftStudent = (value: ChildDataRow['child_left']) => {
-    if (typeof value === 'boolean') return value
-    const normalized = normalizeValue(value)
-    return normalized === 'true' || normalized === '1' || normalized === 'yes' || normalized === 'left'
-}
-
-const getStudentStatus = (row?: ChildDataRow | null): StudentStatus => {
-    return row && isLeftStudent(row.child_left) ? 'Left' : 'Enrolled'
-}
-
-const getRowSearchText = (tab: ReportTab, row: EnrichedChildRow | EnrichedFamilyRow | EnrichedSiblingRow | EnrichedUniformRow) => {
-    const parts = [row.child_name, row.reg_no, row.eac_no]
-
-    if (tab === 'child') {
-        const childRow = row as EnrichedChildRow
-        parts.push(childRow.school_name, childRow.school_category, childRow.class_std_text, childRow.gender)
+  const load = useCallback(async () => {
+    if (!profile) return
+    setLoading(true)
+    setError('')
+    try {
+      let q = supabase.from(sheet).select('*').limit(2000)
+      // Child_Data stores the centre as a number, the linked tables as text.
+      if (centre) q = q.eq('eac_no', sheet === 'Child_Data' ? Number(centre) : String(centre))
+      const { data, error: err } = await q
+      if (err) throw err
+      setRows(data ?? [])
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Could not load your centre’s records.'))
+    } finally {
+      setLoading(false)
     }
+  }, [profile?.id, sheet, centre])
 
-    if (tab === 'family') {
-        const familyRow = row as EnrichedFamilyRow
-        parts.push(
-            familyRow.f_name,
-            familyRow.m_name,
-            familyRow.f_mobile,
-            familyRow.m_mobile,
-            familyRow.fmly_addr1,
-            familyRow.fmly_addr2,
-            familyRow.fmly_addr3,
-            familyRow.fmly_pincode,
-            familyRow.fmly_remarks,
-        )
-    }
+  useEffect(() => {
+    load()
+  }, [load])
 
-    if (tab === 'sibling') {
-        const siblingRow = row as EnrichedSiblingRow
-        parts.push(
-            siblingRow.names_1,
-            siblingRow.names_2,
-            siblingRow.names_3,
-            siblingRow.names_4,
-            siblingRow.names_5,
-            siblingRow.class_occup_1,
-            siblingRow.class_occup_2,
-            siblingRow.class_occup_3,
-            siblingRow.class_occup_4,
-            siblingRow.class_occup_5,
-            siblingRow.sibling_remarks,
-        )
-    }
-
-    if (tab === 'uniform') {
-        const uniformRow = row as EnrichedUniformRow
-        parts.push(
-            uniformRow.shirtsize,
-            uniformRow.knickersize,
-            uniformRow.pant_skirtsize,
-            uniformRow.chudidharsize,
-            uniformRow.top_pantsize,
-            uniformRow.footwearsize,
-            uniformRow.uniform_updated,
-        )
-    }
-
-    return parts
-        .map(normalizeValue)
-        .filter(Boolean)
-        .join(' ')
-}
-
-const sortRows = <T extends { child_name: string; reg_no?: string | number | null }>(rows: T[]) => {
-    return [...rows].sort((left, right) => {
-        const nameComparison = left.child_name.localeCompare(right.child_name, undefined, { sensitivity: 'base' })
-        if (nameComparison !== 0) return nameComparison
-        return normalizeValue(left.reg_no).localeCompare(normalizeValue(right.reg_no), undefined, { sensitivity: 'base' })
-    })
-}
-
-export default function FieldVolunteerReportsPage() {
-    const { profile, loading: authLoading, isAuthorized } = useRequireRole(['field_volunteer'])
-    const [loading, setLoading] = useState(false)
-    const [error, setError] = useState('')
-    const [activeTab, setActiveTab] = useState<ReportTab>('child')
-    const [searchTerm, setSearchTerm] = useState('')
-    const [studentFilter, setStudentFilter] = useState<StudentFilter>('all')
-    const [page, setPage] = useState(0)
-    const [rowsPerPage, setRowsPerPage] = useState(10)
-    const [childRows, setChildRows] = useState<EnrichedChildRow[]>([])
-    const [familyRows, setFamilyRows] = useState<EnrichedFamilyRow[]>([])
-    const [siblingRows, setSiblingRows] = useState<EnrichedSiblingRow[]>([])
-    const [uniformRows, setUniformRows] = useState<EnrichedUniformRow[]>([])
-
-    const roleInfo = ROLE_CONFIG.find((role) => role.value === 'field_volunteer')
-    const eacNo = profile?.centre_eac_no ? String(profile.centre_eac_no).trim() : ''
-
-    useEffect(() => {
-        if (!isAuthorized || !profile) return
-
-        const loadReports = async () => {
-            if (!eacNo) {
-                setError('No EAC number is assigned to this account.')
-                return
-            }
-
-            setLoading(true)
-            setError('')
-
-            try {
-                const [childrenResult, familyResult, siblingResult, uniformResult] = await Promise.all([
-                    supabase.from('Child_Data').select('*').eq('eac_no', eacNo),
-                    supabase.from('childfmly').select('*').eq('eac_no', eacNo),
-                    supabase.from('childsibling').select('*').eq('eac_no', eacNo),
-                    supabase.from('childuniform').select('*').eq('eac_no', eacNo),
-                ])
-
-                if (childrenResult.error) throw childrenResult.error
-                if (familyResult.error) throw familyResult.error
-                if (siblingResult.error) throw siblingResult.error
-                if (uniformResult.error) throw uniformResult.error
-
-                const children = (childrenResult.data ?? []) as ChildDataRow[]
-                const childLookup = new Map<string, ChildDataRow>()
-
-                children.forEach((row) => {
-                    const regNo = normalizeValue(row.reg_no)
-                    if (regNo) childLookup.set(regNo, row)
-                })
-
-                const enrichedChildren = children.map<EnrichedChildRow>((row) => ({
-                    ...row,
-                    child_name: buildChildName(row),
-                    child_status: getStudentStatus(row),
-                }))
-
-                const enrichedFamily = ((familyResult.data ?? []) as ChildFamilyRow[]).map<EnrichedFamilyRow>((row) => {
-                    const child = childLookup.get(normalizeValue(row.reg_no))
-                    return {
-                        ...row,
-                        child_name: buildChildName(child),
-                        child_status: getStudentStatus(child),
-                    }
-                })
-
-                const enrichedSibling = ((siblingResult.data ?? []) as ChildSiblingRow[]).map<EnrichedSiblingRow>((row) => {
-                    const child = childLookup.get(normalizeValue(row.reg_no))
-                    return {
-                        ...row,
-                        child_name: buildChildName(child),
-                        child_status: getStudentStatus(child),
-                    }
-                })
-
-                const enrichedUniform = ((uniformResult.data ?? []) as ChildUniformRow[]).map<EnrichedUniformRow>((row) => {
-                    const child = childLookup.get(normalizeValue(row.reg_no))
-                    return {
-                        ...row,
-                        child_name: buildChildName(child),
-                        child_status: getStudentStatus(child),
-                    }
-                })
-
-                setChildRows(enrichedChildren)
-                setFamilyRows(enrichedFamily)
-                setSiblingRows(enrichedSibling)
-                setUniformRows(enrichedUniform)
-            } catch (loadError) {
-                console.error('Failed to load volunteer reports:', loadError)
-                const message = getErrorMessage(loadError, 'Unable to load reports.')
-                setError(message)
-                setChildRows([])
-                setFamilyRows([])
-                setSiblingRows([])
-                setUniformRows([])
-            } finally {
-                setLoading(false)
-            }
-        }
-
-        loadReports()
-    }, [eacNo, isAuthorized, profile])
-
-    useEffect(() => {
-        setPage(0)
-    }, [activeTab, searchTerm, studentFilter, rowsPerPage])
-
-    const activeRows = useMemo(() => {
-        const sourceRows =
-            activeTab === 'child'
-                ? childRows
-                : activeTab === 'family'
-                    ? familyRows
-                    : activeTab === 'sibling'
-                        ? siblingRows
-                        : uniformRows
-
-        const normalizedSearch = searchTerm.trim().toLowerCase()
-
-        const filteredRows = sourceRows.filter((row) => {
-            const statusMatches =
-                studentFilter === 'all' || row.child_status.toLowerCase() === studentFilter
-            const searchMatches = !normalizedSearch || getRowSearchText(activeTab, row).includes(normalizedSearch)
-            return statusMatches && searchMatches
-        })
-
-        return sortRows(filteredRows)
-    }, [activeTab, childRows, familyRows, siblingRows, uniformRows, searchTerm, studentFilter])
-
-    const visibleRows = useMemo(() => {
-        const start = page * rowsPerPage
-        return activeRows.slice(start, start + rowsPerPage)
-    }, [activeRows, page, rowsPerPage])
-
-    const activeTabLabel = tabs.find((tab) => tab.id === activeTab)?.label ?? 'Child Data'
-
-    if (authLoading) {
-        return (
-            <div className="min-h-screen bg-surface-sunken flex items-center justify-center">
-                <LoadingSpinner size="lg" />
-            </div>
-        )
-    }
-
-    if (!isAuthorized || !profile) {
-        return (
-            <main className="min-h-screen bg-surface-sunken flex items-center justify-center p-4">
-                <div className="rounded-xl border border-rule bg-surface p-6 text-center shadow-sm">
-                    <h1 className="text-xl font-bold sm:text-2xl text-ink mb-2">Access Denied</h1>
-                    <p className="text-ink-muted">You don't have permission to access this page.</p>
-                </div>
-            </main>
-        )
-    }
-
-    const renderChildDataTable = () => (
-        <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-rule text-sm">
-                <thead className="bg-surface-sunken text-ink-muted">
-                    <tr>
-                        <th className="px-4 py-3 text-left font-semibold">Name</th>
-                        <th className="px-4 py-3 text-left font-semibold">Reg No</th>
-                        <th className="px-4 py-3 text-left font-semibold">Gender</th>
-                        <th className="px-4 py-3 text-left font-semibold">Status</th>
-                        <th className="px-4 py-3 text-left font-semibold">Admission Date</th>
-                        <th className="px-4 py-3 text-left font-semibold">Class/Std</th>
-                        <th className="px-4 py-3 text-left font-semibold">School</th>
-                        <th className="px-4 py-3 text-left font-semibold">School Category</th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-rule-faint bg-surface">
-                    {(visibleRows as EnrichedChildRow[]).map((row) => (
-                        <tr key={String(row.record_id ?? row.reg_no)} className="hover:bg-surface-hover">
-                            <td className="px-4 py-3 font-medium text-ink">{row.child_name}</td>
-                            <td className="px-4 py-3 text-ink">{normalizeDisplayValue(row.reg_no)}</td>
-                            <td className="px-4 py-3 text-ink">{normalizeDisplayValue(row.gender)}</td>
-                            <td className="px-4 py-3 text-ink">
-                                <span
-                                    className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${row.child_status === 'Enrolled'
-                                        ? 'bg-status-approved-bg text-status-approved-fg'
-                                        : 'bg-rose-100 text-rose-800'
-                                        }`}
-                                >
-                                    {row.child_status}
-                                </span>
-                            </td>
-                            <td className="px-4 py-3 text-ink">{normalizeDisplayValue(row.adm_date)}</td>
-                            <td className="px-4 py-3 text-ink">{normalizeDisplayValue(row.class_std_text)}</td>
-                            <td className="px-4 py-3 text-ink">{normalizeDisplayValue(row.school_name)}</td>
-                            <td className="px-4 py-3 text-ink">{normalizeDisplayValue(row.school_category)}</td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return rows
+    return rows.filter((r) =>
+      definition.columns.some(([key]) => txt(r[key]).toLowerCase().includes(q))
     )
+  }, [rows, query, definition])
 
-    const renderFamilyTable = () => (
-        <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-rule text-sm">
-                <thead className="bg-surface-sunken text-ink-muted">
-                    <tr>
-                        <th className="px-4 py-3 text-left font-semibold">Child Name</th>
-                        <th className="px-4 py-3 text-left font-semibold">Reg No</th>
-                        <th className="px-4 py-3 text-left font-semibold">Father Name</th>
-                        <th className="px-4 py-3 text-left font-semibold">Mother Name</th>
-                        <th className="px-4 py-3 text-left font-semibold">Father Mobile</th>
-                        <th className="px-4 py-3 text-left font-semibold">Mother Mobile</th>
-                        <th className="px-4 py-3 text-left font-semibold">Address</th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-rule-faint bg-surface">
-                    {(visibleRows as EnrichedFamilyRow[]).map((row) => (
-                        <tr key={String(row.record_id ?? row.reg_no)} className="hover:bg-surface-hover">
-                            <td className="px-4 py-3 font-medium text-ink">{row.child_name}</td>
-                            <td className="px-4 py-3 text-ink">{normalizeDisplayValue(row.reg_no)}</td>
-                            <td className="px-4 py-3 text-ink">{normalizeDisplayValue(row.f_name)}</td>
-                            <td className="px-4 py-3 text-ink">{normalizeDisplayValue(row.m_name)}</td>
-                            <td className="px-4 py-3 text-ink">{normalizeDisplayValue(row.f_mobile)}</td>
-                            <td className="px-4 py-3 text-ink">{normalizeDisplayValue(row.m_mobile)}</td>
-                            <td className="px-4 py-3 text-ink">
-                                {[row.fmly_addr1, row.fmly_addr2, row.fmly_addr3, row.fmly_pincode]
-                                    .map(normalizeDisplayValue)
-                                    .filter((value) => value !== '-')
-                                    .join(', ') || '-'}
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
+  const download = () => {
+    const csv = toCsv(
+      definition.columns.map(([, label]) => label),
+      visible.map((r) => definition.columns.map(([key]) => r[key]))
     )
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }))
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `EAC${centre ?? ''}-${definition.label}-${new Date().toISOString().slice(0, 10)}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
 
-    const renderSiblingTable = () => (
-        <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-rule text-sm">
-                <thead className="bg-surface-sunken text-ink-muted">
-                    <tr>
-                        <th className="px-4 py-3 text-left font-semibold">Child Name</th>
-                        <th className="px-4 py-3 text-left font-semibold">Reg No</th>
-                        <th className="px-4 py-3 text-left font-semibold">Sibling Details</th>
-                        <th className="px-4 py-3 text-left font-semibold">Remarks</th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-rule-faint bg-surface">
-                    {(visibleRows as EnrichedSiblingRow[]).map((row) => {
-                        const siblingDetails = [
-                            row.names_1 ? `1. ${row.names_1}` : '',
-                            row.names_2 ? `2. ${row.names_2}` : '',
-                            row.names_3 ? `3. ${row.names_3}` : '',
-                            row.names_4 ? `4. ${row.names_4}` : '',
-                            row.names_5 ? `5. ${row.names_5}` : '',
-                        ]
-                            .filter(Boolean)
-                            .join(' | ')
-
-                        return (
-                            <tr key={String(row.record_id ?? row.reg_no)} className="hover:bg-surface-hover">
-                                <td className="px-4 py-3 font-medium text-ink">{row.child_name}</td>
-                                <td className="px-4 py-3 text-ink">{normalizeDisplayValue(row.reg_no)}</td>
-                                <td className="px-4 py-3 text-ink">{siblingDetails || '-'}</td>
-                                <td className="px-4 py-3 text-ink">{normalizeDisplayValue(row.sibling_remarks)}</td>
-                            </tr>
-                        )
-                    })}
-                </tbody>
-            </table>
-        </div>
-    )
-
-    const renderUniformTable = () => (
-        <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-rule text-sm">
-                <thead className="bg-surface-sunken text-ink-muted">
-                    <tr>
-                        <th className="px-4 py-3 text-left font-semibold">Child Name</th>
-                        <th className="px-4 py-3 text-left font-semibold">Reg No</th>
-                        <th className="px-4 py-3 text-left font-semibold">Shirt</th>
-                        <th className="px-4 py-3 text-left font-semibold">Knicker</th>
-                        <th className="px-4 py-3 text-left font-semibold">Pant/Skirt</th>
-                        <th className="px-4 py-3 text-left font-semibold">Chudidhar</th>
-                        <th className="px-4 py-3 text-left font-semibold">Top/Pant</th>
-                        <th className="px-4 py-3 text-left font-semibold">Footwear</th>
-                        <th className="px-4 py-3 text-left font-semibold">Updated</th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-rule-faint bg-surface">
-                    {(visibleRows as EnrichedUniformRow[]).map((row) => (
-                        <tr key={String(row.record_id ?? row.reg_no)} className="hover:bg-surface-hover">
-                            <td className="px-4 py-3 font-medium text-ink">{row.child_name}</td>
-                            <td className="px-4 py-3 text-ink">{normalizeDisplayValue(row.reg_no)}</td>
-                            <td className="px-4 py-3 text-ink">{normalizeDisplayValue(row.shirtsize)}</td>
-                            <td className="px-4 py-3 text-ink">{normalizeDisplayValue(row.knickersize)}</td>
-                            <td className="px-4 py-3 text-ink">{normalizeDisplayValue(row.pant_skirtsize)}</td>
-                            <td className="px-4 py-3 text-ink">{normalizeDisplayValue(row.chudidharsize)}</td>
-                            <td className="px-4 py-3 text-ink">{normalizeDisplayValue(row.top_pantsize)}</td>
-                            <td className="px-4 py-3 text-ink">{normalizeDisplayValue(row.footwearsize)}</td>
-                            <td className="px-4 py-3 text-ink">{normalizeDisplayValue(row.uniform_updated)}</td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
-    )
-
+  if (authLoading) {
     return (
-      <AppShell
-        role="field_volunteer"
-        active="/field-volunteer/reports"
-        breadcrumb={['My work', 'Reports']}
-        username={profile.username}
-      >
-                <div className="px-4 py-5 sm:px-6 sm:py-8">
-                    <div className="mx-auto max-w-7xl space-y-6">
-                        <div className="rounded-2xl border border-rule bg-surface p-6 shadow-sm">
-                            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                                <div>
-                                    <p className="text-sm font-semibold uppercase tracking-[0.24em] text-blue-600">Reports</p>
-                                    <h1 className="mt-2 text-3xl font-bold text-ink">EAC Records</h1>
-                                    <p className="mt-2 max-w-2xl text-ink-muted">
-                                        View and search records for Child Data, Child Family, Child Sibling, and Child Uniform within your assigned EAC.
-                                    </p>
-                                </div>
-                                <div className="rounded-xl bg-surface-sunken px-4 py-3 text-sm text-ink-muted">
-                                    <span className="block font-semibold text-ink">Assigned EAC</span>
-                                    <span>{eacNo || 'Not assigned'}</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {error && <Alert type="error" message={error} onDismiss={() => setError('')} />}
-
-                        <div className="rounded-2xl border border-rule bg-surface p-6 shadow-sm">
-                            <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-                                <div className="flex flex-wrap gap-2">
-                                    {tabs.map((tab) => {
-                                        const Icon = tab.icon
-                                        const isActive = activeTab === tab.id
-                                        return (
-                                            <button
-                                                key={tab.id}
-                                                onClick={() => setActiveTab(tab.id)}
-                                                className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${isActive
-                                                    ? 'border-ink bg-ink text-surface'
-                                                    : 'border-rule bg-surface text-ink hover:border-rule-strong hover:bg-surface-hover'
-                                                    }`}
-                                            >
-                                                <Icon className="h-4 w-4" />
-                                                {tab.label}
-                                            </button>
-                                        )
-                                    })}
-                                </div>
-
-                                <div className="grid gap-3 md:grid-cols-2 xl:min-w-[520px] xl:grid-cols-[minmax(0,1fr),180px]">
-                                    <label className="relative block">
-                                        <span className="sr-only">Search by name</span>
-                                        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" />
-                                        <input
-                                            type="search"
-                                            value={searchTerm}
-                                            onChange={(event) => setSearchTerm(event.target.value)}
-                                            placeholder="Search by name"
-                                            className="w-full rounded-xl border border-rule bg-surface py-3 pl-10 pr-4 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                                        />
-                                    </label>
-
-                                    <label className="relative block">
-                                        <span className="sr-only">Student status filter</span>
-                                        <Filter className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" />
-                                        <select
-                                            value={studentFilter}
-                                            onChange={(event) => setStudentFilter(event.target.value as StudentFilter)}
-                                            className="w-full rounded-xl border border-rule bg-surface py-3 pl-10 pr-4 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                                        >
-                                            {studentFilters.map((filter) => (
-                                                <option key={filter.id} value={filter.id}>
-                                                    {filter.label}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </label>
-                                </div>
-                            </div>
-
-                            <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-ink-muted">
-                                <span className="rounded-full bg-blue-50 px-3 py-1 font-medium text-blue-700">{activeTabLabel}</span>
-                                <span>{activeRows.length} matching records</span>
-                                <span>Sorted alphabetically by name before pagination</span>
-                            </div>
-                        </div>
-
-                        <div className="rounded-2xl border border-rule bg-surface shadow-sm">
-                            {loading ? (
-                                <div className="flex min-h-[360px] items-center justify-center">
-                                    <LoadingSpinner size="lg" />
-                                </div>
-                            ) : activeRows.length === 0 ? (
-                                <div className="flex min-h-[360px] flex-col items-center justify-center px-6 text-center">
-                                    <FileText className="h-10 w-10 text-ink-faint" />
-                                    <h2 className="mt-4 text-lg font-semibold text-ink">No records found</h2>
-                                    <p className="mt-2 max-w-md text-sm text-ink-faint">
-                                        Try a different search or status filter, or confirm records exist for this EAC.
-                                    </p>
-                                </div>
-                            ) : (
-                                <>
-                                    {activeTab === 'child'
-                                        ? renderChildDataTable()
-                                        : activeTab === 'family'
-                                            ? renderFamilyTable()
-                                            : activeTab === 'sibling'
-                                                ? renderSiblingTable()
-                                                : renderUniformTable()}
-
-                                    <div className="border-t border-rule">
-                                        <TablePagination
-                                            component="div"
-                                            count={activeRows.length}
-                                            page={page}
-                                            onPageChange={(_, nextPage) => setPage(nextPage)}
-                                            rowsPerPage={rowsPerPage}
-                                            onRowsPerPageChange={(event) => setRowsPerPage(Number(event.target.value))}
-                                            rowsPerPageOptions={rowsPerPageOptions}
-                                        />
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            </AppShell>
+      <div className="flex min-h-screen items-center justify-center bg-surface">
+        <LoadingSpinner size="lg" />
+      </div>
     )
+  }
+
+  if (!isAuthorized || !profile) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-surface p-4">
+        <div className="max-w-md rounded-lg border border-rule p-6 text-center">
+          <h1 className="mb-2 text-2xl font-semibold">Access denied</h1>
+          <p className="text-ink-muted">You don&apos;t have permission to view this page.</p>
+        </div>
+      </main>
+    )
+  }
+
+  return (
+    <AppShell
+      role="field_volunteer"
+      active="/field-volunteer/reports"
+      breadcrumb={['My work', 'Reports']}
+      username={profile.username}
+      actions={
+        <button
+          type="button"
+          onClick={download}
+          disabled={visible.length === 0}
+          className="flex h-[32px] items-center gap-1.5 rounded-md border border-rule-strong px-2.5 text-[13.5px] transition-colors hover:bg-surface-hover disabled:opacity-40"
+        >
+          <Download className="h-[13px] w-[13px]" />
+          <span className="hidden sm:inline">Spreadsheet</span>
+        </button>
+      }
+    >
+      <div className="px-4 pb-10 pt-5 sm:px-6">
+        {error && <Alert type="error" message={error} className="mb-4" />}
+
+        <div className="mb-4">
+          <h1 className="text-xl font-semibold tracking-tight">Reports</h1>
+          <p className="mt-1 text-[14px] text-ink-muted">
+            {centre ? `Records at centre ${centre}.` : 'No centre is assigned to your account yet.'}
+          </p>
+        </div>
+
+        <div className="-mx-4 mb-3 overflow-x-auto border-b border-rule px-4 sm:mx-0 sm:px-0">
+          <div className="flex w-max gap-1">
+            {SHEETS.map((s) => (
+              <button
+                key={s.key}
+                type="button"
+                onClick={() => setSheet(s.key)}
+                className={`-mb-px h-10 whitespace-nowrap border-b-2 px-3 text-[14px] transition-colors ${
+                  sheet === s.key ? 'border-ink font-medium text-ink' : 'border-transparent text-ink-muted hover:text-ink'
+                }`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <div className="flex h-9 w-full items-center gap-2 rounded-md border border-rule-strong px-2.5 focus-within:border-blue-500 sm:w-[260px]">
+            <Search className="h-[13px] w-[13px] shrink-0 text-ink-faint" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search this list"
+              className="min-w-0 flex-1 bg-transparent text-[13.5px] outline-none placeholder:text-ink-faint"
+            />
+          </div>
+          <span className="shrink-0 text-[13px] text-ink-faint">
+            {loading ? 'Loading…' : `${visible.length.toLocaleString()} rows`}
+          </span>
+        </div>
+
+        <div className="overflow-hidden rounded-md border border-rule">
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-[13.5px]">
+              <thead>
+                <tr className="bg-surface-sunken">
+                  {definition.columns.map(([key, label]) => (
+                    <th
+                      key={key}
+                      className="whitespace-nowrap border-b border-rule px-2.5 py-2 text-left text-[12.5px] font-medium text-ink-muted"
+                    >
+                      {label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan={definition.columns.length} className="p-12 text-center">
+                      <LoadingSpinner size="lg" />
+                    </td>
+                  </tr>
+                ) : visible.length === 0 ? (
+                  <tr>
+                    <td colSpan={definition.columns.length} className="p-12 text-center">
+                      <Inbox className="mx-auto mb-3 h-10 w-10 text-rule-strong" />
+                      <p className="text-[14.5px] text-ink-muted">Nothing recorded here yet.</p>
+                    </td>
+                  </tr>
+                ) : (
+                  visible.map((row, i) => (
+                    <tr key={i} className="border-b border-rule-faint last:border-0">
+                      {definition.columns.map(([key]) => (
+                        <td key={key} className="whitespace-nowrap px-2.5 py-1.5 text-ink-muted">
+                          {cell(row[key])}
+                        </td>
+                      ))}
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </AppShell>
+  )
 }
