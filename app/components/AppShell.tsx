@@ -54,10 +54,10 @@ export default function AppShell({ role, active, breadcrumb, username, actions, 
   const nav = (
     <>
       <div className="flex items-center gap-2.5 px-3 pb-2 pt-3">
-        <div className="flex h-[22px] w-[22px] items-center justify-center rounded bg-ink text-[11px] font-semibold text-surface">
+        <div className="flex h-[22px] w-[22px] items-center justify-center rounded bg-ink text-[12px] font-semibold text-surface">
           D
         </div>
-        <span className="min-w-0 flex-1 truncate text-[13.5px] font-medium">Debora Foundation</span>
+        <span className="min-w-0 flex-1 truncate text-[14.5px] font-medium">Debora Foundation</span>
         <button
           type="button"
           onClick={() => setNavOpen(false)}
@@ -71,7 +71,7 @@ export default function AppShell({ role, active, breadcrumb, username, actions, 
       {groups.map((group) => (
         <div key={group.heading}>
           <div className="px-4 pb-1 pt-2.5">
-            <span className="text-[11px] font-medium text-ink-faint">{group.heading}</span>
+            <span className="text-[12px] font-medium text-ink-faint">{group.heading}</span>
           </div>
           <div className="flex flex-col gap-px px-2">
             {group.items.map((item) => {
@@ -88,7 +88,7 @@ export default function AppShell({ role, active, breadcrumb, username, actions, 
                   }`}
                 >
                   <Icon className={`h-[15px] w-[15px] ${isActive ? 'text-ink' : 'text-ink-muted'}`} />
-                  <span className={`text-[13.5px] ${isActive ? 'font-medium' : ''}`}>{item.label}</span>
+                  <span className={`text-[14.5px] ${isActive ? 'font-medium' : ''}`}>{item.label}</span>
                 </Link>
               )
             })}
@@ -97,11 +97,11 @@ export default function AppShell({ role, active, breadcrumb, username, actions, 
       ))}
 
       <div className="mt-auto border-t border-rule p-2">
-        <div className="flex h-[34px] items-center gap-2.5 rounded px-2">
-          <div className="flex h-[22px] w-[22px] items-center justify-center rounded bg-accent-bg text-[10.5px] font-semibold text-accent-fg">
+        <div className="flex h-[38px] items-center gap-2.5 rounded px-2">
+          <div className="flex h-[22px] w-[22px] items-center justify-center rounded bg-accent-bg text-[11.5px] font-semibold text-accent-fg">
             {initials || 'A'}
           </div>
-          <span className="min-w-0 flex-1 truncate text-[12.5px]">{username}</span>
+          <span className="min-w-0 flex-1 truncate text-[13.5px]">{username}</span>
           <button
             type="button"
             onClick={signOut}
@@ -145,7 +145,7 @@ export default function AppShell({ role, active, breadcrumb, username, actions, 
           {breadcrumb.map((crumb, i) => (
             <div key={crumb} className={`items-center gap-2 ${i === breadcrumb.length - 1 ? 'flex' : 'hidden sm:flex'}`}>
               {i > 0 && <span className="text-rule-strong">/</span>}
-              <span className={`text-[13.5px] ${i === breadcrumb.length - 1 ? 'text-ink' : 'text-ink-faint'}`}>
+              <span className={`text-[14.5px] ${i === breadcrumb.length - 1 ? 'text-ink' : 'text-ink-faint'}`}>
                 {crumb}
               </span>
             </div>
@@ -158,14 +158,22 @@ export default function AppShell({ role, active, breadcrumb, username, actions, 
               onClick={toggleTheme}
               title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
               aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
-              className="flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink"
+              className="flex h-[32px] w-[28px] shrink-0 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink"
             >
               {theme === 'dark' ? <Sun className="h-[15px] w-[15px]" /> : <Moon className="h-[15px] w-[15px]" />}
             </button>
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto">{children}</main>
+        {/*
+          Content is capped and centred. Without this, two cards stretch the
+          full width of a large monitor and become mostly padding, which is
+          what made the app look emptier the bigger the screen got. Wide
+          tables still scroll inside their own container.
+        */}
+        <main className="flex-1 overflow-y-auto">
+          <div className="mx-auto h-full w-full max-w-[1280px]">{children}</div>
+        </main>
       </div>
     </div>
   )

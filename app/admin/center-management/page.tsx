@@ -430,7 +430,7 @@ export default function CentreDataPage() {
         <button
           type="button"
           onClick={startCreate}
-          className="flex h-[30px] items-center gap-1.5 rounded-md bg-blue-600 px-3 text-[12.5px] font-medium text-white transition-colors hover:bg-blue-700"
+          className="flex h-[34px] items-center gap-1.5 rounded-md bg-blue-600 px-3 text-[13.5px] font-medium text-white transition-colors hover:bg-blue-700"
         >
           <Plus className="h-3.5 w-3.5" /> New centre
         </button>
@@ -452,16 +452,16 @@ export default function CentreDataPage() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Centre, village or person"
-                className="h-8 w-full rounded-md border border-rule bg-surface-sunken pl-8 pr-2.5 text-[13px] outline-none placeholder:text-ink-faint focus:border-rule-strong focus:bg-surface"
+                className="h-8 w-full rounded-md border border-rule bg-surface-sunken pl-8 pr-2.5 text-[14px] outline-none placeholder:text-ink-faint focus:border-rule-strong focus:bg-surface"
               />
             </div>
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto py-1.5">
             {loading ? (
-              <div className="px-3 py-6 text-center text-[12.5px] text-ink-muted">Loading centres…</div>
+              <div className="px-3 py-6 text-center text-[13.5px] text-ink-muted">Loading centres…</div>
             ) : tree.length === 0 ? (
-              <div className="px-3 py-6 text-center text-[12.5px] text-ink-muted">
+              <div className="px-3 py-6 text-center text-[13.5px] text-ink-muted">
                 {query ? 'No centre matches that.' : 'No centres yet.'}
               </div>
             ) : (
@@ -480,23 +480,23 @@ export default function CentreDataPage() {
                         <ChevronRight className="h-3.5 w-3.5 shrink-0 text-ink-faint" />
                       )}
                       <span
-                        className={`min-w-0 flex-1 truncate text-[13px] font-medium ${
+                        className={`min-w-0 flex-1 truncate text-[14px] font-medium ${
                           group.key === UNASSIGNED ? 'italic text-ink-muted' : ''
                         }`}
                       >
                         {group.district}
                       </span>
-                      <span className="font-mono text-[11px] text-ink-faint">{group.total}</span>
+                      <span className="font-mono text-[12px] text-ink-faint">{group.total}</span>
                     </button>
 
                     {open &&
                       group.taluks.map((t) => (
                         <div key={t.key}>
                           <div className="flex h-6 items-center gap-1.5 pl-[26px] pr-2">
-                            <span className="min-w-0 flex-1 truncate text-[11.5px] font-medium uppercase tracking-wide text-ink-faint">
+                            <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium uppercase tracking-wide text-ink-faint">
                               {t.taluk}
                             </span>
-                            {t.total === 0 && <span className="text-[11px] text-ink-faint">no centres</span>}
+                            {t.total === 0 && <span className="text-[12px] text-ink-faint">no centres</span>}
                           </div>
 
                           {t.villages.map((v) => {
@@ -510,13 +510,13 @@ export default function CentreDataPage() {
                                 {v.name && !single && (
                                   <div className="flex h-6 items-center gap-1.5 pl-[38px] pr-2">
                                     <span
-                                      className={`min-w-0 flex-1 truncate text-[12px] ${
+                                      className={`min-w-0 flex-1 truncate text-[13px] ${
                                         v.centres.length === 0 ? 'text-ink-faint' : 'text-ink-muted'
                                       }`}
                                     >
                                       {v.name}
                                     </span>
-                                    {v.centres.length === 0 && <span className="text-[11px] text-ink-faint">—</span>}
+                                    {v.centres.length === 0 && <span className="text-[12px] text-ink-faint">—</span>}
                                   </div>
                                 )}
 
@@ -538,21 +538,21 @@ export default function CentreDataPage() {
                                       } ${active ? 'bg-rule' : 'hover:bg-surface-hover'}`}
                                     >
                                       <span
-                                        className={`w-8 shrink-0 font-mono text-[11.5px] ${
+                                        className={`w-8 shrink-0 font-mono text-[12.5px] ${
                                           active ? 'text-ink' : 'text-ink-muted'
                                         }`}
                                       >
                                         {c.eac_no}
                                       </span>
                                       <span
-                                        className={`min-w-0 flex-1 truncate text-[13px] ${active ? 'font-medium' : ''} ${
+                                        className={`min-w-0 flex-1 truncate text-[14px] ${active ? 'font-medium' : ''} ${
                                           isClosed(c) ? 'text-ink-faint' : ''
                                         }`}
                                       >
                                         {label}
                                       </span>
                                       {isClosed(c) && (
-                                        <span className="shrink-0 text-[11px] text-ink-faint">closed</span>
+                                        <span className="shrink-0 text-[12px] text-ink-faint">closed</span>
                                       )}
                                       {recorded < CONTACTS.length && (
                                         <span
@@ -575,7 +575,7 @@ export default function CentreDataPage() {
           </div>
 
           <div className="border-t border-rule p-2">
-            <label className="flex h-7 w-full cursor-pointer items-center gap-2 rounded px-2 text-[12.5px] text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink">
+            <label className="flex h-7 w-full cursor-pointer items-center gap-2 rounded px-2 text-[13.5px] text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink">
               <input
                 type="checkbox"
                 checked={showEmptyPlaces}
@@ -586,14 +586,14 @@ export default function CentreDataPage() {
             </label>
             <Link
               href="/admin/places"
-              className="flex h-7 w-full items-center gap-2 rounded px-2 text-[12.5px] text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink"
+              className="flex h-7 w-full items-center gap-2 rounded px-2 text-[13.5px] text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink"
             >
               <MapPin className="h-3.5 w-3.5" /> Add or rename a place
             </Link>
             <button
               type="button"
               onClick={() => setShowRename(true)}
-              className="flex h-7 w-full items-center gap-2 rounded px-2 text-[12.5px] text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink"
+              className="flex h-7 w-full items-center gap-2 rounded px-2 text-[13.5px] text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink"
             >
               <Tag className="h-3.5 w-3.5" /> Fix a place name on old rows
             </button>
@@ -610,7 +610,7 @@ export default function CentreDataPage() {
                   setSelectedId(null)
                   setEditing(null)
                 }}
-                className="mb-3 flex h-9 items-center gap-1.5 rounded-md border border-rule-strong px-2.5 text-[13px] transition-colors hover:bg-surface-hover md:hidden"
+                className="mb-3 flex h-9 items-center gap-1.5 rounded-md border border-rule-strong px-2.5 text-[14px] transition-colors hover:bg-surface-hover md:hidden"
               >
                 <ChevronLeft className="h-4 w-4" /> All centres
               </button>
@@ -704,11 +704,11 @@ function CentreDetail({
       <div className="mb-5 flex items-start justify-between gap-4">
         <div className="flex min-w-0 flex-col gap-1.5">
           <div className="flex items-center gap-2.5">
-            <span className="rounded bg-surface-hover px-1.5 py-0.5 font-mono text-[12px] text-ink-muted">
+            <span className="rounded bg-surface-hover px-1.5 py-0.5 font-mono text-[13px] text-ink-muted">
               EAC {centre.eac_no}
             </span>
             <span
-              className={`rounded px-1.5 py-0.5 text-[11.5px] font-medium ${
+              className={`rounded px-1.5 py-0.5 text-[12.5px] font-medium ${
                 closed
                   ? 'bg-status-inactive-bg text-status-inactive-fg'
                   : 'bg-status-approved-bg text-status-approved-fg'
@@ -717,10 +717,10 @@ function CentreDetail({
               {closed ? 'Closed' : 'Active'}
             </span>
           </div>
-          <h1 className="truncate text-[22px] font-semibold tracking-tight">
+          <h1 className="truncate text-[24px] font-semibold tracking-tight">
             {place.village?.name ?? `EAC ${centre.eac_no}`}
           </h1>
-          <p className="flex items-center gap-1.5 text-[13px] text-ink-muted">
+          <p className="flex items-center gap-1.5 text-[14px] text-ink-muted">
             <MapPin className="h-3.5 w-3.5 shrink-0" />
             {address.length ? address.join(' › ') : 'No village set yet — edit this centre to pick one'}
           </p>
@@ -730,7 +730,7 @@ function CentreDetail({
           <button
             type="button"
             onClick={onEdit}
-            className="flex h-8 items-center gap-1.5 rounded-md border border-rule-strong px-3 text-[13px] transition-colors hover:bg-surface-hover"
+            className="flex h-8 items-center gap-1.5 rounded-md border border-rule-strong px-3 text-[14px] transition-colors hover:bg-surface-hover"
           >
             <Pencil className="h-3.5 w-3.5" /> Edit
           </button>
@@ -748,7 +748,7 @@ function CentreDetail({
 
       {confirmDelete && (
         <div className="mb-5 rounded-md border border-status-returned-fg/30 bg-status-returned-bg px-4 py-3.5">
-          <p className="text-[13px] text-status-returned-fg">
+          <p className="text-[14px] text-status-returned-fg">
             Delete centre {centre.eac_no}? {counts?.total
               ? `${counts.total} child record${counts.total === 1 ? '' : 's'} reference this EAC and will be orphaned.`
               : 'This cannot be undone.'}
@@ -758,14 +758,14 @@ function CentreDetail({
               type="button"
               onClick={onDelete}
               disabled={saving}
-              className="flex h-[30px] items-center rounded-md bg-status-returned-fg px-3 text-[12.5px] font-medium text-surface disabled:opacity-60"
+              className="flex h-[34px] items-center rounded-md bg-status-returned-fg px-3 text-[13.5px] font-medium text-surface disabled:opacity-60"
             >
               {saving ? 'Deleting…' : 'Delete centre'}
             </button>
             <button
               type="button"
               onClick={() => setConfirmDelete(false)}
-              className="flex h-[30px] items-center rounded-md border border-rule-strong bg-surface px-3 text-[12.5px]"
+              className="flex h-[34px] items-center rounded-md border border-rule-strong bg-surface px-3 text-[13.5px]"
             >
               Cancel
             </button>
@@ -788,13 +788,13 @@ function CentreDetail({
           },
         ].map((s) => (
           <div key={s.label} className="flex flex-1 flex-col gap-1 bg-surface px-4 py-3">
-            <span className="text-[11.5px] leading-tight text-ink-muted">{s.label}</span>
+            <span className="text-[12.5px] leading-tight text-ink-muted">{s.label}</span>
             <span className={`text-lg font-semibold tracking-tight ${s.tone}`}>{s.value}</span>
           </div>
         ))}
         <Link
           href={`/admin/child-data?eacNo=${encodeURIComponent(String(centre.eac_no))}`}
-          className="col-span-2 flex h-11 items-center gap-1.5 bg-surface px-4 text-[12.5px] font-medium text-blue-600 transition-colors hover:bg-surface-hover sm:col-span-4 lg:h-full lg:w-auto"
+          className="col-span-2 flex h-11 items-center gap-1.5 bg-surface px-4 text-[13.5px] font-medium text-blue-600 transition-colors hover:bg-surface-hover sm:col-span-4 lg:h-full lg:w-auto"
         >
           <Users className="h-3.5 w-3.5" /> Open children
         </Link>
@@ -804,7 +804,7 @@ function CentreDetail({
       <div className="mb-6">
         <div className="mb-2.5 flex items-baseline justify-between">
           <span className="text-xs font-medium text-ink-faint">People at this centre</span>
-          <span className={`text-[11.5px] ${recorded < CONTACTS.length ? 'text-status-pending-fg' : 'text-ink-faint'}`}>
+          <span className={`text-[12.5px] ${recorded < CONTACTS.length ? 'text-status-pending-fg' : 'text-ink-faint'}`}>
             {recorded} of {CONTACTS.length} recorded
           </span>
         </div>
@@ -820,31 +820,31 @@ function CentreDetail({
                   name ? 'border-rule' : 'border-dashed border-rule-strong bg-surface-sunken'
                 }`}
               >
-                <span className="text-[11px] font-medium uppercase tracking-wide text-ink-faint">{c.label}</span>
+                <span className="text-[12px] font-medium uppercase tracking-wide text-ink-faint">{c.label}</span>
                 {name ? (
                   <>
-                    <span className="truncate text-[13.5px] font-medium">{name}</span>
+                    <span className="truncate text-[14.5px] font-medium">{name}</span>
                     {mobile ? (
                       <a
                         href={`tel:${mobile.replace(/\s+/g, '')}`}
-                        className="flex items-center gap-1.5 font-mono text-[12.5px] text-blue-600"
+                        className="flex items-center gap-1.5 font-mono text-[13.5px] text-blue-600"
                       >
                         <Phone className="h-3 w-3" /> {mobile}
                       </a>
                     ) : (
-                      <span className="text-[12px] text-ink-faint">No number</span>
+                      <span className="text-[13px] text-ink-faint">No number</span>
                     )}
                     {email && (
                       <a
                         href={`mailto:${email}`}
-                        className="flex items-center gap-1.5 truncate text-[12.5px] text-blue-600"
+                        className="flex items-center gap-1.5 truncate text-[13.5px] text-blue-600"
                       >
                         <Mail className="h-3 w-3 shrink-0" /> <span className="truncate">{email}</span>
                       </a>
                     )}
                   </>
                 ) : (
-                  <span className="text-[13px] italic text-ink-faint">Not recorded</span>
+                  <span className="text-[14px] italic text-ink-faint">Not recorded</span>
                 )}
               </div>
             )
@@ -865,8 +865,8 @@ function CentreDetail({
             { label: 'Ended', value: formatDate(centre.end_date) },
           ].map((f) => (
             <div key={f.label} className="flex flex-col gap-1 bg-surface px-4 py-3">
-              <span className="text-[11.5px] text-ink-muted">{f.label}</span>
-              <span className="truncate text-[13.5px]">{f.value}</span>
+              <span className="text-[12.5px] text-ink-muted">{f.label}</span>
+              <span className="truncate text-[14.5px]">{f.value}</span>
             </div>
           ))}
         </div>
@@ -878,7 +878,7 @@ function CentreDetail({
 /* ------------------------------------------------------------------ form -- */
 
 const inputClass =
-  'h-8 w-full rounded-md border border-rule bg-surface px-2.5 text-[13px] outline-none placeholder:text-ink-faint focus:border-blue-500'
+  'h-8 w-full rounded-md border border-rule bg-surface px-2.5 text-[14px] outline-none placeholder:text-ink-faint focus:border-blue-500'
 
 function Field({
   label,
@@ -899,7 +899,7 @@ function Field({
 }) {
   return (
     <label className="flex flex-col gap-1.5">
-      <span className="text-[11.5px] font-medium text-ink-muted">
+      <span className="text-[12.5px] font-medium text-ink-muted">
         {label}
         {required && <span className="text-status-returned-fg"> *</span>}
       </span>
@@ -940,10 +940,10 @@ function CentreForm({
     <div className="max-w-[900px]">
       <div className="mb-5 flex items-start justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <h1 className="text-[22px] font-semibold tracking-tight">
+          <h1 className="text-[24px] font-semibold tracking-tight">
             {creating ? 'New centre' : `Edit EAC ${form.eac_no}`}
           </h1>
-          <p className="text-[13px] text-ink-muted">
+          <p className="text-[14px] text-ink-muted">
             {creating
               ? 'EAC number and village name are required; everything else can be filled in later.'
               : 'Changes apply to this centre only.'}
@@ -953,7 +953,7 @@ function CentreForm({
           <button
             type="button"
             onClick={onCancel}
-            className="flex h-8 items-center gap-1.5 rounded-md border border-rule-strong px-3 text-[13px] transition-colors hover:bg-surface-hover"
+            className="flex h-8 items-center gap-1.5 rounded-md border border-rule-strong px-3 text-[14px] transition-colors hover:bg-surface-hover"
           >
             <X className="h-3.5 w-3.5" /> Cancel
           </button>
@@ -961,7 +961,7 @@ function CentreForm({
             type="button"
             onClick={onSave}
             disabled={saving}
-            className="flex h-8 items-center gap-1.5 rounded-md bg-blue-600 px-3.5 text-[13px] font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-60"
+            className="flex h-8 items-center gap-1.5 rounded-md bg-blue-600 px-3.5 text-[14px] font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-60"
           >
             <Check className="h-3.5 w-3.5" /> {saving ? 'Saving…' : creating ? 'Create centre' : 'Save changes'}
           </button>
@@ -1001,7 +1001,7 @@ function CentreForm({
                   showPanchayat
                   required
                 />
-                <p className="mt-2 text-[11.5px] text-ink-faint">
+                <p className="mt-2 text-[12.5px] text-ink-faint">
                   Village not on the list?{' '}
                   <Link href="/admin/places" className="underline hover:text-ink">
                     Add it under Places
@@ -1022,7 +1022,7 @@ function CentreForm({
               key={c.label}
               className="grid grid-cols-1 gap-3.5 bg-surface px-4 py-3.5 sm:grid-cols-[1fr_1fr] lg:grid-cols-[140px_1fr_180px_1fr]"
             >
-              <span className="self-center text-[12.5px] font-medium">{c.label}</span>
+              <span className="self-center text-[13.5px] font-medium">{c.label}</span>
               <Field label="Name" value={form[c.name as string]} onChange={set(c.name as string)} />
               <Field label="Mobile" value={form[c.mobile as string]} onChange={set(c.mobile as string)} />
               {c.email ? (
@@ -1076,8 +1076,8 @@ function Summary({
   return (
     <div className="max-w-[820px]">
       <div className="mb-6 flex flex-col gap-1.5">
-        <h1 className="text-[22px] font-semibold tracking-tight">Centre data</h1>
-        <p className="text-[13.5px] leading-relaxed text-ink-muted">
+        <h1 className="text-[24px] font-semibold tracking-tight">Centre data</h1>
+        <p className="text-[14.5px] leading-relaxed text-ink-muted">
           Pick a centre on the left to see its people and address. Every centre is one EAC number.
         </p>
       </div>
@@ -1114,12 +1114,12 @@ function Summary({
                   i < gaps.length - 1 ? 'border-b border-rule' : ''
                 }`}
               >
-                <span className="w-9 font-mono text-[12.5px] text-ink-muted">{g.centre.eac_no}</span>
-                <span className={`flex-1 truncate text-[13px] ${g.place.village ? '' : 'text-ink-faint'}`}>
+                <span className="w-9 font-mono text-[13.5px] text-ink-muted">{g.centre.eac_no}</span>
+                <span className={`flex-1 truncate text-[14px] ${g.place.village ? '' : 'text-ink-faint'}`}>
                   {g.place.village?.name ?? 'No village set'}
                 </span>
-                <span className="truncate text-[12px] text-ink-faint">{g.place.taluk?.name ?? ''}</span>
-                <span className="w-24 text-right text-[12px] text-status-pending-fg">
+                <span className="truncate text-[13px] text-ink-faint">{g.place.taluk?.name ?? ''}</span>
+                <span className="w-24 text-right text-[13px] text-status-pending-fg">
                   {CONTACTS.length - g.recorded} missing
                 </span>
               </button>
@@ -1224,14 +1224,14 @@ function RenamePlaceDialog({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-rule px-5 py-3.5">
-          <span className="text-[14px] font-semibold">Fix a place name</span>
+          <span className="text-[15px] font-semibold">Fix a place name</span>
           <button type="button" onClick={onClose} aria-label="Close" className="text-ink-faint hover:text-ink">
             <X className="h-4 w-4" />
           </button>
         </div>
 
         <div className="flex flex-col gap-4 px-5 py-4">
-          <p className="text-[12.5px] leading-relaxed text-ink-muted">
+          <p className="text-[13.5px] leading-relaxed text-ink-muted">
             Corrects a spelling on every centre that uses it. Use this when the same place appears twice in the
             tree under slightly different names.
           </p>
@@ -1247,7 +1247,7 @@ function RenamePlaceDialog({
                   setLevel(l)
                   setOldValue('')
                 }}
-                className={`h-7 rounded-md px-3 text-[12.5px] capitalize transition-colors ${
+                className={`h-7 rounded-md px-3 text-[13.5px] capitalize transition-colors ${
                   level === l ? 'bg-ink text-surface' : 'border border-rule-strong hover:bg-surface-hover'
                 }`}
               >
@@ -1257,7 +1257,7 @@ function RenamePlaceDialog({
           </div>
 
           <label className="flex flex-col gap-1.5">
-            <span className="text-[11.5px] font-medium text-ink-muted">Current name</span>
+            <span className="text-[12.5px] font-medium text-ink-muted">Current name</span>
             <select
               value={oldValue}
               onChange={(e) => {
@@ -1279,7 +1279,7 @@ function RenamePlaceDialog({
           <Field label="Corrected name" value={newValue} onChange={setNewValue} />
 
           {chosen && (
-            <p className="text-[12px] text-ink-muted">
+            <p className="text-[13px] text-ink-muted">
               This updates {chosen.count} centre{chosen.count === 1 ? '' : 's'}.
             </p>
           )}
@@ -1289,7 +1289,7 @@ function RenamePlaceDialog({
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 items-center rounded-md border border-rule-strong px-3 text-[13px] hover:bg-surface-hover"
+            className="flex h-8 items-center rounded-md border border-rule-strong px-3 text-[14px] hover:bg-surface-hover"
           >
             Cancel
           </button>
@@ -1297,7 +1297,7 @@ function RenamePlaceDialog({
             type="button"
             onClick={submit}
             disabled={busy || !chosen || !newValue.trim() || newValue.trim() === chosen?.value}
-            className="flex h-8 items-center rounded-md bg-blue-600 px-3.5 text-[13px] font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            className="flex h-8 items-center rounded-md bg-blue-600 px-3.5 text-[14px] font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >
             {busy ? 'Renaming…' : 'Rename everywhere'}
           </button>

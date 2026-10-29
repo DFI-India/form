@@ -232,9 +232,9 @@ export default function ReportsPage() {
   }
 
   const selectClass =
-    'h-[30px] rounded-md border border-rule-strong bg-surface px-2 text-[12.5px] text-ink outline-none focus:border-blue-500'
+    'h-[34px] rounded-md border border-rule-strong bg-surface px-2 text-[13.5px] text-ink outline-none focus:border-blue-500'
   const inputClass =
-    'h-[30px] rounded-md border border-rule-strong bg-surface px-2.5 text-[12.5px] text-ink outline-none placeholder:text-ink-faint focus:border-blue-500'
+    'h-[34px] rounded-md border border-rule-strong bg-surface px-2.5 text-[13.5px] text-ink outline-none placeholder:text-ink-faint focus:border-blue-500'
 
   /** Shared by the wide-screen column and the phone sheet. */
   const fieldPicker = (
@@ -251,33 +251,33 @@ export default function ReportsPage() {
             </option>
           ))}
         </select>
-        <div className="mt-2 flex h-[34px] items-center gap-2 rounded-md border border-rule-strong px-2.5 focus-within:border-blue-500">
+        <div className="mt-2 flex h-[38px] items-center gap-2 rounded-md border border-rule-strong px-2.5 focus-within:border-blue-500">
           <Search className="h-[13px] w-[13px] shrink-0 text-ink-faint" />
           <input
             value={fieldQuery}
             onChange={(e) => setFieldQuery(e.target.value)}
             placeholder="Find a field"
-            className="min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-ink-faint"
+            className="min-w-0 flex-1 bg-transparent text-[14px] outline-none placeholder:text-ink-faint"
           />
         </div>
       </div>
 
       <div className="flex items-center justify-between px-3 py-2">
-        <span className="text-[11px] font-medium text-ink-faint">
+        <span className="text-[12px] font-medium text-ink-faint">
           {mode === 'list' ? 'Columns to show' : 'Columns (rows mode)'}
         </span>
-        <button type="button" onClick={() => setColumns([])} className="text-[11px] text-ink-faint hover:text-ink">
+        <button type="button" onClick={() => setColumns([])} className="text-[12px] text-ink-faint hover:text-ink">
           Clear
         </button>
       </div>
 
       {grouped.map(([group, list]) => (
         <div key={group} className="pb-1">
-          <div className="px-3 py-1 text-[11px] font-medium uppercase tracking-wide text-ink-faint">{group}</div>
+          <div className="px-3 py-1 text-[12px] font-medium uppercase tracking-wide text-ink-faint">{group}</div>
           {list.map((field) => (
             <label
               key={field.key}
-              className="flex min-h-[38px] cursor-pointer items-center gap-2.5 px-3 py-1 text-[13px] hover:bg-surface-hover"
+              className="flex min-h-[42px] cursor-pointer items-center gap-2.5 px-3 py-1 text-[14px] hover:bg-surface-hover"
             >
               <input
                 type="checkbox"
@@ -316,7 +316,7 @@ export default function ReportsPage() {
             type="button"
             onClick={exportCsv}
             disabled={running || !hasRun.current}
-            className="flex h-[28px] items-center gap-1.5 rounded-md border border-rule-strong px-2.5 text-[12.5px] transition-colors hover:bg-surface-hover disabled:opacity-40"
+            className="flex h-[32px] items-center gap-1.5 rounded-md border border-rule-strong px-2.5 text-[13.5px] transition-colors hover:bg-surface-hover disabled:opacity-40"
           >
             <Download className="h-[13px] w-[13px]" /> <span className="hidden sm:inline">Spreadsheet</span>
           </button>
@@ -324,7 +324,7 @@ export default function ReportsPage() {
             type="button"
             onClick={() => window.print()}
             disabled={!hasRun.current}
-            className="flex h-[28px] items-center gap-1.5 rounded-md border border-rule-strong px-2.5 text-[12.5px] transition-colors hover:bg-surface-hover disabled:opacity-40"
+            className="flex h-[32px] items-center gap-1.5 rounded-md border border-rule-strong px-2.5 text-[13.5px] transition-colors hover:bg-surface-hover disabled:opacity-40"
           >
             <Printer className="h-[13px] w-[13px]" /> <span className="hidden sm:inline">Print</span>
           </button>
@@ -332,7 +332,7 @@ export default function ReportsPage() {
             type="button"
             onClick={run}
             disabled={running}
-            className="flex h-[28px] items-center gap-1.5 rounded-md bg-ink px-3 text-[12.5px] font-medium text-surface transition-opacity hover:opacity-90 disabled:opacity-50"
+            className="flex h-[32px] items-center gap-1.5 rounded-md bg-ink px-3 text-[13.5px] font-medium text-surface transition-opacity hover:opacity-90 disabled:opacity-50"
           >
             <Play className="h-[13px] w-[13px]" /> {running ? 'Running…' : 'Run'}
           </button>
@@ -363,12 +363,12 @@ export default function ReportsPage() {
 
             {/* Printed header. Hidden on screen; the toolbar covers it there. */}
             <div className="print-only mb-4">
-              <h1 className="text-[18px] font-semibold">{title || `${definition.label} report`}</h1>
-              <p className="mt-1 text-[12px]">
+              <h1 className="text-[20px] font-semibold">{title || `${definition.label} report`}</h1>
+              <p className="mt-1 text-[13px]">
                 Debora Foundation India · {ranAt || new Date().toLocaleString()} ·{' '}
                 {total.toLocaleString()} {mode === 'list' ? definition.noun : 'groups'}
               </p>
-              {filterSummary.length > 0 && <p className="mt-0.5 text-[12px]">Filters: {filterSummary.join('; ')}</p>}
+              {filterSummary.length > 0 && <p className="mt-0.5 text-[13px]">Filters: {filterSummary.join('; ')}</p>}
             </div>
 
             <div className="print-hide">
@@ -377,16 +377,16 @@ export default function ReportsPage() {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder={`${definition.label} report`}
-                  className={`${inputClass} h-[34px] w-full text-[15px] font-semibold sm:w-[320px]`}
+                  className={`${inputClass} h-[38px] w-full text-[16px] font-semibold sm:w-[320px]`}
                 />
                 <button
                   type="button"
                   onClick={() => setFieldsOpen(true)}
-                  className="flex h-[32px] items-center gap-1.5 rounded-md border border-rule-strong px-2.5 text-[12.5px] transition-colors hover:bg-surface-hover lg:hidden"
+                  className="flex h-[36px] items-center gap-1.5 rounded-md border border-rule-strong px-2.5 text-[13.5px] transition-colors hover:bg-surface-hover lg:hidden"
                 >
                   <ListChecks className="h-[13px] w-[13px]" />
                   Fields
-                  <span className="font-mono text-[11px] text-ink-faint">{columns.length}</span>
+                  <span className="font-mono text-[12px] text-ink-faint">{columns.length}</span>
                 </button>
 
                 <div className="flex overflow-hidden rounded-md border border-rule-strong">
@@ -395,7 +395,7 @@ export default function ReportsPage() {
                       key={m}
                       type="button"
                       onClick={() => setMode(m)}
-                      className={`flex h-[32px] items-center gap-1.5 px-3 text-[12.5px] transition-colors ${
+                      className={`flex h-[36px] items-center gap-1.5 px-3 text-[13.5px] transition-colors ${
                         mode === m ? 'bg-ink text-surface' : 'hover:bg-surface-hover'
                       }`}
                     >
@@ -409,7 +409,7 @@ export default function ReportsPage() {
               {mode === 'summary' && (
                 <div className="mb-4 rounded-md border border-rule bg-surface-sunken p-3">
                   <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <span className="w-[74px] text-[11px] font-medium text-ink-faint">Group by</span>
+                    <span className="w-[74px] text-[12px] font-medium text-ink-faint">Group by</span>
                     {[0, 1].map((i) => (
                       <select
                         key={i}
@@ -435,10 +435,10 @@ export default function ReportsPage() {
                   </div>
 
                   <div className="flex flex-wrap items-start gap-2">
-                    <span className="mt-1.5 w-[74px] text-[11px] font-medium text-ink-faint">Measure</span>
+                    <span className="mt-1.5 w-[74px] text-[12px] font-medium text-ink-faint">Measure</span>
                     <div className="flex flex-col gap-2">
                       {measures.length === 0 && (
-                        <span className="text-[12px] text-ink-faint">Counting rows. Add a total or average below.</span>
+                        <span className="text-[13px] text-ink-faint">Counting rows. Add a total or average below.</span>
                       )}
                       {measures.map((m) => (
                         <div key={m.id} className="flex items-center gap-2">
@@ -492,7 +492,7 @@ export default function ReportsPage() {
                         onClick={() =>
                           setMeasures((list) => [...list, { id: nextId++, fn: 'sum', field: '' }])
                         }
-                        className="flex h-[26px] w-fit items-center gap-1 rounded-md border border-rule-strong px-2 text-[12px] hover:bg-surface-hover"
+                        className="flex h-[30px] w-fit items-center gap-1 rounded-md border border-rule-strong px-2 text-[13px] hover:bg-surface-hover"
                       >
                         <Plus className="h-3 w-3" /> Add a measure
                       </button>
@@ -502,10 +502,10 @@ export default function ReportsPage() {
               )}
 
               <div className="mb-4 rounded-md border border-rule bg-surface-sunken p-3">
-                <span className="mb-2 block text-[11px] font-medium text-ink-faint">Filters</span>
+                <span className="mb-2 block text-[12px] font-medium text-ink-faint">Filters</span>
                 <div className="flex flex-col gap-2">
                   {filters.length === 0 && (
-                    <span className="text-[12px] text-ink-faint">No filters. The report covers everything.</span>
+                    <span className="text-[13px] text-ink-faint">No filters. The report covers everything.</span>
                   )}
                   {filters.map((row) => {
                     const field = byKey.get(row.field)
@@ -604,7 +604,7 @@ export default function ReportsPage() {
                     onClick={() =>
                       setFilters((list) => [...list, { id: nextId++, field: '', op: 'eq', value: '', value2: '' }])
                     }
-                    className="flex h-[26px] w-fit items-center gap-1 rounded-md border border-rule-strong px-2 text-[12px] hover:bg-surface-hover"
+                    className="flex h-[30px] w-fit items-center gap-1 rounded-md border border-rule-strong px-2 text-[13px] hover:bg-surface-hover"
                   >
                     <Plus className="h-3 w-3" /> Add a filter
                   </button>
@@ -616,36 +616,36 @@ export default function ReportsPage() {
             {running ? (
               <div className="rounded-md border border-rule p-12 text-center print-hide">
                 <LoadingSpinner size="lg" />
-                <p className="mt-3 text-[13px] text-ink-muted">Running…</p>
+                <p className="mt-3 text-[14px] text-ink-muted">Running…</p>
               </div>
             ) : !hasRun.current ? (
               <div className="rounded-md border border-dashed border-rule-strong p-12 text-center print-hide">
-                <p className="text-[13.5px] text-ink-muted">Choose what you want, then press Run.</p>
+                <p className="text-[14.5px] text-ink-muted">Choose what you want, then press Run.</p>
               </div>
             ) : (
               <>
                 <div className="mb-2 flex items-center justify-between print-hide">
-                  <span className="text-[12.5px] text-ink-faint">
+                  <span className="text-[13.5px] text-ink-faint">
                     {mode === 'list'
                       ? `${total.toLocaleString()} ${definition.noun}`
                       : `${rows.length.toLocaleString()} ${rows.length === 1 ? 'group' : 'groups'}`}
                     {truncated ? ` · showing the first ${rows.length.toLocaleString()}` : ''}
                   </span>
                   {truncated && (
-                    <span className="text-[12px] text-status-pending-fg">
+                    <span className="text-[13px] text-status-pending-fg">
                       The spreadsheet download includes every row.
                     </span>
                   )}
                 </div>
 
                 <div className="overflow-x-auto rounded-md border border-rule">
-                  <table className="w-full border-collapse text-[12.5px]">
+                  <table className="w-full border-collapse text-[13.5px]">
                     <thead>
                       <tr className="bg-surface-sunken">
                         {resultColumns.map((c) => (
                           <th
                             key={c}
-                            className="whitespace-nowrap border-b border-rule px-2.5 py-2 text-left text-[11.5px] font-medium text-ink-muted"
+                            className="whitespace-nowrap border-b border-rule px-2.5 py-2 text-left text-[12.5px] font-medium text-ink-muted"
                           >
                             {byKey.get(c)?.label ??
                               (c === 'count' ? 'Count' : c.replace(/^(sum|avg|min|max)_/, (m) =>

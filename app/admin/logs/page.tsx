@@ -197,7 +197,7 @@ export default function AdminLogsPage() {
             </div>
             <button
               onClick={() => router.push('/admin')}
-              className="min-h-[40px] px-4 py-2 bg-surface-hover text-ink rounded-lg hover:bg-rule transition-colors inline-flex items-center gap-2"
+              className="min-h-[44px] px-4 py-2 bg-surface-hover text-ink rounded-lg hover:bg-rule transition-colors inline-flex items-center gap-2"
             >
               <ArrowLeft className="w-4 h-4" /> Back to Dashboard
             </button>
@@ -261,7 +261,7 @@ export default function AdminLogsPage() {
                   setUserFilter('all')
                   setPage(1)
                 }}
-                className="min-h-[40px] px-4 py-2 bg-surface-hover text-ink-muted rounded-lg hover:bg-rule text-sm"
+                className="min-h-[44px] px-4 py-2 bg-surface-hover text-ink-muted rounded-lg hover:bg-rule text-sm"
               >
                 Clear Filters
               </button>

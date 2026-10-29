@@ -388,7 +388,7 @@ export default function DFIStaffAllRecordsPage() {
                         </div>
                         <button
                             onClick={() => router.push('/dfi-staff')}
-                            className="min-h-[40px] px-4 py-2 bg-surface-hover text-ink rounded-lg hover:bg-rule transition-colors inline-flex items-center gap-2"
+                            className="min-h-[44px] px-4 py-2 bg-surface-hover text-ink rounded-lg hover:bg-rule transition-colors inline-flex items-center gap-2"
                         >
                             <ArrowLeft className="w-4 h-4" /> Back to Dashboard
                         </button>
@@ -450,14 +450,14 @@ export default function DFIStaffAllRecordsPage() {
 
                             <button
                                 onClick={onSearch}
-                                className="min-h-[40px] px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
+                                className="min-h-[44px] px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
                             >
                                 Search
                             </button>
 
                             <button
                                 onClick={() => fetchTabRecords(activeTab)}
-                                className="min-h-[40px] px-4 py-2 bg-surface-hover text-ink rounded-lg hover:bg-rule transition-colors text-sm font-medium inline-flex items-center gap-2"
+                                className="min-h-[44px] px-4 py-2 bg-surface-hover text-ink rounded-lg hover:bg-rule transition-colors text-sm font-medium inline-flex items-center gap-2"
                             >
                                 <RefreshCw className="w-4 h-4" />
                                 Refresh

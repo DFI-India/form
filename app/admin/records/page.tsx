@@ -322,7 +322,7 @@ export default function AdminRecordsPage() {
   }
 
   const selectClass =
-    'h-[30px] rounded-md border border-rule-strong bg-surface px-2.5 text-[12.5px] text-ink outline-none focus:border-blue-500'
+    'h-[34px] rounded-md border border-rule-strong bg-surface px-2.5 text-[13.5px] text-ink outline-none focus:border-blue-500'
 
   const chipRow = (
     label: string,
@@ -331,13 +331,13 @@ export default function AdminRecordsPage() {
     onPick: (value: string) => void
   ) => (
     <div className="flex flex-wrap items-center gap-1.5">
-      <span className="w-[68px] shrink-0 text-[11px] font-medium text-ink-faint">{label}</span>
+      <span className="w-[68px] shrink-0 text-[12px] font-medium text-ink-faint">{label}</span>
       {options.map((option) => (
         <button
           key={option.value}
           type="button"
           onClick={() => onPick(option.value)}
-          className={`h-[26px] rounded-md px-2.5 text-[12.5px] transition-colors ${
+          className={`h-[30px] rounded-md px-2.5 text-[13.5px] transition-colors ${
             current === option.value
               ? 'bg-ink text-surface'
               : 'border border-rule-strong text-ink hover:bg-surface-hover'
@@ -345,7 +345,7 @@ export default function AdminRecordsPage() {
         >
           {option.label}
           {option.value !== 'all' && summary[option.value] !== undefined && (
-            <span className="ml-1.5 font-mono text-[11px] opacity-70">{summary[option.value]}</span>
+            <span className="ml-1.5 font-mono text-[12px] opacity-70">{summary[option.value]}</span>
           )}
         </button>
       ))}
@@ -361,14 +361,14 @@ export default function AdminRecordsPage() {
         <div className="mb-4 flex items-center justify-between gap-5">
           <h1 className="text-xl font-semibold tracking-tight">All records</h1>
           <div className="flex items-center gap-3">
-            <span className="text-[12.5px] text-ink-faint">
+            <span className="text-[13.5px] text-ink-faint">
               {loading ? 'Counting…' : `${total.toLocaleString()} ${total === 1 ? 'row' : 'rows'}`}
             </span>
             <button
               type="button"
               onClick={handleExport}
               disabled={exporting}
-              className="flex h-[30px] items-center gap-1.5 rounded-md border border-rule-strong px-2.5 text-[12.5px] transition-colors hover:bg-surface-hover disabled:opacity-50"
+              className="flex h-[34px] items-center gap-1.5 rounded-md border border-rule-strong px-2.5 text-[13.5px] transition-colors hover:bg-surface-hover disabled:opacity-50"
             >
               <Download className="h-[13px] w-[13px] text-ink-muted" />
               {exporting ? 'Exporting…' : 'Export CSV'}
@@ -383,7 +383,7 @@ export default function AdminRecordsPage() {
               key={tab.key}
               type="button"
               onClick={() => setEntity(tab.key)}
-              className={`-mb-px h-[32px] border-b-2 px-3 text-[13px] transition-colors ${
+              className={`-mb-px h-[36px] border-b-2 px-3 text-[14px] transition-colors ${
                 entity === tab.key
                   ? 'border-ink font-medium text-ink'
                   : 'border-transparent text-ink-muted hover:text-ink'
@@ -405,14 +405,14 @@ export default function AdminRecordsPage() {
               e.preventDefault()
               setSearch(searchInput.trim())
             }}
-            className="flex h-[30px] w-[260px] items-center gap-2 rounded-md border border-rule-strong px-2.5 focus-within:border-blue-500"
+            className="flex h-[34px] w-[260px] items-center gap-2 rounded-md border border-rule-strong px-2.5 focus-within:border-blue-500"
           >
             <Search className="h-[13px] w-[13px] shrink-0 text-ink-faint" />
             <input
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               placeholder={searchBy === 'name' ? 'Child name' : searchBy === 'reg_no' ? 'Reg No' : 'EAC No'}
-              className="min-w-0 flex-1 bg-transparent text-[12.5px] outline-none placeholder:text-ink-faint"
+              className="min-w-0 flex-1 bg-transparent text-[13.5px] outline-none placeholder:text-ink-faint"
             />
           </form>
 
@@ -434,14 +434,14 @@ export default function AdminRecordsPage() {
           <button
             type="button"
             onClick={() => setShowMore((v) => !v)}
-            className="flex h-[30px] items-center gap-1.5 rounded-md border border-rule-strong px-2.5 text-[12.5px] transition-colors hover:bg-surface-hover"
+            className="flex h-[34px] items-center gap-1.5 rounded-md border border-rule-strong px-2.5 text-[13.5px] transition-colors hover:bg-surface-hover"
           >
             <SlidersHorizontal className="h-[13px] w-[13px] text-ink-muted" />
             More filters
           </button>
 
           <div className="ml-auto flex items-center gap-2">
-            <span className="text-[12px] text-ink-faint">Sort</span>
+            <span className="text-[13px] text-ink-faint">Sort</span>
             <select value={sort} onChange={(e) => setSort(e.target.value)} className={selectClass}>
               {SORTS.map((s) => (
                 <option key={s.value} value={s.value}>
@@ -473,7 +473,7 @@ export default function AdminRecordsPage() {
                 setSearchInput('')
                 setSort('created_at:desc')
               }}
-              className="h-[30px] rounded-md px-2.5 text-[12.5px] text-ink-muted transition-colors hover:bg-surface-hover"
+              className="h-[34px] rounded-md px-2.5 text-[13.5px] text-ink-muted transition-colors hover:bg-surface-hover"
             >
               Reset all
             </button>
@@ -483,7 +483,7 @@ export default function AdminRecordsPage() {
         {/* Table */}
         <div className="overflow-hidden rounded-md border border-rule">
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-[12.5px]">
+            <table className="w-full border-collapse text-[13.5px]">
               <thead>
                 {groupSpans && (
                   <tr className="bg-surface-sunken">
@@ -492,7 +492,7 @@ export default function AdminRecordsPage() {
                       <th
                         key={i}
                         colSpan={group.span}
-                        className="border-b border-l border-rule px-2 py-1 text-left text-[11px] font-medium text-ink-faint"
+                        className="border-b border-l border-rule px-2 py-1 text-left text-[12px] font-medium text-ink-faint"
                       >
                         {group.title}
                       </th>
@@ -501,19 +501,19 @@ export default function AdminRecordsPage() {
                   </tr>
                 )}
                 <tr className="bg-surface-sunken">
-                  <th className="sticky left-0 z-20 w-[190px] min-w-[190px] border-b border-r border-rule bg-surface-sunken px-3 py-2 text-left text-[11.5px] font-medium text-ink-muted">
+                  <th className="sticky left-0 z-20 w-[190px] min-w-[190px] border-b border-r border-rule bg-surface-sunken px-3 py-2 text-left text-[12.5px] font-medium text-ink-muted">
                     Child
                   </th>
                   {columns.map((column) => (
                     <th
                       key={column.key}
                       style={{ minWidth: column.width }}
-                      className="border-b border-rule px-2 py-2 text-left text-[11.5px] font-medium text-ink-muted"
+                      className="border-b border-rule px-2 py-2 text-left text-[12.5px] font-medium text-ink-muted"
                     >
                       {column.label}
                     </th>
                   ))}
-                  <th className="border-b border-rule px-2 py-2 text-left text-[11.5px] font-medium text-ink-muted">Approval</th>
+                  <th className="border-b border-rule px-2 py-2 text-left text-[12.5px] font-medium text-ink-muted">Approval</th>
                   <th className="w-[72px] border-b border-rule px-2 py-2" />
                 </tr>
               </thead>
@@ -522,14 +522,14 @@ export default function AdminRecordsPage() {
                   <tr>
                     <td colSpan={columns.length + 3} className="p-12 text-center">
                       <LoadingSpinner size="lg" />
-                      <p className="mt-3 text-[13px] text-ink-muted">Loading records…</p>
+                      <p className="mt-3 text-[14px] text-ink-muted">Loading records…</p>
                     </td>
                   </tr>
                 ) : rows.length === 0 ? (
                   <tr>
                     <td colSpan={columns.length + 3} className="p-12 text-center">
                       <Inbox className="mx-auto mb-3 h-10 w-10 text-rule-strong" />
-                      <p className="text-[13.5px] text-ink-muted">No records match these filters</p>
+                      <p className="text-[14.5px] text-ink-muted">No records match these filters</p>
                     </td>
                   </tr>
                 ) : (
@@ -546,19 +546,19 @@ export default function AdminRecordsPage() {
                           <span className="flex items-center gap-1.5 whitespace-nowrap">
                             <span className="min-w-0 flex-1 truncate">{name || '—'}</span>
                             {entity === 'child_data' && hasLeft(row) && (
-                              <span className="shrink-0 rounded bg-status-inactive-bg px-1 py-px text-[10.5px] text-status-inactive-fg">
+                              <span className="shrink-0 rounded bg-status-inactive-bg px-1 py-px text-[11.5px] text-status-inactive-fg">
                                 Left
                               </span>
                             )}
                           </span>
-                          <span className="block whitespace-nowrap font-mono text-[11px] text-ink-faint">
+                          <span className="block whitespace-nowrap font-mono text-[12px] text-ink-faint">
                             EAC {txt(row.eac_no) || '—'} · Reg {txt(row.reg_no) || '—'}
                           </span>
                         </td>
                         {columns.map((column) => (
                           <td
                             key={column.key}
-                            className={`px-2 py-1.5 text-ink-muted ${column.mono ? 'font-mono text-[12px]' : ''}`}
+                            className={`px-2 py-1.5 text-ink-muted ${column.mono ? 'font-mono text-[13px]' : ''}`}
                           >
                             <span className="block max-w-[260px] truncate" title={cellValue(row, column.key)}>
                               {cellValue(row, column.key)}
@@ -566,7 +566,7 @@ export default function AdminRecordsPage() {
                           </td>
                         ))}
                         <td className="px-2 py-1.5">
-                          <span className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${approvalChipClass(row.status)}`}>
+                          <span className={`rounded px-1.5 py-0.5 text-[12px] font-medium ${approvalChipClass(row.status)}`}>
                             {approvalLabel(row.status)}
                           </span>
                         </td>
@@ -603,7 +603,7 @@ export default function AdminRecordsPage() {
 
           {!loading && rows.length > 0 && (
             <div className="flex items-center justify-between border-t border-rule px-4 py-2.5">
-              <span className="text-[12.5px] text-ink-faint">
+              <span className="text-[13.5px] text-ink-faint">
                 {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} of {total.toLocaleString()}
               </span>
               <div className="flex items-center gap-2">
@@ -611,18 +611,18 @@ export default function AdminRecordsPage() {
                   type="button"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="h-[28px] rounded-md border border-rule-strong px-2.5 text-[12.5px] transition-colors hover:bg-surface-hover disabled:opacity-40"
+                  className="h-[32px] rounded-md border border-rule-strong px-2.5 text-[13.5px] transition-colors hover:bg-surface-hover disabled:opacity-40"
                 >
                   Previous
                 </button>
-                <span className="text-[12.5px] text-ink-muted">
+                <span className="text-[13.5px] text-ink-muted">
                   {page} / {totalPages}
                 </span>
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page >= totalPages}
-                  className="h-[28px] rounded-md border border-rule-strong px-2.5 text-[12.5px] transition-colors hover:bg-surface-hover disabled:opacity-40"
+                  className="h-[32px] rounded-md border border-rule-strong px-2.5 text-[13.5px] transition-colors hover:bg-surface-hover disabled:opacity-40"
                 >
                   Next
                 </button>
@@ -636,12 +636,12 @@ export default function AdminRecordsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setDeleting(null)}>
           <div className="w-full max-w-md rounded-lg border border-rule bg-surface p-5" onClick={(e) => e.stopPropagation()}>
             <div className="mb-3 flex items-start justify-between gap-3">
-              <h2 className="text-[15px] font-semibold">Delete this record?</h2>
+              <h2 className="text-[16px] font-semibold">Delete this record?</h2>
               <button type="button" onClick={() => setDeleting(null)} className="rounded p-1 text-ink-faint hover:bg-surface-hover" aria-label="Close">
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <p className="mb-4 text-[13px] leading-relaxed text-ink-muted">
+            <p className="mb-4 text-[14px] leading-relaxed text-ink-muted">
               This permanently removes the {TABS.find((t) => t.key === entity)?.label.toLowerCase()} row for EAC{' '}
               {txt(deleting.eac_no) || '—'}, Reg No {txt(deleting.reg_no) || '—'}. It cannot be undone.
             </p>
@@ -649,7 +649,7 @@ export default function AdminRecordsPage() {
               <button
                 type="button"
                 onClick={() => setDeleting(null)}
-                className="h-[32px] rounded-md border border-rule-strong px-3 text-[13px] transition-colors hover:bg-surface-hover"
+                className="h-[36px] rounded-md border border-rule-strong px-3 text-[14px] transition-colors hover:bg-surface-hover"
               >
                 Cancel
               </button>
@@ -657,7 +657,7 @@ export default function AdminRecordsPage() {
                 type="button"
                 onClick={handleDelete}
                 disabled={deleteBusy}
-                className="h-[32px] rounded-md bg-status-returned-fg px-3 text-[13px] font-medium text-surface transition-opacity hover:opacity-90 disabled:opacity-50"
+                className="h-[36px] rounded-md bg-status-returned-fg px-3 text-[14px] font-medium text-surface transition-opacity hover:opacity-90 disabled:opacity-50"
               >
                 {deleteBusy ? 'Deleting…' : 'Delete'}
               </button>

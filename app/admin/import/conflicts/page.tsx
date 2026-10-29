@@ -222,7 +222,7 @@ export default function ImportConflictsPage() {
       actions={
         <Link
           href="/admin/import"
-          className="flex h-[30px] items-center gap-1.5 rounded-md border border-rule-strong px-3 text-[12.5px] transition-colors hover:bg-surface-hover"
+          className="flex h-[34px] items-center gap-1.5 rounded-md border border-rule-strong px-3 text-[13.5px] transition-colors hover:bg-surface-hover"
         >
           <Undo2 className="h-3.5 w-3.5" /> Back to import
         </Link>
@@ -234,8 +234,8 @@ export default function ImportConflictsPage() {
           {notice && <Alert type="success" message={notice} className="mb-4" />}
 
           <div className="mb-6 flex flex-col gap-2">
-            <h1 className="text-[22px] font-semibold tracking-tight">Import conflicts</h1>
-            <p className="max-w-[680px] text-[13.5px] leading-relaxed text-ink-muted">
+            <h1 className="text-[24px] font-semibold tracking-tight">Import conflicts</h1>
+            <p className="max-w-[680px] text-[14.5px] leading-relaxed text-ink-muted">
               These records exist in both the file and the database, and disagree. Everything else from the
               import was already added. Each field below defaults to the file&apos;s value — untick to keep what
               &apos;s stored, or type over it.
@@ -243,7 +243,7 @@ export default function ImportConflictsPage() {
           </div>
 
           {setupRequired && (
-            <div className="mb-6 rounded-md border border-status-pending-fg/30 bg-status-pending-bg px-4 py-3.5 text-[13px] text-status-pending-fg">
+            <div className="mb-6 rounded-md border border-status-pending-fg/30 bg-status-pending-bg px-4 py-3.5 text-[14px] text-status-pending-fg">
               The <span className="font-mono">import_staging</span> table doesn&apos;t exist yet. Run{' '}
               <span className="font-mono">sql/001_import_staging.sql</span> in the Supabase SQL editor, then
               re-run the import with conflict review turned on.
@@ -252,7 +252,7 @@ export default function ImportConflictsPage() {
 
           {!loading && pendingTotal === 0 && !setupRequired ? (
             <div className="rounded-md border border-rule px-4 py-10 text-center">
-              <p className="text-[13.5px] text-ink-muted">
+              <p className="text-[14.5px] text-ink-muted">
                 Nothing waiting. Conflicts appear here when an import finds records that already exist and say
                 something different.
               </p>
@@ -267,7 +267,7 @@ export default function ImportConflictsPage() {
                     setEntity('')
                     setPage(1)
                   }}
-                  className={`h-7 rounded-md px-3 text-[12.5px] transition-colors ${
+                  className={`h-7 rounded-md px-3 text-[13.5px] transition-colors ${
                     entity === '' ? 'bg-ink text-surface' : 'border border-rule-strong hover:bg-surface-hover'
                   }`}
                 >
@@ -281,7 +281,7 @@ export default function ImportConflictsPage() {
                       setEntity(key)
                       setPage(1)
                     }}
-                    className={`h-7 rounded-md px-3 text-[12.5px] transition-colors ${
+                    className={`h-7 rounded-md px-3 text-[13.5px] transition-colors ${
                       entity === key ? 'bg-ink text-surface' : 'border border-rule-strong hover:bg-surface-hover'
                     }`}
                   >
@@ -292,7 +292,7 @@ export default function ImportConflictsPage() {
 
               {/* Bulk bar */}
               <div className="mb-3 flex flex-wrap items-center gap-2.5 rounded-md border border-rule bg-surface-sunken px-3.5 py-2.5">
-                <label className="flex items-center gap-2 text-[12.5px]">
+                <label className="flex items-center gap-2 text-[13.5px]">
                   <input
                     type="checkbox"
                     checked={rows.length > 0 && selected.size === rows.length}
@@ -302,7 +302,7 @@ export default function ImportConflictsPage() {
                   />
                   Select all on this page
                 </label>
-                <span className="text-[12.5px] text-ink-muted">
+                <span className="text-[13.5px] text-ink-muted">
                   {selected.size > 0 ? `${selected.size} selected` : `${total} pending`}
                 </span>
                 <div className="ml-auto flex gap-2">
@@ -310,7 +310,7 @@ export default function ImportConflictsPage() {
                     type="button"
                     disabled={busy || selected.size === 0}
                     onClick={() => resolve(selectedRows, 'discard')}
-                    className="flex h-[30px] items-center gap-1.5 rounded-md border border-rule-strong bg-surface px-3 text-[12.5px] transition-colors hover:bg-surface-hover disabled:opacity-50"
+                    className="flex h-[34px] items-center gap-1.5 rounded-md border border-rule-strong bg-surface px-3 text-[13.5px] transition-colors hover:bg-surface-hover disabled:opacity-50"
                   >
                     <X className="h-3.5 w-3.5" /> Keep stored version
                   </button>
@@ -318,7 +318,7 @@ export default function ImportConflictsPage() {
                     type="button"
                     disabled={busy || selected.size === 0}
                     onClick={() => resolve(selectedRows, 'apply')}
-                    className="flex h-[30px] items-center gap-1.5 rounded-md bg-blue-600 px-3 text-[12.5px] font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
+                    className="flex h-[34px] items-center gap-1.5 rounded-md bg-blue-600 px-3 text-[13.5px] font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
                   >
                     <Check className="h-3.5 w-3.5" /> Apply selected
                   </button>
@@ -328,9 +328,9 @@ export default function ImportConflictsPage() {
               {/* Conflicts */}
               <div className="overflow-hidden rounded-md border border-rule">
                 {loading ? (
-                  <div className="px-4 py-10 text-center text-[13px] text-ink-muted">Loading conflicts…</div>
+                  <div className="px-4 py-10 text-center text-[14px] text-ink-muted">Loading conflicts…</div>
                 ) : rows.length === 0 ? (
-                  <div className="px-4 py-10 text-center text-[13px] text-ink-muted">
+                  <div className="px-4 py-10 text-center text-[14px] text-ink-muted">
                     Nothing pending for this table.
                   </div>
                 ) : (
@@ -371,14 +371,14 @@ export default function ImportConflictsPage() {
                             ) : (
                               <ChevronRight className="h-3.5 w-3.5 shrink-0 text-ink-faint" />
                             )}
-                            <span className="w-24 shrink-0 font-mono text-[11.5px] text-ink-muted">
+                            <span className="w-24 shrink-0 font-mono text-[12.5px] text-ink-muted">
                               {row.eac_no} / {row.reg_no}
                             </span>
-                            <span className="min-w-0 flex-1 truncate text-[13.5px]">{nameOf(row)}</span>
-                            <span className="shrink-0 rounded bg-surface-hover px-2 py-0.5 text-[11px] text-ink-muted">
+                            <span className="min-w-0 flex-1 truncate text-[14.5px]">{nameOf(row)}</span>
+                            <span className="shrink-0 rounded bg-surface-hover px-2 py-0.5 text-[12px] text-ink-muted">
                               {IMPORT_SPECS[row.entity]?.label ?? row.entity}
                             </span>
-                            <span className="w-24 shrink-0 text-right text-[12px] text-status-pending-fg">
+                            <span className="w-24 shrink-0 text-right text-[13px] text-status-pending-fg">
                               {row.diff_fields.length} field{row.diff_fields.length === 1 ? '' : 's'}
                             </span>
                           </button>
@@ -387,13 +387,13 @@ export default function ImportConflictsPage() {
                         {open && (
                           <div className="border-t border-rule bg-surface-sunken px-3.5 py-3">
                             <div className="mb-2 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] gap-3 px-1">
-                              <span className="text-[11px] font-medium uppercase tracking-wide text-ink-faint">
+                              <span className="text-[12px] font-medium uppercase tracking-wide text-ink-faint">
                                 Field
                               </span>
-                              <span className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-ink-faint">
+                              <span className="flex items-center gap-1.5 text-[12px] font-medium uppercase tracking-wide text-ink-faint">
                                 <Database className="h-3 w-3" /> In the database
                               </span>
-                              <span className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-ink-faint">
+                              <span className="flex items-center gap-1.5 text-[12px] font-medium uppercase tracking-wide text-ink-faint">
                                 <FileSpreadsheet className="h-3 w-3" /> In the file
                               </span>
                             </div>
@@ -413,11 +413,11 @@ export default function ImportConflictsPage() {
                                         checked={take}
                                         onChange={() => toggleField(row, field)}
                                       />
-                                      <span className="truncate text-[12.5px]">{fieldLabel(field)}</span>
+                                      <span className="truncate text-[13.5px]">{fieldLabel(field)}</span>
                                     </label>
 
                                     <span
-                                      className={`min-w-0 truncate text-[12.5px] ${
+                                      className={`min-w-0 truncate text-[13.5px] ${
                                         take ? 'text-ink-faint line-through' : 'text-ink'
                                       }`}
                                       title={show(row.existing[field])}
@@ -429,7 +429,7 @@ export default function ImportConflictsPage() {
                                       value={value === '—' ? '' : value}
                                       onChange={(e) => editField(row, field, e.target.value)}
                                       placeholder="blank"
-                                      className={`h-7 w-full rounded border px-2 text-[12.5px] outline-none focus:border-blue-500 ${
+                                      className={`h-7 w-full rounded border px-2 text-[13.5px] outline-none focus:border-blue-500 ${
                                         take
                                           ? 'border-status-approved-fg/30 bg-status-approved-bg text-status-approved-fg'
                                           : 'border-rule bg-surface-sunken text-ink-faint'
@@ -441,7 +441,7 @@ export default function ImportConflictsPage() {
                             </div>
 
                             <div className="mt-3 flex items-center gap-2">
-                              <span className="text-[12px] text-ink-muted">
+                              <span className="text-[13px] text-ink-muted">
                                 {taking === 0
                                   ? 'Keeping the stored record as it is.'
                                   : `Writing ${taking} of ${row.diff_fields.length} field${
@@ -453,7 +453,7 @@ export default function ImportConflictsPage() {
                                   type="button"
                                   disabled={busy}
                                   onClick={() => resolve([row], 'discard')}
-                                  className="flex h-[30px] items-center rounded-md border border-rule-strong bg-surface px-3 text-[12.5px] hover:bg-surface-hover disabled:opacity-50"
+                                  className="flex h-[34px] items-center rounded-md border border-rule-strong bg-surface px-3 text-[13.5px] hover:bg-surface-hover disabled:opacity-50"
                                 >
                                   Keep stored version
                                 </button>
@@ -461,7 +461,7 @@ export default function ImportConflictsPage() {
                                   type="button"
                                   disabled={busy}
                                   onClick={() => resolve([row], 'apply')}
-                                  className="flex h-[30px] items-center rounded-md bg-blue-600 px-3 text-[12.5px] font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                                  className="flex h-[34px] items-center rounded-md bg-blue-600 px-3 text-[13.5px] font-medium text-white hover:bg-blue-700 disabled:opacity-50"
                                 >
                                   {taking === 0 ? 'Close conflict' : 'Apply'}
                                 </button>
@@ -477,7 +477,7 @@ export default function ImportConflictsPage() {
 
               {totalPages > 1 && (
                 <div className="mt-3 flex items-center justify-between">
-                  <span className="text-[12.5px] text-ink-muted">
+                  <span className="text-[13.5px] text-ink-muted">
                     Page {page} of {totalPages}
                   </span>
                   <div className="flex gap-2">
@@ -485,7 +485,7 @@ export default function ImportConflictsPage() {
                       type="button"
                       disabled={page <= 1}
                       onClick={() => setPage((p) => p - 1)}
-                      className="flex h-[30px] items-center rounded-md border border-rule-strong px-3 text-[12.5px] hover:bg-surface-hover disabled:opacity-40"
+                      className="flex h-[34px] items-center rounded-md border border-rule-strong px-3 text-[13.5px] hover:bg-surface-hover disabled:opacity-40"
                     >
                       Previous
                     </button>
@@ -493,7 +493,7 @@ export default function ImportConflictsPage() {
                       type="button"
                       disabled={page >= totalPages}
                       onClick={() => setPage((p) => p + 1)}
-                      className="flex h-[30px] items-center rounded-md border border-rule-strong px-3 text-[12.5px] hover:bg-surface-hover disabled:opacity-40"
+                      className="flex h-[34px] items-center rounded-md border border-rule-strong px-3 text-[13.5px] hover:bg-surface-hover disabled:opacity-40"
                     >
                       Next
                     </button>

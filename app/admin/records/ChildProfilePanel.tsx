@@ -62,8 +62,8 @@ interface ChildProfilePanelProps {
 }
 
 const inputClass =
-  'h-[32px] w-full rounded-md border border-rule-strong bg-surface px-2.5 text-[13px] text-ink outline-none transition-colors placeholder:text-ink-faint focus:border-blue-500'
-const labelClass = 'mb-1 block text-[12px] text-ink-muted'
+  'h-[36px] w-full rounded-md border border-rule-strong bg-surface px-2.5 text-[14px] text-ink outline-none transition-colors placeholder:text-ink-faint focus:border-blue-500'
+const labelClass = 'mb-1 block text-[13px] text-ink-muted'
 
 const isSchemaSection = (section: SectionKey): section is ChildSectionKey => section !== 'child_data'
 
@@ -157,13 +157,13 @@ function SchemaForm({
               <div className="grid min-w-[520px] grid-cols-[20px_minmax(0,1.6fr)_64px_96px_minmax(0,1.4fr)] items-center gap-2">
                 <span />
                 {header.map((f) => (
-                  <span key={f.key} className="text-[12px] text-ink-muted">
+                  <span key={f.key} className="text-[13px] text-ink-muted">
                     {f.label}
                   </span>
                 ))}
                 {block.groups.map((group, row) => (
                   <div key={group.title ?? row} className="contents">
-                    <span className="text-right font-mono text-[11.5px] text-ink-faint">{row + 1}</span>
+                    <span className="text-right font-mono text-[12.5px] text-ink-faint">{row + 1}</span>
                     {group.fields.map((f) => (
                       <FieldInput
                         key={f.key}
@@ -183,7 +183,7 @@ function SchemaForm({
         const { group } = block
         return (
           <div key={i}>
-            {group.title && <h4 className="mb-2 text-[12.5px] font-semibold text-ink">{group.title}</h4>}
+            {group.title && <h4 className="mb-2 text-[13.5px] font-semibold text-ink">{group.title}</h4>}
             <div className="grid grid-cols-1 gap-x-3 gap-y-3 sm:grid-cols-2">
               {group.fields.map((f) => (
                 <label key={f.key} className={f.wide ? 'sm:col-span-2' : ''}>
@@ -463,8 +463,8 @@ export default function ChildProfilePanel({
       >
         <div className="flex shrink-0 items-center justify-between border-b border-rule px-5 py-3.5">
           <div className="min-w-0">
-            <h3 className="truncate text-[16px] font-semibold">{childName}</h3>
-            <p className="font-mono text-[12px] text-ink-muted">
+            <h3 className="truncate text-[17px] font-semibold">{childName}</h3>
+            <p className="font-mono text-[13px] text-ink-muted">
               EAC {eacNo} · Reg No {regNo}
             </p>
           </div>
@@ -479,9 +479,9 @@ export default function ChildProfilePanel({
         </div>
 
         {loading ? (
-          <div className="p-12 text-center text-[13px] text-ink-muted">Loading child profile…</div>
+          <div className="p-12 text-center text-[14px] text-ink-muted">Loading child profile…</div>
         ) : loadError ? (
-          <div className="p-12 text-center text-[13px] text-status-returned-fg">{loadError}</div>
+          <div className="p-12 text-center text-[14px] text-status-returned-fg">{loadError}</div>
         ) : (
           <>
             <div className="flex shrink-0 border-b border-rule px-2" role="tablist">
@@ -498,7 +498,7 @@ export default function ChildProfilePanel({
                       setActiveSection(section)
                       setError('')
                     }}
-                    className={`-mb-px flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 border-b-2 px-2 text-[13px] transition-colors ${
+                    className={`-mb-px flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 border-b-2 px-2 text-[14px] transition-colors ${
                       isActive
                         ? 'border-ink font-medium text-ink'
                         : 'border-transparent text-ink-muted hover:text-ink'
@@ -523,13 +523,13 @@ export default function ChildProfilePanel({
 
             <div className="flex-1 overflow-y-auto px-5 py-4">
               {error && (
-                <div className="mb-4 rounded-md border border-status-returned-fg/30 bg-status-returned-bg px-3 py-2 text-[13px] text-status-returned-fg">
+                <div className="mb-4 rounded-md border border-status-returned-fg/30 bg-status-returned-bg px-3 py-2 text-[14px] text-status-returned-fg">
                   {error}
                 </div>
               )}
 
               {duplicateCount && duplicateCount > 1 && (
-                <div className="mb-4 flex items-start gap-2 rounded-md border border-status-pending-fg/30 bg-status-pending-bg px-3 py-2 text-[12.5px] text-status-pending-fg">
+                <div className="mb-4 flex items-start gap-2 rounded-md border border-status-pending-fg/30 bg-status-pending-bg px-3 py-2 text-[13.5px] text-status-pending-fg">
                   <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                   <span>
                     This child has {duplicateCount} {SECTION_LABELS[activeSection].toLowerCase()} records. Showing and
@@ -539,7 +539,7 @@ export default function ChildProfilePanel({
               )}
 
               {creating && (
-                <div className="mb-4 rounded-md border border-dashed border-rule-strong px-3 py-2.5 text-[12.5px] text-ink-muted">
+                <div className="mb-4 rounded-md border border-dashed border-rule-strong px-3 py-2.5 text-[13.5px] text-ink-muted">
                   No {isSchemaSection(activeSection) ? SECTION_SCHEMA[activeSection].noun : ''} recorded yet. Fill in
                   what you have and it will be saved as approved by you.
                 </div>
@@ -553,7 +553,7 @@ export default function ChildProfilePanel({
                     onChange={(key, value) => setField(activeSection, key, value)}
                   />
                   {creating && activeSection === 'childleaving' && profileData.child_data?.child_left !== true && (
-                    <label className="mt-5 flex items-center gap-2 text-[13px]">
+                    <label className="mt-5 flex items-center gap-2 text-[14px]">
                       <input
                         type="checkbox"
                         checked={markLeft}
@@ -583,7 +583,7 @@ export default function ChildProfilePanel({
                                 className="h-24 w-24 shrink-0 rounded-lg border border-rule object-cover"
                               />
                             ) : (
-                              <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-lg border border-dashed border-rule-strong text-center text-[11px] leading-tight text-ink-faint">
+                              <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-lg border border-dashed border-rule-strong text-center text-[12px] leading-tight text-ink-faint">
                                 {value ? 'Photo did not load' : 'No photo'}
                               </div>
                             )}
@@ -595,15 +595,15 @@ export default function ChildProfilePanel({
                                   const file = e.target.files?.[0]
                                   if (file) handlePhotoUpload(file)
                                 }}
-                                className="w-full text-[12.5px] text-ink-muted file:mr-3 file:h-[30px] file:rounded-md file:border file:border-rule-strong file:bg-surface file:px-2.5 file:text-[12.5px] file:text-ink"
+                                className="w-full text-[13.5px] text-ink-muted file:mr-3 file:h-[34px] file:rounded-md file:border file:border-rule-strong file:bg-surface file:px-2.5 file:text-[13.5px] file:text-ink"
                               />
-                              {uploadingPhoto && <p className="text-[12px] text-ink-faint">Uploading image…</p>}
+                              {uploadingPhoto && <p className="text-[13px] text-ink-faint">Uploading image…</p>}
                               {value ? (
                                 <a
                                   href={String(value)}
                                   target="_blank"
                                   rel="noreferrer"
-                                  className="block text-[12px] text-blue-600 hover:underline dark:text-blue-400"
+                                  className="block text-[13px] text-blue-600 hover:underline dark:text-blue-400"
                                 >
                                   Open full size
                                 </a>
@@ -648,7 +648,7 @@ export default function ChildProfilePanel({
             </div>
 
             <div className="flex shrink-0 items-center justify-between gap-3 border-t border-rule px-5 py-3">
-              <span className="text-[12.5px] text-ink-muted" aria-live="polite">
+              <span className="text-[13.5px] text-ink-muted" aria-live="polite">
                 {saveMessage ? (
                   <span className="text-status-approved-fg">{saveMessage}</span>
                 ) : dirty ? (
@@ -663,7 +663,7 @@ export default function ChildProfilePanel({
                 type="button"
                 onClick={() => handleSave(activeSection)}
                 disabled={saving || uploadingPhoto || !dirty}
-                className="h-[32px] rounded-md bg-ink px-3.5 text-[13px] font-medium text-surface transition-opacity hover:opacity-90 disabled:opacity-40"
+                className="h-[36px] rounded-md bg-ink px-3.5 text-[14px] font-medium text-surface transition-opacity hover:opacity-90 disabled:opacity-40"
               >
                 {saveLabel}
               </button>

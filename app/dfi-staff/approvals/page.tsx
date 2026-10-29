@@ -383,13 +383,13 @@ export default function DFIStaffApprovalsPage() {
             <div className="flex gap-3">
               <button
                 onClick={() => router.push('/dfi-staff/review-queue')}
-                className="min-h-[40px] px-4 py-2 bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300 rounded-lg hover:bg-purple-200 dark:hover:bg-purple-900 transition-colors inline-flex items-center gap-2"
+                className="min-h-[44px] px-4 py-2 bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300 rounded-lg hover:bg-purple-200 dark:hover:bg-purple-900 transition-colors inline-flex items-center gap-2"
               >
                 <Search className="w-4 h-4" /> Review Queue
               </button>
               <button
                 onClick={() => router.push('/dfi-staff')}
-                className="min-h-[40px] px-4 py-2 bg-surface-hover text-ink rounded-lg hover:bg-rule transition-colors inline-flex items-center gap-2"
+                className="min-h-[44px] px-4 py-2 bg-surface-hover text-ink rounded-lg hover:bg-rule transition-colors inline-flex items-center gap-2"
               >
                 <ArrowLeft className="w-4 h-4" /> Dashboard
               </button>

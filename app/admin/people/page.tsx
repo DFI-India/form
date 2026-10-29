@@ -406,7 +406,7 @@ export default function AdminPeoplePage() {
 
                 <button
                   onClick={() => setShowForm(!showForm)}
-                  className="min-h-[40px] px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                  className="min-h-[44px] px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   + Add User
                 </button>
@@ -571,14 +571,14 @@ export default function AdminPeoplePage() {
                       <button
                         type="submit"
                         disabled={loading || (form.password !== form.confirmPassword && form.confirmPassword.length > 0)}
-                        className="min-h-[40px] px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="min-h-[44px] px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
                         {loading ? 'Creating…' : 'Create User'}
                       </button>
                       <button
                         type="button"
                         onClick={() => setShowForm(false)}
-                        className="min-h-[40px] px-4 py-2 bg-rule text-ink text-sm font-medium rounded-lg hover:bg-rule-strong transition-colors"
+                        className="min-h-[44px] px-4 py-2 bg-rule text-ink text-sm font-medium rounded-lg hover:bg-rule-strong transition-colors"
                       >
                         Cancel
                       </button>

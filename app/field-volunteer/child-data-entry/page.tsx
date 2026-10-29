@@ -2985,7 +2985,7 @@ export default function ChildForm() {
           {/* Messages */}
           {message && (
             <div
-              className={`mb-4 flex items-start gap-2 rounded-lg border px-3.5 py-3 text-[13.5px] font-medium ${
+              className={`mb-4 flex items-start gap-2 rounded-lg border px-3.5 py-3 text-[14.5px] font-medium ${
                 message.type === 'success'
                   ? 'border-status-approved-fg/30 bg-status-approved-bg text-status-approved-fg'
                   : 'border-status-returned-fg/30 bg-status-returned-bg text-status-returned-fg'
@@ -3008,7 +3008,7 @@ export default function ChildForm() {
                 <button
                   key={tab.id}
                   onClick={() => handleTabSelection(tab.id as TabType)}
-                  className={`-mb-px h-11 whitespace-nowrap border-b-2 px-3 text-[13.5px] font-medium transition-colors ${
+                  className={`-mb-px h-11 whitespace-nowrap border-b-2 px-3 text-[14.5px] font-medium transition-colors ${
                     activeTab === tab.id
                       ? 'border-ink text-ink'
                       : 'border-transparent text-ink-muted hover:text-ink'
@@ -3438,7 +3438,7 @@ export default function ChildForm() {
                         type="button"
                         onClick={handleWizardBack}
                         disabled={wizardStep === 0 || loading}
-                        className="inline-flex h-11 flex-1 items-center justify-center rounded-lg border border-rule-strong text-[14px] font-medium text-ink transition-colors hover:bg-surface-hover disabled:opacity-40 sm:h-10 sm:flex-none sm:px-5"
+                        className="inline-flex h-11 flex-1 items-center justify-center rounded-lg border border-rule-strong text-[15px] font-medium text-ink transition-colors hover:bg-surface-hover disabled:opacity-40 sm:h-10 sm:flex-none sm:px-5"
                       >
                         Back
                       </button>
@@ -3447,7 +3447,7 @@ export default function ChildForm() {
                         type="button"
                         onClick={handleWizardNext}
                         disabled={loading}
-                        className="inline-flex h-11 flex-1 items-center justify-center rounded-lg bg-blue-600 text-[14px] font-semibold text-white transition hover:bg-blue-700 disabled:bg-blue-300 sm:h-10 sm:flex-none sm:px-5"
+                        className="inline-flex h-11 flex-1 items-center justify-center rounded-lg bg-blue-600 text-[15px] font-semibold text-white transition hover:bg-blue-700 disabled:bg-blue-300 sm:h-10 sm:flex-none sm:px-5"
                       >
                         Next
                       </button>
@@ -3458,7 +3458,7 @@ export default function ChildForm() {
                           finalSubmitArmedRef.current = true
                         }}
                         disabled={loading || isSubmittingUnified}
-                        className="inline-flex h-11 flex-1 items-center justify-center rounded-lg bg-blue-600 text-[14px] font-semibold text-white transition hover:bg-blue-700 disabled:bg-blue-300 sm:h-10 sm:flex-none sm:px-5"
+                        className="inline-flex h-11 flex-1 items-center justify-center rounded-lg bg-blue-600 text-[15px] font-semibold text-white transition hover:bg-blue-700 disabled:bg-blue-300 sm:h-10 sm:flex-none sm:px-5"
                       >
                         {loading ? 'Submitting...' : 'Submit Complete Form'}
                       </button>
@@ -3474,7 +3474,7 @@ export default function ChildForm() {
                             setEntryGate('chooser')
                           }}
                           disabled={loading || isSubmittingUnified}
-                          className="inline-flex h-9 items-center justify-center rounded-md px-2.5 text-[13px] font-medium text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink disabled:opacity-40"
+                          className="inline-flex h-9 items-center justify-center rounded-md px-2.5 text-[14px] font-medium text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink disabled:opacity-40"
                         >
                           Show My Drafts
                         </button>
@@ -3483,7 +3483,7 @@ export default function ChildForm() {
                         type="button"
                         onClick={saveChildDraft}
                         disabled={loading || isSubmittingUnified}
-                        className="inline-flex h-9 items-center justify-center rounded-md px-2.5 text-[13px] font-medium text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink disabled:opacity-40"
+                        className="inline-flex h-9 items-center justify-center rounded-md px-2.5 text-[14px] font-medium text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink disabled:opacity-40"
                       >
                         Save Draft
                       </button>
@@ -3491,7 +3491,7 @@ export default function ChildForm() {
                         type="button"
                         onClick={loadChildDraft}
                         disabled={loading || isSubmittingUnified || !formData.reg_no.trim()}
-                        className="inline-flex h-9 items-center justify-center rounded-md px-2.5 text-[13px] font-medium text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink disabled:opacity-40"
+                        className="inline-flex h-9 items-center justify-center rounded-md px-2.5 text-[14px] font-medium text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink disabled:opacity-40"
                       >
                         Continue Entry
                       </button>
@@ -3500,7 +3500,7 @@ export default function ChildForm() {
                           type="button"
                           onClick={() => clearChildDraft()}
                           disabled={loading || isSubmittingUnified}
-                          className="inline-flex h-9 items-center justify-center rounded-md px-2.5 text-[13px] font-medium text-status-returned-fg transition-colors hover:bg-status-returned-bg disabled:opacity-40"
+                          className="inline-flex h-9 items-center justify-center rounded-md px-2.5 text-[14px] font-medium text-status-returned-fg transition-colors hover:bg-status-returned-bg disabled:opacity-40"
                         >
                           Clear Draft
                         </button>
@@ -3667,7 +3667,7 @@ export default function ChildForm() {
                     <button
                       type="submit"
                       disabled={familyLoading}
-                      className="inline-flex h-11 flex-1 items-center justify-center rounded-lg bg-blue-600 text-[14px] font-semibold text-white transition hover:bg-blue-700 disabled:bg-blue-300 sm:h-10 sm:flex-none sm:px-5"
+                      className="inline-flex h-11 flex-1 items-center justify-center rounded-lg bg-blue-600 text-[15px] font-semibold text-white transition hover:bg-blue-700 disabled:bg-blue-300 sm:h-10 sm:flex-none sm:px-5"
                     >
                       {familyLoading ? 'Saving...' : 'Save Family Data'}
                     </button>
@@ -3762,7 +3762,7 @@ export default function ChildForm() {
                     <button
                       type="submit"
                       disabled={siblingLoading}
-                      className="inline-flex h-11 flex-1 items-center justify-center rounded-lg bg-blue-600 text-[14px] font-semibold text-white transition hover:bg-blue-700 disabled:bg-blue-300 sm:h-10 sm:flex-none sm:px-5"
+                      className="inline-flex h-11 flex-1 items-center justify-center rounded-lg bg-blue-600 text-[15px] font-semibold text-white transition hover:bg-blue-700 disabled:bg-blue-300 sm:h-10 sm:flex-none sm:px-5"
                     >
                       {siblingLoading ? 'Saving...' : 'Save Sibling Data'}
                     </button>
@@ -3853,7 +3853,7 @@ export default function ChildForm() {
                     <button
                       type="submit"
                       disabled={uniformLoading}
-                      className="inline-flex h-11 flex-1 items-center justify-center rounded-lg bg-blue-600 text-[14px] font-semibold text-white transition hover:bg-blue-700 disabled:bg-blue-300 sm:h-10 sm:flex-none sm:px-5"
+                      className="inline-flex h-11 flex-1 items-center justify-center rounded-lg bg-blue-600 text-[15px] font-semibold text-white transition hover:bg-blue-700 disabled:bg-blue-300 sm:h-10 sm:flex-none sm:px-5"
                     >
                       {uniformLoading ? 'Saving...' : 'Save Uniform Data'}
                     </button>
@@ -3981,7 +3981,7 @@ export default function ChildForm() {
                     <button
                       type="submit"
                       disabled={leavingLoading}
-                      className="inline-flex h-11 flex-1 items-center justify-center rounded-lg bg-blue-600 text-[14px] font-semibold text-white transition hover:bg-blue-700 disabled:bg-blue-300 sm:h-10 sm:flex-none sm:px-5"
+                      className="inline-flex h-11 flex-1 items-center justify-center rounded-lg bg-blue-600 text-[15px] font-semibold text-white transition hover:bg-blue-700 disabled:bg-blue-300 sm:h-10 sm:flex-none sm:px-5"
                     >
                       {leavingLoading ? 'Saving...' : 'Save Leaving Data'}
                     </button>
@@ -4481,7 +4481,7 @@ export default function ChildForm() {
                     <button
                       type="submit"
                       disabled={vocationalLoading}
-                      className="inline-flex h-11 flex-1 items-center justify-center rounded-lg bg-blue-600 text-[14px] font-semibold text-white transition hover:bg-blue-700 disabled:bg-blue-300 sm:h-10 sm:flex-none sm:px-5"
+                      className="inline-flex h-11 flex-1 items-center justify-center rounded-lg bg-blue-600 text-[15px] font-semibold text-white transition hover:bg-blue-700 disabled:bg-blue-300 sm:h-10 sm:flex-none sm:px-5"
                     >
                       {vocationalLoading ? 'Saving...' : 'Submit Vocational Course Data'}
                     </button>
@@ -4865,7 +4865,7 @@ export default function ChildForm() {
                     <button
                       type="submit"
                       disabled={computerLoading}
-                      className="inline-flex h-11 flex-1 items-center justify-center rounded-lg bg-blue-600 text-[14px] font-semibold text-white transition hover:bg-blue-700 disabled:bg-blue-300 sm:h-10 sm:flex-none sm:px-5"
+                      className="inline-flex h-11 flex-1 items-center justify-center rounded-lg bg-blue-600 text-[15px] font-semibold text-white transition hover:bg-blue-700 disabled:bg-blue-300 sm:h-10 sm:flex-none sm:px-5"
                     >
                       {computerLoading ? 'Saving...' : 'Submit Computer Course Data'}
                     </button>
@@ -5874,7 +5874,7 @@ function TextInput({ label, name, value, onChange, type = 'text', step, required
 
   return (
     <div>
-      <label className="mb-1.5 block text-[13px] font-medium text-ink-muted" htmlFor={name}>
+      <label className="mb-1.5 block text-[14px] font-medium text-ink-muted" htmlFor={name}>
         {displayLabel}
       </label>
       <input
@@ -5899,7 +5899,7 @@ function NumberInput(props: InputProps) {
 function ReadOnlyInput({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <label className="mb-1.5 block text-[13px] font-medium text-ink-muted">{label}</label>
+      <label className="mb-1.5 block text-[14px] font-medium text-ink-muted">{label}</label>
       <input
         type="text"
         value={value}

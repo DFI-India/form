@@ -192,7 +192,7 @@ export default function ImportReview({
           },
         ].map((tile) => (
           <div key={tile.label} className="flex flex-col gap-1.5 bg-surface px-4 py-3.5">
-            <span className="text-[11.5px] text-ink-muted">{tile.label}</span>
+            <span className="text-[12.5px] text-ink-muted">{tile.label}</span>
             <span className={`text-xl font-semibold tracking-tight ${tile.tone}`}>{tile.value}</span>
           </div>
         ))}
@@ -201,8 +201,8 @@ export default function ImportReview({
       {blockedOnCentres && (
         <div className="flex items-start gap-3 rounded-md border border-status-pending-fg/30 bg-status-pending-bg px-4 py-3.5">
           <Ban className="mt-0.5 h-4 w-4 shrink-0 text-status-pending-fg" />
-          <div className="text-[12.5px] leading-relaxed text-status-pending-fg">
-            <p className="text-[13.5px] font-medium">{totals.newCentres} centre(s) don&apos;t exist yet.</p>
+          <div className="text-[13.5px] leading-relaxed text-status-pending-fg">
+            <p className="text-[14.5px] font-medium">{totals.newCentres} centre(s) don&apos;t exist yet.</p>
             <p className="mt-0.5">
               Children can&apos;t be added to a centre that isn&apos;t in the system. Tick{' '}
               <span className="font-medium">&ldquo;Create centres that don&apos;t exist yet&rdquo;</span> above, or add
@@ -215,22 +215,22 @@ export default function ImportReview({
       {/* Per-table */}
       <div className="overflow-hidden rounded-md border border-rule">
         <div className="border-b border-rule bg-surface-sunken px-4 py-2.5">
-          <h4 className="text-[11px] font-medium uppercase tracking-wide text-ink-faint">Tables</h4>
+          <h4 className="text-[12px] font-medium uppercase tracking-wide text-ink-faint">Tables</h4>
         </div>
         <table className="w-full">
           <tbody className="divide-y divide-rule">
             {entityRows.map((e) => (
               <tr key={e.entity}>
-                <td className="px-4 py-2.5 text-[13px]">{e.label}</td>
-                <td className="px-4 py-2.5 font-mono text-[11.5px] text-ink-faint">{e.table}</td>
+                <td className="px-4 py-2.5 text-[14px]">{e.label}</td>
+                <td className="px-4 py-2.5 font-mono text-[12.5px] text-ink-faint">{e.table}</td>
                 <td className="px-4 py-2.5 text-right">
-                  <span className="font-mono text-[13px] tabular-nums text-status-approved-fg">
+                  <span className="font-mono text-[14px] tabular-nums text-status-approved-fg">
                     +{e.toAdd.toLocaleString()}
                   </span>
                 </td>
                 <td className="w-32 px-4 py-2.5 text-right">
                   {e.skipped > 0 ? (
-                    <span className="font-mono text-[12.5px] tabular-nums text-status-pending-fg">
+                    <span className="font-mono text-[13.5px] tabular-nums text-status-pending-fg">
                       {e.skipped} {staging ? 'to review' : 'skipped'}
                     </span>
                   ) : (
@@ -246,10 +246,10 @@ export default function ImportReview({
       {/* Centres + children */}
       <div className="overflow-hidden rounded-md border border-rule">
         <div className="flex items-center justify-between border-b border-rule bg-surface-sunken px-4 py-2.5">
-          <h4 className="text-[11px] font-medium uppercase tracking-wide text-ink-faint">
+          <h4 className="text-[12px] font-medium uppercase tracking-wide text-ink-faint">
             Centres ({centres.length})
           </h4>
-          <span className="text-[11px] text-ink-faint">click a centre to see its children</span>
+          <span className="text-[12px] text-ink-faint">click a centre to see its children</span>
         </div>
 
         <div className="max-h-[28rem] divide-y divide-rule overflow-y-auto">
@@ -271,9 +271,9 @@ export default function ImportReview({
                     <ChevronRight className="h-3.5 w-3.5 shrink-0 text-ink-faint" />
                   )}
                   <Building2 className="h-3.5 w-3.5 shrink-0 text-ink-faint" />
-                  <span className="w-12 font-mono text-[12.5px] tabular-nums text-ink-muted">{c.eacNo}</span>
+                  <span className="w-12 font-mono text-[13.5px] tabular-nums text-ink-muted">{c.eacNo}</span>
 
-                  <span className="min-w-0 flex-1 truncate text-[13px]">
+                  <span className="min-w-0 flex-1 truncate text-[14px]">
                     {c.villageName || c.existingName || '—'}
                     {(c.district || c.taluk) && (
                       <span className="text-ink-faint">
@@ -286,25 +286,25 @@ export default function ImportReview({
                   {c.isNew && c.conflictingFields.length > 0 && (
                     <span
                       title={`Child rows disagree on: ${c.conflictingFields.join(', ')} — the most common value will be used. Verify in Centre Management.`}
-                      className="shrink-0 rounded bg-status-pending-bg px-1.5 py-0.5 text-[11px] font-medium text-status-pending-fg"
+                      className="shrink-0 rounded bg-status-pending-bg px-1.5 py-0.5 text-[12px] font-medium text-status-pending-fg"
                     >
                       check {c.conflictingFields.join('/')}
                     </span>
                   )}
                   {c.isNew ? (
-                    <span className="shrink-0 rounded bg-status-approved-bg px-1.5 py-0.5 text-[11px] font-medium text-status-approved-fg">
+                    <span className="shrink-0 rounded bg-status-approved-bg px-1.5 py-0.5 text-[12px] font-medium text-status-approved-fg">
                       new centre
                     </span>
                   ) : (
-                    <span className="shrink-0 rounded bg-surface-hover px-1.5 py-0.5 text-[11px] text-ink-muted">
+                    <span className="shrink-0 rounded bg-surface-hover px-1.5 py-0.5 text-[12px] text-ink-muted">
                       exists
                     </span>
                   )}
 
-                  <span className="w-16 shrink-0 text-right font-mono text-[11.5px] tabular-nums text-status-approved-fg">
+                  <span className="w-16 shrink-0 text-right font-mono text-[12.5px] tabular-nums text-status-approved-fg">
                     +{c.newChildren}
                   </span>
-                  <span className="w-20 shrink-0 text-right font-mono text-[11.5px] tabular-nums text-ink-faint">
+                  <span className="w-20 shrink-0 text-right font-mono text-[12.5px] tabular-nums text-ink-faint">
                     {c.existingChildren > 0 ? `${c.existingChildren} ${staging ? 'review' : 'skip'}` : ''}
                   </span>
                 </button>
@@ -317,19 +317,19 @@ export default function ImportReview({
                           <tr key={String(k.regNo)} className={k.isNew ? '' : 'opacity-50'}>
                             <td className="w-8 py-1.5 pl-12 pr-2">
                               <span
-                                className={`font-mono text-[13px] ${
+                                className={`font-mono text-[14px] ${
                                   k.isNew ? 'text-status-approved-fg' : 'text-ink-faint'
                                 }`}
                               >
                                 {k.isNew ? '+' : '~'}
                               </span>
                             </td>
-                            <td className="w-16 px-2 py-1.5 font-mono text-[11.5px] tabular-nums text-ink-muted">
+                            <td className="w-16 px-2 py-1.5 font-mono text-[12.5px] tabular-nums text-ink-muted">
                               {String(k.regNo)}
                             </td>
-                            <td className="px-2 py-1.5 text-[13px]">{k.name}</td>
-                            <td className="w-20 px-2 py-1.5 text-[11.5px] text-ink-muted">{k.gender ?? ''}</td>
-                            <td className="w-24 px-2 py-1.5 font-mono text-[11.5px] text-ink-muted">
+                            <td className="px-2 py-1.5 text-[14px]">{k.name}</td>
+                            <td className="w-20 px-2 py-1.5 text-[12.5px] text-ink-muted">{k.gender ?? ''}</td>
+                            <td className="w-24 px-2 py-1.5 font-mono text-[12.5px] text-ink-muted">
                               {k.dob ?? ''}
                             </td>
                             <td className="w-24 px-2 py-1.5">
@@ -341,7 +341,7 @@ export default function ImportReview({
                             </td>
                             <td className="w-20 px-4 py-1.5 text-right">
                               {!k.isNew && (
-                                <span className="text-[10.5px] text-ink-faint">
+                                <span className="text-[11.5px] text-ink-faint">
                                   {staging ? 'review' : 'skipped'}
                                 </span>
                               )}
@@ -361,7 +361,7 @@ export default function ImportReview({
       {totals.conflictedCentres > 0 && (
         <div className="flex items-start gap-3 rounded-md border border-status-pending-fg/30 bg-status-pending-bg px-4 py-3.5">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-status-pending-fg" />
-          <p className="text-[12.5px] leading-relaxed text-status-pending-fg">
+          <p className="text-[13.5px] leading-relaxed text-status-pending-fg">
             <span className="font-medium">{totals.conflictedCentres}</span> of the new centres have children
             recording different districts/taluks/villages. Those Access columns describe where the{' '}
             <span className="font-medium">child</span> lives, not the centre, so the most common value is used —
@@ -373,10 +373,10 @@ export default function ImportReview({
       {totals.leaving > 0 && (
         <div className="flex items-start gap-3 rounded-md border border-rule bg-surface-sunken px-4 py-3.5">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-ink-faint" />
-          <p className="text-[12.5px] leading-relaxed text-ink-muted">
+          <p className="text-[13.5px] leading-relaxed text-ink-muted">
             <span className="font-medium text-ink">{totals.leaving}</span> of these children are marked as
-            having left the programme (from the <span className="font-mono text-[11.5px]">Onroll</span> flag) and will be
-            imported with <span className="font-mono text-[11.5px]">child_left</span> set — they&apos;ll show as{' '}
+            having left the programme (from the <span className="font-mono text-[12.5px]">Onroll</span> flag) and will be
+            imported with <span className="font-mono text-[12.5px]">child_left</span> set — they&apos;ll show as{' '}
             <span className="font-medium">LEFT</span> in All Records.
           </p>
         </div>

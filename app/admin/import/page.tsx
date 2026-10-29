@@ -389,7 +389,7 @@ export default function AdminImportPage() {
           {pendingConflicts > 0 && (
             <Link
               href="/admin/import/conflicts"
-              className="flex h-[30px] items-center gap-1.5 rounded-md border border-status-pending-fg/30 bg-status-pending-bg px-3 text-[12.5px] font-medium text-status-pending-fg transition-opacity hover:opacity-80"
+              className="flex h-[34px] items-center gap-1.5 rounded-md border border-status-pending-fg/30 bg-status-pending-bg px-3 text-[13.5px] font-medium text-status-pending-fg transition-opacity hover:opacity-80"
             >
               <GitCompare className="h-3.5 w-3.5" />
               {pendingConflicts} to review
@@ -399,7 +399,7 @@ export default function AdminImportPage() {
             <button
               type="button"
               onClick={reset}
-              className="flex h-[30px] items-center rounded-md border border-rule-strong px-3 text-[12.5px] transition-colors hover:bg-surface-hover"
+              className="flex h-[34px] items-center rounded-md border border-rule-strong px-3 text-[13.5px] transition-colors hover:bg-surface-hover"
             >
               Start over
             </button>
@@ -410,8 +410,8 @@ export default function AdminImportPage() {
       <div className="px-10 pb-16 pt-8">
         <div className="max-w-[900px]">
           <div className="mb-6 flex flex-col gap-2">
-            <h1 className="text-[22px] font-semibold tracking-tight">Import from Access</h1>
-            <p className="max-w-[660px] text-[13.5px] leading-relaxed text-ink-muted">
+            <h1 className="text-[24px] font-semibold tracking-tight">Import from Access</h1>
+            <p className="max-w-[660px] text-[14.5px] leading-relaxed text-ink-muted">
               Reads an .accdb directly — all five tables in one pass. Nothing is written until you&apos;ve seen
               exactly what would change.
             </p>
@@ -426,7 +426,7 @@ export default function AdminImportPage() {
                 <div key={s.n} className="flex flex-1 items-center gap-1">
                   <div className="flex items-center gap-2">
                     <span
-                      className={`flex h-[18px] w-[18px] items-center justify-center rounded-full text-[10.5px] font-semibold ${
+                      className={`flex h-[18px] w-[18px] items-center justify-center rounded-full text-[11.5px] font-semibold ${
                         s.done
                           ? 'bg-status-approved-fg text-surface'
                           : isCurrent
@@ -437,7 +437,7 @@ export default function AdminImportPage() {
                       {s.done ? <Check className="h-2.5 w-2.5" /> : s.n}
                     </span>
                     <span
-                      className={`whitespace-nowrap text-[12.5px] ${
+                      className={`whitespace-nowrap text-[13.5px] ${
                         s.done || isCurrent ? 'text-ink' : 'text-ink-faint'
                       }`}
                     >
@@ -468,14 +468,14 @@ export default function AdminImportPage() {
                   }}
                 />
                 <Upload className="h-5 w-5 text-ink-faint" />
-                <span className="text-[13.5px] font-medium">Drop in an .accdb, or pick CSV files</span>
-                <span className="max-w-[420px] text-[12px] leading-relaxed text-ink-muted">
+                <span className="text-[14.5px] font-medium">Drop in an .accdb, or pick CSV files</span>
+                <span className="max-w-[420px] text-[13px] leading-relaxed text-ink-muted">
                   An Access file is read in full — you don&apos;t need to export anything. With CSV it&apos;s one
                   file per table. Either way the table is worked out from the columns.
                 </span>
               </label>
 
-              {parsing && <p className="mt-3 text-[12.5px] text-ink-muted">Reading files…</p>}
+              {parsing && <p className="mt-3 text-[13.5px] text-ink-muted">Reading files…</p>}
 
               {sortedFiles.length > 0 && (
                 <div className="mt-3 flex flex-col gap-px overflow-hidden rounded-md border border-rule bg-rule">
@@ -494,17 +494,17 @@ export default function AdminImportPage() {
 
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="truncate text-[13.5px] font-medium">
+                          <span className="truncate text-[14.5px] font-medium">
                             {file.sourceTable ? `${file.fileName} → ${file.sourceTable}` : file.fileName}
                           </span>
                           {file.entity && (
-                            <span className="rounded bg-surface-hover px-1.5 py-0.5 text-[11px] text-ink-muted">
+                            <span className="rounded bg-surface-hover px-1.5 py-0.5 text-[12px] text-ink-muted">
                               {IMPORT_SPECS[file.entity].label}
                             </span>
                           )}
                         </div>
 
-                        <p className="mt-1 text-[12.5px] text-ink-muted">
+                        <p className="mt-1 text-[13.5px] text-ink-muted">
                           <span className="font-mono">{file.rows.length.toLocaleString()}</span> row
                           {file.rows.length === 1 ? '' : 's'}
                           {file.eacNos.length > 0 && ` · ${file.eacNos.length} centre${file.eacNos.length === 1 ? '' : 's'}`}
@@ -514,7 +514,7 @@ export default function AdminImportPage() {
                         </p>
 
                         {file.errors.length > 0 && (
-                          <ul className="mt-1.5 flex flex-col gap-0.5 text-[11.5px] text-status-pending-fg">
+                          <ul className="mt-1.5 flex flex-col gap-0.5 text-[12.5px] text-status-pending-fg">
                             {file.errors.slice(0, 3).map((e, i) => (
                               <li key={i}>
                                 {e.row > 0 ? `Row ${e.row}: ` : ''}
@@ -526,7 +526,7 @@ export default function AdminImportPage() {
                         )}
 
                         {file.unmappedHeaders.length > 0 && (
-                          <p className="mt-1.5 text-[11.5px] text-ink-faint">
+                          <p className="mt-1.5 text-[12.5px] text-ink-faint">
                             Columns ignored: {file.unmappedHeaders.slice(0, 6).join(', ')}
                             {file.unmappedHeaders.length > 6 && ` +${file.unmappedHeaders.length - 6} more`}
                           </p>
@@ -555,7 +555,7 @@ export default function AdminImportPage() {
               <div className="rounded-md border border-rule p-4">
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <label className="flex flex-col gap-1.5">
-                    <span className="text-[12px] font-medium text-ink-muted">Status for imported rows</span>
+                    <span className="text-[13px] font-medium text-ink-muted">Status for imported rows</span>
                     <select
                       value={status}
                       onChange={(e) => setStatus(e.target.value)}
@@ -568,7 +568,7 @@ export default function AdminImportPage() {
                   </label>
 
                   <label className="flex flex-col gap-1.5">
-                    <span className="text-[12px] font-medium text-ink-muted">If a record already exists</span>
+                    <span className="text-[13px] font-medium text-ink-muted">If a record already exists</span>
                     <select
                       value={conflictStrategy}
                       onChange={(e) => setConflictStrategy(e.target.value as 'skip' | 'abort' | 'stage')}
@@ -581,7 +581,7 @@ export default function AdminImportPage() {
                   </label>
                 </div>
 
-                <p className="mt-2.5 text-[12px] leading-relaxed text-ink-muted">
+                <p className="mt-2.5 text-[13px] leading-relaxed text-ink-muted">
                   {conflictStrategy === 'stage'
                     ? 'Everything new is imported. A record that already exists and says something different is set aside so you can compare it field by field — identical ones are ignored.'
                     : conflictStrategy === 'skip'
@@ -597,8 +597,8 @@ export default function AdminImportPage() {
                     className="mt-0.5"
                   />
                   <span className="flex flex-col gap-0.5">
-                    <span className="text-[13px]">Create centres that don&apos;t exist yet</span>
-                    <span className="text-[11.5px] leading-relaxed text-ink-faint">
+                    <span className="text-[14px]">Create centres that don&apos;t exist yet</span>
+                    <span className="text-[12.5px] leading-relaxed text-ink-faint">
                       Children can&apos;t be attached to a centre that isn&apos;t in the system. The centre&apos;s
                       address is taken from the most common value across its children — worth checking in Centre
                       data afterwards.
@@ -611,12 +611,12 @@ export default function AdminImportPage() {
                     type="button"
                     onClick={runPreflight}
                     disabled={!canRun}
-                    className="flex h-8 items-center gap-1.5 rounded-md bg-ink px-3.5 text-[13px] font-medium text-surface transition-opacity hover:opacity-90 disabled:opacity-50"
+                    className="flex h-8 items-center gap-1.5 rounded-md bg-ink px-3.5 text-[14px] font-medium text-surface transition-opacity hover:opacity-90 disabled:opacity-50"
                   >
                     <CheckCircle2 className="h-3.5 w-3.5" />
                     {running && !preflight ? 'Checking…' : 'Review changes'}
                   </button>
-                  <span className="text-[12.5px] text-ink-muted">
+                  <span className="text-[13.5px] text-ink-muted">
                     <span className="font-mono">{totalRows.toLocaleString()}</span> rows across {files.length}{' '}
                     table{files.length === 1 ? '' : 's'}
                     {totalErrors > 0 && ` · ${totalErrors} skipped`}
@@ -637,7 +637,7 @@ export default function AdminImportPage() {
                   <button
                     type="button"
                     onClick={() => setPreflight(null)}
-                    className="text-[12.5px] text-ink-muted transition-colors hover:text-ink"
+                    className="text-[13.5px] text-ink-muted transition-colors hover:text-ink"
                   >
                     Dismiss
                   </button>
@@ -666,12 +666,12 @@ export default function AdminImportPage() {
                       }
                     }}
                     disabled={!canRun}
-                    className="flex h-8 items-center gap-1.5 rounded-md bg-blue-600 px-3.5 text-[13px] font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
+                    className="flex h-8 items-center gap-1.5 rounded-md bg-blue-600 px-3.5 text-[14px] font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
                   >
                     <Play className="h-3.5 w-3.5" />
                     {running ? 'Importing…' : 'Apply import'}
                   </button>
-                  <span className="text-[12.5px] text-ink-muted">This writes to the live database.</span>
+                  <span className="text-[13.5px] text-ink-muted">This writes to the live database.</span>
                 </div>
               </div>
             </section>
@@ -682,17 +682,17 @@ export default function AdminImportPage() {
             <div className="mb-5 flex items-start gap-3 rounded-md border border-status-pending-fg/30 bg-status-pending-bg px-4 py-3.5">
               <GitCompare className="mt-0.5 h-4 w-4 shrink-0 text-status-pending-fg" />
               <div className="min-w-0 flex-1">
-                <p className="text-[13.5px] font-medium text-status-pending-fg">
+                <p className="text-[14.5px] font-medium text-status-pending-fg">
                   {stagedCount.toLocaleString()} record{stagedCount === 1 ? '' : 's'} held back for review
                 </p>
-                <p className="mt-0.5 text-[12.5px] leading-relaxed text-status-pending-fg">
+                <p className="mt-0.5 text-[13.5px] leading-relaxed text-status-pending-fg">
                   These already exist and say something different from the file. Nothing was overwritten —
                   compare them side by side and choose what to keep.
                 </p>
               </div>
               <Link
                 href="/admin/import/conflicts"
-                className="flex h-8 shrink-0 items-center rounded-md bg-status-pending-fg px-3.5 text-[12.5px] font-medium text-surface transition-opacity hover:opacity-90"
+                className="flex h-8 shrink-0 items-center rounded-md bg-status-pending-fg px-3.5 text-[13.5px] font-medium text-surface transition-opacity hover:opacity-90"
               >
                 Review conflicts
               </Link>
@@ -712,16 +712,16 @@ export default function AdminImportPage() {
                       <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-status-returned-fg" />
                     )}
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-[13.5px] font-medium">{r.label}</p>
+                      <p className="truncate text-[14.5px] font-medium">{r.label}</p>
                       <p
-                        className={`mt-0.5 text-[12.5px] ${
+                        className={`mt-0.5 text-[13.5px] ${
                           r.ok ? 'text-ink-muted' : 'text-status-returned-fg'
                         }`}
                       >
                         {r.message}
                       </p>
                       {r.summary?.missingCentres?.length > 0 && (
-                        <p className="mt-1 text-[11.5px] text-status-pending-fg">
+                        <p className="mt-1 text-[12.5px] text-status-pending-fg">
                           Centres not in the system yet: {r.summary.missingCentres.join(', ')}
                         </p>
                       )}
@@ -733,20 +733,20 @@ export default function AdminImportPage() {
               <div className="mt-4 flex flex-wrap gap-2">
                 <Link
                   href="/admin/child-data"
-                  className="flex h-8 items-center rounded-md border border-rule-strong px-3.5 text-[13px] transition-colors hover:bg-surface-hover"
+                  className="flex h-8 items-center rounded-md border border-rule-strong px-3.5 text-[14px] transition-colors hover:bg-surface-hover"
                 >
                   Open child data
                 </Link>
                 <Link
                   href="/admin/center-management"
-                  className="flex h-8 items-center rounded-md border border-rule-strong px-3.5 text-[13px] transition-colors hover:bg-surface-hover"
+                  className="flex h-8 items-center rounded-md border border-rule-strong px-3.5 text-[14px] transition-colors hover:bg-surface-hover"
                 >
                   Check centres
                 </Link>
                 <button
                   type="button"
                   onClick={reset}
-                  className="flex h-8 items-center rounded-md border border-rule-strong px-3.5 text-[13px] transition-colors hover:bg-surface-hover"
+                  className="flex h-8 items-center rounded-md border border-rule-strong px-3.5 text-[14px] transition-colors hover:bg-surface-hover"
                 >
                   Import another file
                 </button>
@@ -760,7 +760,7 @@ export default function AdminImportPage() {
 }
 
 const selectClass =
-  'h-8 w-full rounded-md border border-rule bg-surface px-2.5 text-[13px] outline-none focus:border-blue-500'
+  'h-8 w-full rounded-md border border-rule bg-surface px-2.5 text-[14px] outline-none focus:border-blue-500'
 
 /** Numbered heading — the flow is strictly sequential, so it reads as steps. */
 function SectionHead({
@@ -776,11 +776,11 @@ function SectionHead({
 }) {
   return (
     <div className="mb-2.5 flex items-center gap-2.5">
-      <span className="flex h-5 w-5 items-center justify-center rounded bg-surface-hover text-[11px] font-semibold text-ink-muted">
+      <span className="flex h-5 w-5 items-center justify-center rounded bg-surface-hover text-[12px] font-semibold text-ink-muted">
         {n}
       </span>
-      <span className="text-[14px] font-semibold">{title}</span>
-      {note && <span className="text-[12.5px] text-ink-muted">{note}</span>}
+      <span className="text-[15px] font-semibold">{title}</span>
+      {note && <span className="text-[13.5px] text-ink-muted">{note}</span>}
       {action && <div className="ml-auto">{action}</div>}
     </div>
   )

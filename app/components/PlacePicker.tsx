@@ -41,7 +41,7 @@ export interface PlacePickerProps {
 const ADD = '__add__'
 
 const selectClass =
-  'h-8 w-full rounded-md border border-rule bg-surface px-2 text-[13px] outline-none transition-colors ' +
+  'h-8 w-full rounded-md border border-rule bg-surface px-2 text-[14px] outline-none transition-colors ' +
   'focus:border-rule-strong disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:text-ink-faint'
 
 export default function PlacePicker({
@@ -168,7 +168,7 @@ export default function PlacePicker({
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {rows.map((row) => (
           <label key={row.kind} className="flex flex-col gap-1.5">
-            <span className="text-[11.5px] font-medium text-ink-muted">
+            <span className="text-[12.5px] font-medium text-ink-muted">
               {row.label}
               {required && row.kind === 'village' && <span className="text-status-returned-fg"> *</span>}
             </span>
@@ -212,7 +212,7 @@ export default function PlacePicker({
               {canCreate && !row.disabled && <option value={ADD}>+ Add a {row.label.toLowerCase()}…</option>}
             </select>
             {row.kind === 'village' && !row.disabled && row.options.length === 0 && (
-              <span className="text-[11px] text-ink-faint">No villages recorded in this taluk yet.</span>
+              <span className="text-[12px] text-ink-faint">No villages recorded in this taluk yet.</span>
             )}
           </label>
         ))}
@@ -220,18 +220,18 @@ export default function PlacePicker({
 
       {showPanchayat && (
         <label className="flex max-w-[260px] flex-col gap-1.5">
-          <span className="text-[11.5px] font-medium text-ink-muted">Panchayat</span>
+          <span className="text-[12.5px] font-medium text-ink-muted">Panchayat</span>
           {/* Read-only on purpose: the panchayat belongs to the village record,
               so editing it here would change it for every centre and child in
               that village, not just this one. Rendered as text rather than a
               disabled <select> so it never looks like a choice. */}
           <output
-            className="flex h-8 w-full items-center rounded-md border border-rule bg-surface-sunken px-2 text-[13px] text-ink-muted"
+            className="flex h-8 w-full items-center rounded-md border border-rule bg-surface-sunken px-2 text-[14px] text-ink-muted"
             aria-label="Panchayat"
           >
             {resolved.panchayat?.name ?? (villageId ? 'Not recorded' : 'Pick a village first')}
           </output>
-          <span className="text-[11px] text-ink-faint">
+          <span className="text-[12px] text-ink-faint">
             Comes from the village. Change it on the village, not here.
           </span>
         </label>
@@ -239,7 +239,7 @@ export default function PlacePicker({
 
       {adding && (
         <div className="flex flex-col gap-2 rounded-md border border-rule bg-surface-sunken p-3">
-          <span className="text-[12px] font-medium">
+          <span className="text-[13px] font-medium">
             New {adding}
             {adding === 'taluk' && resolved.district
               ? ` in ${resolved.district.name}`
@@ -262,13 +262,13 @@ export default function PlacePicker({
                 if (e.key === 'Escape') setAdding(null)
               }}
               placeholder={`Name of the ${adding}`}
-              className="h-8 flex-1 rounded-md border border-rule bg-surface px-2.5 text-[13px] outline-none focus:border-rule-strong"
+              className="h-8 flex-1 rounded-md border border-rule bg-surface px-2.5 text-[14px] outline-none focus:border-rule-strong"
             />
             <button
               type="button"
               onClick={commitAdd}
               disabled={busy || !draft.trim()}
-              className="flex h-8 items-center gap-1.5 rounded-md bg-blue-600 px-3 text-[12.5px] font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-60"
+              className="flex h-8 items-center gap-1.5 rounded-md bg-blue-600 px-3 text-[13.5px] font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-60"
             >
               {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
               Add
@@ -276,18 +276,18 @@ export default function PlacePicker({
             <button
               type="button"
               onClick={() => setAdding(null)}
-              className="flex h-8 items-center rounded-md border border-rule-strong px-2.5 text-[12.5px] transition-colors hover:bg-surface-hover"
+              className="flex h-8 items-center rounded-md border border-rule-strong px-2.5 text-[13.5px] transition-colors hover:bg-surface-hover"
             >
               <X className="h-3.5 w-3.5" />
             </button>
           </div>
           {adding === 'village' && (
             <label className="flex flex-col gap-1">
-              <span className="text-[11.5px] text-ink-muted">Panchayat</span>
+              <span className="text-[12.5px] text-ink-muted">Panchayat</span>
               <select
                 value={draftPanchayat}
                 onChange={(e) => setDraftPanchayat(e.target.value)}
-                className="h-8 rounded-md border border-rule bg-surface px-2 text-[13px] outline-none focus:border-rule-strong"
+                className="h-8 rounded-md border border-rule bg-surface px-2 text-[14px] outline-none focus:border-rule-strong"
               >
                 <option value="">Not known yet</option>
                 {panchayats.map((p) => (
@@ -296,19 +296,19 @@ export default function PlacePicker({
                   </option>
                 ))}
               </select>
-              <span className="text-[11px] text-ink-faint">
+              <span className="text-[12px] text-ink-faint">
                 {panchayats.length === 0
                   ? 'No panchayats recorded in this taluk yet.'
                   : 'Can be left blank and filled in later.'}
               </span>
             </label>
           )}
-          {error && <span className="text-[11.5px] text-status-returned-fg">{error}</span>}
+          {error && <span className="text-[12.5px] text-status-returned-fg">{error}</span>}
         </div>
       )}
 
       {villageId && resolved.village && (
-        <span className="text-[11.5px] text-ink-faint">
+        <span className="text-[12.5px] text-ink-faint">
           {[resolved.village.name, resolved.panchayat?.name, resolved.taluk?.name, resolved.district?.name]
             .filter(Boolean)
             .join(' · ')}

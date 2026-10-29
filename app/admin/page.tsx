@@ -196,7 +196,7 @@ export default function AdminHomePage() {
                 <span className={`text-2xl font-semibold tracking-tight ${stat.tone}`}>
                   {loading ? '—' : (stat.value ?? 0).toLocaleString()}
                 </span>
-                <span className="text-[11.5px] text-ink-faint">{stat.sub}</span>
+                <span className="text-[12.5px] text-ink-faint">{stat.sub}</span>
               </div>
             ))}
           </div>
@@ -215,7 +215,7 @@ export default function AdminHomePage() {
                   >
                     <div className="flex items-center gap-2.5">
                       <Icon className="h-[15px] w-[15px] text-ink-muted" />
-                      <span className="text-[13.5px] font-medium">{s.title}</span>
+                      <span className="text-[14.5px] font-medium">{s.title}</span>
                     </div>
                     <span className="text-xs leading-relaxed text-ink-muted">{s.blurb}</span>
                   </Link>
@@ -229,9 +229,9 @@ export default function AdminHomePage() {
             <span className="text-xs font-medium text-ink-faint">Needs attention</span>
             <div className="overflow-hidden rounded-md border border-rule">
               {loading ? (
-                <div className="px-4 py-6 text-center text-[13px] text-ink-muted">Checking…</div>
+                <div className="px-4 py-6 text-center text-[14px] text-ink-muted">Checking…</div>
               ) : attention.length === 0 ? (
-                <div className="px-4 py-6 text-center text-[13px] text-ink-muted">
+                <div className="px-4 py-6 text-center text-[14px] text-ink-muted">
                   Nothing waiting — every record is approved and complete.
                 </div>
               ) : (
@@ -243,11 +243,11 @@ export default function AdminHomePage() {
                       i < attention.length - 1 ? 'border-b border-rule' : ''
                     }`}
                   >
-                    <span className={`min-w-[34px] font-mono text-[13px] font-medium ${item.tone}`}>
+                    <span className={`min-w-[34px] font-mono text-[14px] font-medium ${item.tone}`}>
                       {item.count.toLocaleString()}
                     </span>
-                    <span className="flex-1 text-[13.5px]">{item.text}</span>
-                    <span className="text-[12.5px] font-medium text-blue-600">Open</span>
+                    <span className="flex-1 text-[14.5px]">{item.text}</span>
+                    <span className="text-[13.5px] font-medium text-blue-600">Open</span>
                   </Link>
                 ))
               )}
@@ -259,7 +259,7 @@ export default function AdminHomePage() {
             <div className="flex flex-col gap-2.5">
               <div className="flex items-baseline justify-between">
                 <span className="text-xs font-medium text-ink-faint">Centres needing the most work</span>
-                <Link href="/admin/center-management" className="text-[12.5px] font-medium text-blue-600">
+                <Link href="/admin/center-management" className="text-[13.5px] font-medium text-blue-600">
                   All centres
                 </Link>
               </div>
@@ -271,9 +271,9 @@ export default function AdminHomePage() {
                       i < overview.centres.length - 1 ? 'border-b border-rule' : ''
                     }`}
                   >
-                    <span className="w-9 font-mono text-[12.5px] text-ink-muted">{c.eacNo}</span>
-                    <span className="flex-1 truncate text-[13px]">{c.village || '—'}</span>
-                    <span className="text-[12px] text-ink-faint">
+                    <span className="w-9 font-mono text-[13.5px] text-ink-muted">{c.eacNo}</span>
+                    <span className="flex-1 truncate text-[14px]">{c.village || '—'}</span>
+                    <span className="text-[13px] text-ink-faint">
                       {c.withFamily}/{c.total}
                     </span>
                     <div className="flex h-[7px] w-24 overflow-hidden rounded-sm bg-meter-empty">
@@ -288,7 +288,7 @@ export default function AdminHomePage() {
                         style={{ width: `${c.percent}%` }}
                       />
                     </div>
-                    <span className="w-8 text-right font-mono text-[12px] text-ink-muted">{c.percent}%</span>
+                    <span className="w-8 text-right font-mono text-[13px] text-ink-muted">{c.percent}%</span>
                   </div>
                 ))}
               </div>

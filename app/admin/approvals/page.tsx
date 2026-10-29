@@ -196,7 +196,7 @@ export default function AdminApprovalsPage() {
 
         <div className="mb-4">
           <h1 className="text-xl font-semibold tracking-tight">Approvals</h1>
-          <p className="mt-1 text-[13px] text-ink-muted">
+          <p className="mt-1 text-[14px] text-ink-muted">
             {STAGES.find((s) => s.key === stage)?.hint}
           </p>
         </div>
@@ -208,12 +208,12 @@ export default function AdminApprovalsPage() {
               key={s.key}
               type="button"
               onClick={() => setStage(s.key)}
-              className={`flex h-9 items-center gap-2 rounded-md px-3 text-[13px] transition-colors ${
+              className={`flex h-9 items-center gap-2 rounded-md px-3 text-[14px] transition-colors ${
                 stage === s.key ? 'bg-ink text-surface' : 'border border-rule-strong text-ink hover:bg-surface-hover'
               }`}
             >
               {s.label}
-              <span className="font-mono text-[11.5px] opacity-70">{stageCounts[s.key] ?? 0}</span>
+              <span className="font-mono text-[12.5px] opacity-70">{stageCounts[s.key] ?? 0}</span>
             </button>
           ))}
         </div>
@@ -226,13 +226,13 @@ export default function AdminApprovalsPage() {
                 key={e.key}
                 type="button"
                 onClick={() => setEntity(e.key)}
-                className={`-mb-px flex h-10 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 text-[13px] transition-colors ${
+                className={`-mb-px flex h-10 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 text-[14px] transition-colors ${
                   entity === e.key ? 'border-ink font-medium text-ink' : 'border-transparent text-ink-muted hover:text-ink'
                 }`}
               >
                 {e.label}
                 {(counts[e.key] ?? 0) > 0 && (
-                  <span className="rounded bg-status-pending-bg px-1.5 py-0.5 font-mono text-[11px] text-status-pending-fg">
+                  <span className="rounded bg-status-pending-bg px-1.5 py-0.5 font-mono text-[12px] text-status-pending-fg">
                     {counts[e.key]}
                   </span>
                 )}
@@ -245,16 +245,16 @@ export default function AdminApprovalsPage() {
           {loading ? (
             <div className="p-12 text-center">
               <LoadingSpinner size="lg" />
-              <p className="mt-3 text-[13px] text-ink-muted">Loading…</p>
+              <p className="mt-3 text-[14px] text-ink-muted">Loading…</p>
             </div>
           ) : rows.length === 0 ? (
             <div className="p-12 text-center">
               <Inbox className="mx-auto mb-3 h-10 w-10 text-rule-strong" />
-              <p className="text-[13.5px] text-ink-muted">
+              <p className="text-[14.5px] text-ink-muted">
                 Nothing {stage === 'Pending' ? 'waiting to be verified' : 'waiting for approval'} here.
               </p>
               {total > 0 && (
-                <p className="mt-1 text-[12.5px] text-ink-faint">
+                <p className="mt-1 text-[13.5px] text-ink-faint">
                   {total} in other record types at this stage.
                 </p>
               )}
@@ -271,18 +271,18 @@ export default function AdminApprovalsPage() {
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="truncate text-[13.5px] font-medium">{nameOf(row)}</span>
+                      <span className="truncate text-[14.5px] font-medium">{nameOf(row)}</span>
                       {canOpen && (
                         <button
                           type="button"
                           onClick={() => setViewing({ eacNo: row.eac_no!, regNo: row.reg_no! })}
-                          className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[12px] text-ink-faint transition-colors hover:bg-surface-hover hover:text-ink"
+                          className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[13px] text-ink-faint transition-colors hover:bg-surface-hover hover:text-ink"
                         >
                           <Eye className="h-3 w-3" /> Open
                         </button>
                       )}
                     </div>
-                    <span className="font-mono text-[11.5px] text-ink-faint">
+                    <span className="font-mono text-[12.5px] text-ink-faint">
                       EAC {txt(row.eac_no) || '—'} · Reg {txt(row.reg_no) || '—'}
                       {row.created_at ? ` · submitted ${String(row.created_at).slice(0, 10)}` : ''}
                     </span>
@@ -293,7 +293,7 @@ export default function AdminApprovalsPage() {
                       type="button"
                       onClick={() => setRejecting(row)}
                       disabled={working}
-                      className="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-md border border-rule-strong px-3 text-[13px] transition-colors hover:bg-status-returned-bg hover:text-status-returned-fg disabled:opacity-50 sm:h-9 sm:flex-none"
+                      className="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-md border border-rule-strong px-3 text-[14px] transition-colors hover:bg-status-returned-bg hover:text-status-returned-fg disabled:opacity-50 sm:h-9 sm:flex-none"
                     >
                       <X className="h-3.5 w-3.5" /> Send back
                     </button>
@@ -301,7 +301,7 @@ export default function AdminApprovalsPage() {
                       type="button"
                       onClick={() => decide(row, 'approve')}
                       disabled={working}
-                      className="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-md bg-status-approved-fg px-3 text-[13px] font-medium text-surface transition-opacity hover:opacity-90 disabled:opacity-50 sm:h-9 sm:flex-none"
+                      className="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-md bg-status-approved-fg px-3 text-[14px] font-medium text-surface transition-opacity hover:opacity-90 disabled:opacity-50 sm:h-9 sm:flex-none"
                     >
                       <Check className="h-3.5 w-3.5" /> {working ? 'Saving…' : 'Approve'}
                     </button>
@@ -313,7 +313,7 @@ export default function AdminApprovalsPage() {
         </div>
 
         {stage === 'Pending' && rows.length > 0 && (
-          <p className="mt-3 flex items-start gap-1.5 text-[12.5px] text-ink-muted">
+          <p className="mt-3 flex items-start gap-1.5 text-[13.5px] text-ink-muted">
             <ChevronRight className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             Approving here skips the field staff check. The record is recorded as both verified and approved by you.
           </p>
@@ -323,11 +323,11 @@ export default function AdminApprovalsPage() {
       {rejecting && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setRejecting(null)}>
           <div className="w-full max-w-md rounded-lg border border-rule bg-surface p-5" onClick={(e) => e.stopPropagation()}>
-            <h2 className="mb-1 text-[15px] font-semibold">Send back to the volunteer</h2>
-            <p className="mb-3 text-[13px] text-ink-muted">
+            <h2 className="mb-1 text-[16px] font-semibold">Send back to the volunteer</h2>
+            <p className="mb-3 text-[14px] text-ink-muted">
               {nameOf(rejecting)} · EAC {txt(rejecting.eac_no) || '—'} · Reg {txt(rejecting.reg_no) || '—'}
             </p>
-            <label className="mb-1.5 block text-[12.5px] text-ink-muted">What needs fixing?</label>
+            <label className="mb-1.5 block text-[13.5px] text-ink-muted">What needs fixing?</label>
             <textarea
               autoFocus
               value={reason}
@@ -340,7 +340,7 @@ export default function AdminApprovalsPage() {
               <button
                 type="button"
                 onClick={() => setRejecting(null)}
-                className="h-10 rounded-md border border-rule-strong px-3 text-[13px] hover:bg-surface-hover sm:h-9"
+                className="h-10 rounded-md border border-rule-strong px-3 text-[14px] hover:bg-surface-hover sm:h-9"
               >
                 Cancel
               </button>
@@ -348,7 +348,7 @@ export default function AdminApprovalsPage() {
                 type="button"
                 onClick={() => decide(rejecting, 'reject', reason.trim())}
                 disabled={!reason.trim() || busy !== null}
-                className="h-10 rounded-md bg-status-returned-fg px-3 text-[13px] font-medium text-surface disabled:opacity-50 sm:h-9"
+                className="h-10 rounded-md bg-status-returned-fg px-3 text-[14px] font-medium text-surface disabled:opacity-50 sm:h-9"
               >
                 Send back
               </button>

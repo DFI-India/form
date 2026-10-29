@@ -249,13 +249,13 @@ export default function PlacesPage() {
             if (e.key === 'Escape') setDraft(null)
           }}
           placeholder={`Name of the ${KIND_LABEL[kind]}`}
-          className="h-[30px] w-[220px] rounded-md border border-rule-strong bg-surface px-2.5 text-[13px] outline-none focus:border-blue-500"
+          className="h-[34px] w-[220px] rounded-md border border-rule-strong bg-surface px-2.5 text-[14px] outline-none focus:border-blue-500"
         />
         {kind === 'village' && (
           <select
             value={draft.panchayatId}
             onChange={(e) => setDraft({ ...draft, panchayatId: e.target.value })}
-            className="h-[30px] rounded-md border border-rule-strong bg-surface px-2 text-[13px] outline-none focus:border-blue-500"
+            className="h-[34px] rounded-md border border-rule-strong bg-surface px-2 text-[14px] outline-none focus:border-blue-500"
           >
             <option value="">Panchayat not known yet</option>
             {panchayats.map((p) => (
@@ -269,14 +269,14 @@ export default function PlacesPage() {
           type="button"
           onClick={add}
           disabled={busy || !draft.name.trim()}
-          className="flex h-[30px] items-center gap-1.5 rounded-md bg-ink px-2.5 text-[12.5px] font-medium text-surface disabled:opacity-40"
+          className="flex h-[34px] items-center gap-1.5 rounded-md bg-ink px-2.5 text-[13.5px] font-medium text-surface disabled:opacity-40"
         >
           <Check className="h-3.5 w-3.5" /> Add
         </button>
         <button
           type="button"
           onClick={() => setDraft(null)}
-          className="flex h-[30px] items-center rounded-md border border-rule-strong px-2 text-[12.5px] hover:bg-surface-hover"
+          className="flex h-[34px] items-center rounded-md border border-rule-strong px-2 text-[13.5px] hover:bg-surface-hover"
         >
           <X className="h-3.5 w-3.5" />
         </button>
@@ -298,7 +298,7 @@ export default function PlacesPage() {
             }
             if (e.key === 'Escape') setRenaming(null)
           }}
-          className="h-[26px] w-[200px] rounded-md border border-rule-strong bg-surface px-2 text-[13px] outline-none focus:border-blue-500"
+          className="h-[30px] w-[200px] rounded-md border border-rule-strong bg-surface px-2 text-[14px] outline-none focus:border-blue-500"
         />
         <button type="button" onClick={rename} disabled={busy} className={iconBtn} aria-label="Save name">
           <Check className="h-3.5 w-3.5" />
@@ -308,7 +308,7 @@ export default function PlacesPage() {
         </button>
       </span>
     ) : (
-      <span className={`text-[13px] ${bold ? 'font-medium' : ''}`}>{name}</span>
+      <span className={`text-[14px] ${bold ? 'font-medium' : ''}`}>{name}</span>
     )
 
   return (
@@ -320,7 +320,7 @@ export default function PlacesPage() {
         <button
           type="button"
           onClick={() => setDraft({ kind: 'district', parentId: null, name: '', panchayatId: '' })}
-          className="flex h-[28px] items-center gap-1.5 rounded-md bg-ink px-2.5 text-[12.5px] font-medium text-surface transition-opacity hover:opacity-90"
+          className="flex h-[32px] items-center gap-1.5 rounded-md bg-ink px-2.5 text-[13.5px] font-medium text-surface transition-opacity hover:opacity-90"
         >
           <Plus className="h-[13px] w-[13px]" /> New district
         </button>
@@ -332,12 +332,12 @@ export default function PlacesPage() {
 
         <div className="mb-1 flex items-center justify-between gap-5">
           <h1 className="text-xl font-semibold tracking-tight">Places</h1>
-          <span className="text-[12.5px] text-ink-faint">
+          <span className="text-[13.5px] text-ink-faint">
             {tree.districts.length} districts · {tree.taluks.length} taluks · {tree.panchayats.length} panchayats ·{' '}
             {tree.villages.length} villages
           </span>
         </div>
-        <p className="mb-4 max-w-2xl text-[13px] leading-relaxed text-ink-muted">
+        <p className="mb-4 max-w-2xl text-[14px] leading-relaxed text-ink-muted">
           Every centre and child points at a village from this list. A village belongs to one panchayat, and a
           panchayat covers several villages. Changing a name here changes it everywhere.
         </p>
@@ -349,20 +349,20 @@ export default function PlacesPage() {
           />
         ) : (
           <>
-            <div className="mb-3 flex h-[30px] w-[290px] items-center gap-2 rounded-md border border-rule-strong px-2.5 focus-within:border-blue-500">
+            <div className="mb-3 flex h-[34px] w-[290px] items-center gap-2 rounded-md border border-rule-strong px-2.5 focus-within:border-blue-500">
               <Search className="h-[13px] w-[13px] shrink-0 text-ink-faint" />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="District, taluk, panchayat or village"
-                className="min-w-0 flex-1 bg-transparent text-[12.5px] outline-none placeholder:text-ink-faint"
+                className="min-w-0 flex-1 bg-transparent text-[13.5px] outline-none placeholder:text-ink-faint"
               />
             </div>
 
             {loading ? (
               <div className="rounded-md border border-rule p-12 text-center">
                 <LoadingSpinner size="lg" />
-                <p className="mt-3 text-[13px] text-ink-muted">Loading places…</p>
+                <p className="mt-3 text-[14px] text-ink-muted">Loading places…</p>
               </div>
             ) : (
               <div className="overflow-hidden rounded-md border border-rule">
@@ -371,7 +371,7 @@ export default function PlacesPage() {
                 {districts.length === 0 ? (
                   <div className="p-12 text-center">
                     <MapPin className="mx-auto mb-3 h-9 w-9 text-rule-strong" />
-                    <p className="text-[13.5px] text-ink-muted">
+                    <p className="text-[14.5px] text-ink-muted">
                       {q ? 'Nothing matches that.' : 'No districts yet. Add the first one.'}
                     </p>
                   </div>
@@ -381,7 +381,7 @@ export default function PlacesPage() {
                     const isOpen = open[district.id]
                     return (
                       <div key={district.id} className="border-b border-rule last:border-0">
-                        <div className="flex h-[38px] items-center gap-2 px-3 hover:bg-surface-hover">
+                        <div className="flex h-[42px] items-center gap-2 px-3 hover:bg-surface-hover">
                           <button
                             type="button"
                             onClick={() => setOpen((o) => ({ ...o, [district.id]: !o[district.id] }))}
@@ -391,7 +391,7 @@ export default function PlacesPage() {
                             {isOpen ? <ChevronDown className="h-[15px] w-4" /> : <ChevronRight className="h-[15px] w-4" />}
                           </button>
                           {nameCell('district', district.id, district.name, true)}
-                          <span className="text-[11.5px] text-ink-faint">
+                          <span className="text-[12.5px] text-ink-faint">
                             {taluks.length} {taluks.length === 1 ? 'taluk' : 'taluks'}
                           </span>
                           <span className="ml-auto flex items-center gap-1">
@@ -433,7 +433,7 @@ export default function PlacesPage() {
                             const groups = villagesByPanchayat(tree, taluk.id)
                             return (
                               <div key={taluk.id} className="border-t border-rule-faint">
-                                <div className="flex h-[34px] items-center gap-2 pl-8 pr-3 hover:bg-surface-hover">
+                                <div className="flex h-[38px] items-center gap-2 pl-8 pr-3 hover:bg-surface-hover">
                                   <button
                                     type="button"
                                     onClick={() => setOpen((o) => ({ ...o, [taluk.id]: !o[taluk.id] }))}
@@ -447,7 +447,7 @@ export default function PlacesPage() {
                                     )}
                                   </button>
                                   {nameCell('taluk', taluk.id, taluk.name)}
-                                  <span className="text-[11.5px] text-ink-faint">
+                                  <span className="text-[12.5px] text-ink-faint">
                                     {counts.villagesInTaluk(taluk.id)} villages ·{' '}
                                     {panchayatsIn(tree, taluk.id).length} panchayats
                                   </span>
@@ -457,7 +457,7 @@ export default function PlacesPage() {
                                       onClick={() =>
                                         setDraft({ kind: 'panchayat', parentId: taluk.id, name: '', panchayatId: '' })
                                       }
-                                      className="h-[24px] rounded px-1.5 text-[11.5px] text-ink-faint hover:bg-surface-hover hover:text-ink"
+                                      className="h-[28px] rounded px-1.5 text-[12.5px] text-ink-faint hover:bg-surface-hover hover:text-ink"
                                     >
                                       + Panchayat
                                     </button>
@@ -466,7 +466,7 @@ export default function PlacesPage() {
                                       onClick={() =>
                                         setDraft({ kind: 'village', parentId: taluk.id, name: '', panchayatId: '' })
                                       }
-                                      className="h-[24px] rounded px-1.5 text-[11.5px] text-ink-faint hover:bg-surface-hover hover:text-ink"
+                                      className="h-[28px] rounded px-1.5 text-[12.5px] text-ink-faint hover:bg-surface-hover hover:text-ink"
                                     >
                                       + Village
                                     </button>
@@ -499,11 +499,11 @@ export default function PlacesPage() {
                                 {talukOpen &&
                                   groups.map((group) => (
                                     <div key={group.panchayat?.id ?? 'none'} className="border-t border-rule-faint">
-                                      <div className="flex h-[28px] items-center gap-2 bg-surface-sunken pl-14 pr-3">
+                                      <div className="flex h-[32px] items-center gap-2 bg-surface-sunken pl-14 pr-3">
                                         {group.panchayat ? (
                                           <>
                                             {nameCell('panchayat', group.panchayat.id, group.panchayat.name)}
-                                            <span className="text-[11px] text-ink-faint">panchayat</span>
+                                            <span className="text-[12px] text-ink-faint">panchayat</span>
                                             <span className="ml-auto flex items-center gap-1">
                                               <button
                                                 type="button"
@@ -538,7 +538,7 @@ export default function PlacesPage() {
                                             </span>
                                           </>
                                         ) : (
-                                          <span className="text-[11.5px] text-status-pending-fg">
+                                          <span className="text-[12.5px] text-status-pending-fg">
                                             No panchayat recorded
                                           </span>
                                         )}
@@ -549,15 +549,15 @@ export default function PlacesPage() {
                                         return (
                                           <div
                                             key={village.id}
-                                            className="flex h-[32px] items-center gap-2 border-t border-rule-faint pl-20 pr-3 hover:bg-surface-hover"
+                                            className="flex h-[36px] items-center gap-2 border-t border-rule-faint pl-20 pr-3 hover:bg-surface-hover"
                                           >
                                             {nameCell('village', village.id, village.name)}
                                             {used && (used.centres > 0 || used.children > 0) ? (
-                                              <span className="text-[11px] text-ink-faint">
+                                              <span className="text-[12px] text-ink-faint">
                                                 {used.centres} centres · {used.children} children
                                               </span>
                                             ) : (
-                                              <span className="text-[11px] text-ink-faint">not used yet</span>
+                                              <span className="text-[12px] text-ink-faint">not used yet</span>
                                             )}
                                             <span className="ml-auto flex items-center gap-1.5">
                                               <select
@@ -565,7 +565,7 @@ export default function PlacesPage() {
                                                 onChange={(e) => setVillagePanchayat(village.id, e.target.value)}
                                                 disabled={busy}
                                                 aria-label={`Panchayat for ${village.name}`}
-                                                className="h-[26px] rounded-md border border-rule-strong bg-surface px-1.5 text-[12px] outline-none focus:border-blue-500"
+                                                className="h-[30px] rounded-md border border-rule-strong bg-surface px-1.5 text-[13px] outline-none focus:border-blue-500"
                                               >
                                                 <option value="">No panchayat</option>
                                                 {panchayatsIn(tree, taluk.id).map((p) => (
@@ -622,8 +622,8 @@ export default function PlacesPage() {
       {confirmDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setConfirmDelete(null)}>
           <div className="w-full max-w-md rounded-lg border border-rule bg-surface p-5" onClick={(e) => e.stopPropagation()}>
-            <h2 className="mb-2 text-[15px] font-semibold">Remove {confirmDelete.name}?</h2>
-            <p className="mb-4 text-[13px] leading-relaxed text-ink-muted">
+            <h2 className="mb-2 text-[16px] font-semibold">Remove {confirmDelete.name}?</h2>
+            <p className="mb-4 text-[14px] leading-relaxed text-ink-muted">
               This only works if nothing points at it. A {KIND_LABEL[confirmDelete.kind]} still in use, or with places
               under it, is refused and nothing changes.
             </p>
@@ -631,7 +631,7 @@ export default function PlacesPage() {
               <button
                 type="button"
                 onClick={() => setConfirmDelete(null)}
-                className="h-[32px] rounded-md border border-rule-strong px-3 text-[13px] hover:bg-surface-hover"
+                className="h-[36px] rounded-md border border-rule-strong px-3 text-[14px] hover:bg-surface-hover"
               >
                 Cancel
               </button>
@@ -639,7 +639,7 @@ export default function PlacesPage() {
                 type="button"
                 onClick={remove}
                 disabled={busy}
-                className="h-[32px] rounded-md bg-status-returned-fg px-3 text-[13px] font-medium text-surface disabled:opacity-50"
+                className="h-[36px] rounded-md bg-status-returned-fg px-3 text-[14px] font-medium text-surface disabled:opacity-50"
               >
                 {busy ? 'Removing…' : 'Remove'}
               </button>

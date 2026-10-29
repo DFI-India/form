@@ -173,7 +173,7 @@ function ApprovalChip({ bucket, verbose = false }: { bucket: Bucket; verbose?: b
   const meta = BUCKET_META[bucket]
   return (
     <span className="inline-flex items-center gap-1.5">
-      <span className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${meta.chip}`}>
+      <span className={`rounded px-1.5 py-0.5 text-[12px] font-medium ${meta.chip}`}>
         {verbose ? meta.groupLabel ?? meta.label : meta.label}
       </span>
       {meta.flag && !verbose && (
@@ -264,11 +264,11 @@ function PlaceTrail({ row, className = '' }: { row: ChildRow; className?: string
   const parts = [row.district, row.taluk, row.village || row.village_name].map(txt).filter(Boolean)
 
   if (parts.length === 0) {
-    return <span className={`text-[11.5px] text-ink-faint ${className}`}>No place recorded</span>
+    return <span className={`text-[12.5px] text-ink-faint ${className}`}>No place recorded</span>
   }
 
   return (
-    <span className={`flex min-w-0 items-center gap-1 text-[11.5px] text-ink-muted ${className}`}>
+    <span className={`flex min-w-0 items-center gap-1 text-[12.5px] text-ink-muted ${className}`}>
       <MapPin className="h-3 w-3 shrink-0 text-ink-faint" />
       <span className="truncate">{parts.join(' › ')}</span>
     </span>
@@ -450,7 +450,7 @@ export default function ChildDataPage() {
   }
 
   const selectClass =
-    'h-[30px] rounded-md border border-rule-strong bg-surface px-2.5 text-[12.5px] text-ink outline-none focus:border-blue-500'
+    'h-[34px] rounded-md border border-rule-strong bg-surface px-2.5 text-[13.5px] text-ink outline-none focus:border-blue-500'
 
   const chipRow = (
     label: string,
@@ -459,7 +459,7 @@ export default function ChildDataPage() {
     onPick: (value: string) => void
   ) => (
     <div className="flex flex-wrap items-center gap-1.5">
-      <span className="w-[68px] shrink-0 text-[11px] font-medium text-ink-faint">{label}</span>
+      <span className="w-[68px] shrink-0 text-[12px] font-medium text-ink-faint">{label}</span>
       {options.map((option) => {
         const isActive = current === option.value
         return (
@@ -467,7 +467,7 @@ export default function ChildDataPage() {
             key={option.value}
             type="button"
             onClick={() => onPick(option.value)}
-            className={`h-[26px] rounded-md px-2.5 text-[12.5px] transition-colors ${
+            className={`h-[30px] rounded-md px-2.5 text-[13.5px] transition-colors ${
               isActive ? 'bg-ink text-surface' : 'border border-rule-strong text-ink hover:bg-surface-hover'
             }`}
           >
@@ -493,7 +493,7 @@ export default function ChildDataPage() {
 
         <div className="mb-4 flex items-center justify-between gap-5">
           <h1 className="text-xl font-semibold tracking-tight">Child data</h1>
-          <span className="text-[12.5px] text-ink-faint">
+          <span className="text-[13.5px] text-ink-faint">
             {loading ? 'Counting…' : `${total.toLocaleString()} ${total === 1 ? 'child' : 'children'}`}
           </span>
         </div>
@@ -518,14 +518,14 @@ export default function ChildDataPage() {
               e.preventDefault()
               setSearch(searchInput.trim())
             }}
-            className="flex h-[30px] w-[290px] items-center gap-2 rounded-md border border-rule-strong px-2.5 focus-within:border-blue-500"
+            className="flex h-[34px] w-[290px] items-center gap-2 rounded-md border border-rule-strong px-2.5 focus-within:border-blue-500"
           >
             <Search className="h-[13px] w-[13px] shrink-0 text-ink-faint" />
             <input
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               placeholder="Name, Reg No or Aadhaar"
-              className="min-w-0 flex-1 bg-transparent text-[12.5px] outline-none placeholder:text-ink-faint"
+              className="min-w-0 flex-1 bg-transparent text-[13.5px] outline-none placeholder:text-ink-faint"
             />
           </form>
 
@@ -541,7 +541,7 @@ export default function ChildDataPage() {
           <button
             type="button"
             onClick={() => setShowMore((v) => !v)}
-            className={`flex h-[30px] items-center gap-1.5 rounded-md border px-2.5 text-[12.5px] transition-colors ${
+            className={`flex h-[34px] items-center gap-1.5 rounded-md border px-2.5 text-[13.5px] transition-colors ${
               showMore ? 'border-rule-strong bg-surface-hover' : 'border-rule-strong hover:bg-surface-hover'
             }`}
           >
@@ -550,7 +550,7 @@ export default function ChildDataPage() {
           </button>
 
           <div className="ml-auto flex items-center gap-2">
-            <span className="text-[12px] text-ink-faint">Sort</span>
+            <span className="text-[13px] text-ink-faint">Sort</span>
             <select value={sort} onChange={(e) => setSort(e.target.value)} className={selectClass}>
               {SORTS.map((s) => (
                 <option key={s.value} value={s.value}>
@@ -620,7 +620,7 @@ export default function ChildDataPage() {
                 setSearch('')
                 setSearchInput('')
               }}
-              className="h-[30px] rounded-md px-2.5 text-[12.5px] text-ink-muted transition-colors hover:bg-surface-hover"
+              className="h-[34px] rounded-md px-2.5 text-[13.5px] text-ink-muted transition-colors hover:bg-surface-hover"
             >
               Reset all
             </button>
@@ -634,7 +634,7 @@ export default function ChildDataPage() {
                 key={chip.label}
                 type="button"
                 onClick={chip.clear}
-                className="flex h-[24px] items-center gap-1.5 rounded bg-surface-hover px-2 text-[12px] text-ink transition-colors hover:bg-rule"
+                className="flex h-[28px] items-center gap-1.5 rounded bg-surface-hover px-2 text-[13px] text-ink transition-colors hover:bg-rule"
               >
                 {chip.label}
                 <X className="h-3 w-3 text-ink-faint" />
@@ -645,30 +645,30 @@ export default function ChildDataPage() {
 
         {/* Table */}
         <div className="overflow-hidden rounded-md border border-rule">
-          <div className="flex h-[34px] items-center gap-3 border-b border-rule bg-surface-sunken px-3">
+          <div className="flex h-[38px] items-center gap-3 border-b border-rule bg-surface-sunken px-3">
             <span className="w-4" />
             <span className="w-[26px]" />
-            <span className="flex-1 text-[11.5px] font-medium text-ink-muted">Name</span>
-            <span className="w-14 text-[11.5px] font-medium text-ink-muted">EAC</span>
-            <span className="w-12 text-[11.5px] font-medium text-ink-muted">Reg</span>
-            <span className="hidden w-[64px] text-[11.5px] font-medium text-ink-muted xl:block">Gender</span>
-            <span className="w-10 text-[11.5px] font-medium text-ink-muted">Age</span>
-            <span className="hidden w-[76px] text-[11.5px] font-medium text-ink-muted lg:block">Class</span>
-            <span className="hidden w-[104px] text-[11.5px] font-medium text-ink-muted lg:block">Village</span>
-            <span className="w-[78px] text-[11.5px] font-medium text-ink-muted">Record</span>
-            <span className="w-[72px] text-[11.5px] font-medium text-ink-muted">Enrolment</span>
-            <span className="w-[104px] text-[11.5px] font-medium text-ink-muted">Approval</span>
+            <span className="flex-1 text-[12.5px] font-medium text-ink-muted">Name</span>
+            <span className="w-14 text-[12.5px] font-medium text-ink-muted">EAC</span>
+            <span className="w-12 text-[12.5px] font-medium text-ink-muted">Reg</span>
+            <span className="hidden w-[64px] text-[12.5px] font-medium text-ink-muted xl:block">Gender</span>
+            <span className="w-10 text-[12.5px] font-medium text-ink-muted">Age</span>
+            <span className="hidden w-[76px] text-[12.5px] font-medium text-ink-muted lg:block">Class</span>
+            <span className="hidden w-[104px] text-[12.5px] font-medium text-ink-muted lg:block">Village</span>
+            <span className="w-[78px] text-[12.5px] font-medium text-ink-muted">Record</span>
+            <span className="w-[72px] text-[12.5px] font-medium text-ink-muted">Enrolment</span>
+            <span className="w-[104px] text-[12.5px] font-medium text-ink-muted">Approval</span>
           </div>
 
           {loading ? (
             <div className="p-12 text-center">
               <LoadingSpinner size="lg" />
-              <p className="mt-3 text-[13px] text-ink-muted">Loading children…</p>
+              <p className="mt-3 text-[14px] text-ink-muted">Loading children…</p>
             </div>
           ) : rows.length === 0 ? (
             <div className="p-12 text-center">
               <Inbox className="mx-auto mb-3 h-10 w-10 text-rule-strong" />
-              <p className="text-[13.5px] text-ink-muted">No children match these filters</p>
+              <p className="text-[14.5px] text-ink-muted">No children match these filters</p>
             </div>
           ) : (
             rows.map((row) => {
@@ -687,7 +687,7 @@ export default function ChildDataPage() {
                   {showHeading && (
                     <div className="flex items-center gap-2 border-b border-rule bg-surface-sunken px-3 py-1.5">
                       <ApprovalChip bucket={bucket} verbose />
-                      <span className="text-[11.5px] text-ink-muted">{BUCKET_META[bucket].heading}</span>
+                      <span className="text-[12.5px] text-ink-muted">{BUCKET_META[bucket].heading}</span>
                     </div>
                   )}
 
@@ -702,7 +702,7 @@ export default function ChildDataPage() {
                           toggleRow(row)
                         }
                       }}
-                      className={`flex h-[40px] cursor-pointer items-center gap-3 px-3 transition-colors hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-400 ${
+                      className={`flex h-[44px] cursor-pointer items-center gap-3 px-3 transition-colors hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-400 ${
                         isOpen ? '' : 'border-b border-rule-faint'
                       }`}
                     >
@@ -720,16 +720,16 @@ export default function ChildDataPage() {
                           onBroken={markPhotoBroken}
                         />
                       </span>
-                      <span className={`flex-1 truncate text-[13px] ${isOpen ? 'font-semibold' : ''}`}>{name}</span>
-                      <span className="w-14 font-mono text-[12px] text-ink-muted">{String(row.eac_no ?? '—')}</span>
-                      <span className="w-12 font-mono text-[12px] text-ink-muted">{String(row.reg_no ?? '—')}</span>
-                      <span className="hidden w-[64px] text-[12.5px] text-ink-muted xl:block">{row.gender || '—'}</span>
-                      <span className="w-10 text-[12.5px] text-ink-muted">{ageFrom(row.dateofbirth)}</span>
-                      <span className="hidden w-[76px] truncate text-[12.5px] text-ink-muted lg:block">
+                      <span className={`flex-1 truncate text-[14px] ${isOpen ? 'font-semibold' : ''}`}>{name}</span>
+                      <span className="w-14 font-mono text-[13px] text-ink-muted">{String(row.eac_no ?? '—')}</span>
+                      <span className="w-12 font-mono text-[13px] text-ink-muted">{String(row.reg_no ?? '—')}</span>
+                      <span className="hidden w-[64px] text-[13.5px] text-ink-muted xl:block">{row.gender || '—'}</span>
+                      <span className="w-10 text-[13.5px] text-ink-muted">{ageFrom(row.dateofbirth)}</span>
+                      <span className="hidden w-[76px] truncate text-[13.5px] text-ink-muted lg:block">
                         {row.class_std_text || '—'}
                       </span>
                       <span
-                        className="hidden w-[104px] truncate text-[12.5px] text-ink-muted lg:block"
+                        className="hidden w-[104px] truncate text-[13.5px] text-ink-muted lg:block"
                         title={[row.district, row.taluk, row.village || row.village_name].map(txt).filter(Boolean).join(' › ')}
                       >
                         {txt(row.village) || txt(row.village_name) || '—'}
@@ -749,11 +749,11 @@ export default function ChildDataPage() {
                       </span>
                       <span className="w-[72px]">
                         {left ? (
-                          <span className="rounded bg-status-inactive-bg px-1.5 py-0.5 text-[11px] font-medium text-status-inactive-fg">
+                          <span className="rounded bg-status-inactive-bg px-1.5 py-0.5 text-[12px] font-medium text-status-inactive-fg">
                             Left
                           </span>
                         ) : (
-                          <span className="text-[11.5px] text-ink-faint">Enrolled</span>
+                          <span className="text-[12.5px] text-ink-faint">Enrolled</span>
                         )}
                       </span>
                       <span className="w-[104px]">
@@ -772,13 +772,13 @@ export default function ChildDataPage() {
                             onBroken={markPhotoBroken}
                           />
                           <div className="flex min-w-0 flex-1 flex-col gap-1">
-                            <span className="truncate text-[14px] font-semibold">{name}</span>
-                            <span className="font-mono text-[11.5px] text-ink-muted">
+                            <span className="truncate text-[15px] font-semibold">{name}</span>
+                            <span className="font-mono text-[12.5px] text-ink-muted">
                               EAC {String(row.eac_no ?? '—')} · Reg No {String(row.reg_no ?? '—')}
                             </span>
                             <PlaceTrail row={row} />
                             {txt(row.village) && txt(row.village_name) && txt(row.village) !== txt(row.village_name) && (
-                              <span className="text-[11px] text-ink-faint">
+                              <span className="text-[12px] text-ink-faint">
                                 Centre village: {txt(row.village_name)}
                               </span>
                             )}
@@ -786,7 +786,7 @@ export default function ChildDataPage() {
                           <div className="flex items-center gap-1.5">
                             <ApprovalChip bucket={bucket} verbose />
                             <span
-                              className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${
+                              className={`rounded px-1.5 py-0.5 text-[12px] font-medium ${
                                 left
                                   ? 'bg-status-inactive-bg text-status-inactive-fg'
                                   : 'bg-surface-hover text-ink-muted'
@@ -800,7 +800,7 @@ export default function ChildDataPage() {
                                 e.stopPropagation()
                                 setEditing({ eacNo: row.eac_no, regNo: row.reg_no, section: 'child_data' })
                               }}
-                              className="flex h-[28px] items-center gap-1.5 rounded-md bg-ink px-2.5 text-[12.5px] font-medium text-surface transition-opacity hover:opacity-90"
+                              className="flex h-[32px] items-center gap-1.5 rounded-md bg-ink px-2.5 text-[13.5px] font-medium text-surface transition-opacity hover:opacity-90"
                             >
                               <Pencil className="h-[13px] w-[13px]" />
                               Edit
@@ -809,7 +809,7 @@ export default function ChildDataPage() {
                         </div>
 
                         {detailLoading ? (
-                          <p className="py-4 text-[12.5px] text-ink-muted">Loading sections…</p>
+                          <p className="py-4 text-[13.5px] text-ink-muted">Loading sections…</p>
                         ) : (
                           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
                             {SECTIONS.map((section) => {
@@ -840,8 +840,8 @@ export default function ChildDataPage() {
                                     key={section.key}
                                     className="flex flex-col gap-2 rounded-md border border-dashed border-rule-strong bg-surface p-3"
                                   >
-                                    <span className="text-[11.5px] font-semibold text-ink-muted">{section.label}</span>
-                                    <span className="text-[11.5px] leading-snug text-ink-faint">Not recorded yet.</span>
+                                    <span className="text-[12.5px] font-semibold text-ink-muted">{section.label}</span>
+                                    <span className="text-[12.5px] leading-snug text-ink-faint">Not recorded yet.</span>
                                     <button
                                       type="button"
                                       onClick={(e) => {
@@ -852,7 +852,7 @@ export default function ChildDataPage() {
                                           section: section.key as ProfileSection,
                                         })
                                       }}
-                                      className="mt-auto flex h-[26px] w-fit items-center gap-1 rounded-md border border-rule-strong px-2 text-[12px] text-ink transition-colors hover:bg-surface-hover"
+                                      className="mt-auto flex h-[30px] w-fit items-center gap-1 rounded-md border border-rule-strong px-2 text-[13px] text-ink transition-colors hover:bg-surface-hover"
                                     >
                                       <Plus className="h-3 w-3" />
                                       Add
@@ -880,20 +880,20 @@ export default function ChildDataPage() {
                                   key={section.key}
                                   className="flex flex-col gap-2 rounded-md border border-rule bg-surface p-3"
                                 >
-                                  <span className="flex items-center text-[11.5px] font-semibold">
+                                  <span className="flex items-center text-[12.5px] font-semibold">
                                     {section.label}
                                     {editButton}
                                   </span>
                                   <div className="flex flex-col gap-1.5">
                                     {fields.length === 0 ? (
-                                      <span className="text-[11.5px] text-ink-faint">Recorded, no details filled in.</span>
+                                      <span className="text-[12.5px] text-ink-faint">Recorded, no details filled in.</span>
                                     ) : (
                                       fields.map(([k, v]) => (
                                         <div key={k} className="flex justify-between gap-2">
-                                          <span className="shrink-0 text-[11.5px] text-ink-faint">
+                                          <span className="shrink-0 text-[12.5px] text-ink-faint">
                                             {k.replace(/_/g, ' ')}
                                           </span>
-                                          <span className="truncate text-right text-[11.5px]">{String(v)}</span>
+                                          <span className="truncate text-right text-[12.5px]">{String(v)}</span>
                                         </div>
                                       ))
                                     )}
@@ -913,7 +913,7 @@ export default function ChildDataPage() {
 
           {!loading && rows.length > 0 && (
             <div className="flex items-center justify-between px-4 py-2.5">
-              <span className="text-[12.5px] text-ink-faint">
+              <span className="text-[13.5px] text-ink-faint">
                 {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} of {total.toLocaleString()}
               </span>
               <div className="flex items-center gap-2">
@@ -921,18 +921,18 @@ export default function ChildDataPage() {
                   type="button"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="h-[28px] rounded-md border border-rule-strong px-2.5 text-[12.5px] transition-colors hover:bg-surface-hover disabled:opacity-40"
+                  className="h-[32px] rounded-md border border-rule-strong px-2.5 text-[13.5px] transition-colors hover:bg-surface-hover disabled:opacity-40"
                 >
                   Previous
                 </button>
-                <span className="text-[12.5px] text-ink-muted">
+                <span className="text-[13.5px] text-ink-muted">
                   {page} / {totalPages}
                 </span>
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page >= totalPages}
-                  className="h-[28px] rounded-md border border-rule-strong px-2.5 text-[12.5px] transition-colors hover:bg-surface-hover disabled:opacity-40"
+                  className="h-[32px] rounded-md border border-rule-strong px-2.5 text-[13.5px] transition-colors hover:bg-surface-hover disabled:opacity-40"
                 >
                   Next
                 </button>

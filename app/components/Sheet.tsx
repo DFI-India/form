@@ -53,7 +53,7 @@ export default function Sheet({ open, onClose, title, side = 'left', footer, chi
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className={`absolute flex flex-col overflow-hidden border-rule bg-surface ${position}`}>
         <div className="flex h-12 shrink-0 items-center justify-between border-b border-rule px-4">
-          <span className="text-[14px] font-semibold">{title}</span>
+          <span className="text-[15px] font-semibold">{title}</span>
           <button
             type="button"
             onClick={onClose}
